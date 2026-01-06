@@ -199,7 +199,32 @@ Track:
 This is critical for consistency - all persona slides must show similar person.
 
 ═══════════════════════════════════════════════════════════════
-TASK 4: FIND OPTIMAL PRODUCT INSERTION POINT
+TASK 4: ANALYZE TEXT STYLE (CRITICAL FOR GENERATION)
+═══════════════════════════════════════════════════════════════
+
+Look at the text overlays on the slides and DESCRIBE the typography in detail:
+
+1. FONT TYPE: Is it sans-serif (clean, no feet) or serif (has feet/flourishes)?
+   - Sans-serif examples: Arial, Helvetica, modern clean fonts
+   - Serif examples: Times, Georgia, classic fonts
+
+2. FONT WEIGHT: thin / regular / medium / bold / extra-bold / black
+
+3. FONT COLOR: Describe the exact color (e.g., "pure white", "cream/off-white", "soft pink", "black")
+
+4. TEXT EFFECTS:
+   - Shadow: Does it have a drop shadow? (color, direction, softness)
+   - Outline/stroke: Does text have an outline?
+   - Background box: Is text on a semi-transparent background?
+
+5. TEXT SIZE: relative to image (small / medium / large / extra-large)
+
+6. TEXT POSITION STYLE: Where is text typically placed? (top, center, bottom, left-aligned, centered)
+
+This description will be used to generate matching text - be VERY specific!
+
+═══════════════════════════════════════════════════════════════
+TASK 5: FIND OPTIMAL PRODUCT INSERTION POINT
 ═══════════════════════════════════════════════════════════════
 
 RULE: Insert product in EXACTLY ONE slide. Never multiple.
@@ -311,6 +336,17 @@ Return ONLY valid JSON:
         "mood": "aesthetic vibe in 2-3 words",
         "persona_gender": "female | male | none | mixed",
         "persona_slides": [0, 2, 5]
+    }},
+
+    "text_style": {{
+        "font_type": "sans-serif or serif",
+        "font_weight": "thin / regular / medium / bold / extra-bold / black",
+        "font_color": "exact color description (e.g., pure white, cream, soft pink)",
+        "shadow": "none OR description (e.g., soft black drop shadow, bottom-right)",
+        "outline": "none OR description",
+        "background_box": "none OR description (e.g., semi-transparent black rounded box)",
+        "text_size": "small / medium / large / extra-large",
+        "position_style": "where text is typically placed"
     }},
     
     "target_audience": {{
@@ -450,32 +486,45 @@ def _generate_single_image(
     reference_image_path: str,
     product_image_path: Optional[str] = None,
     persona_reference_path: Optional[str] = None,
-    has_persona: bool = False
+    has_persona: bool = False,
+    text_style: Optional[dict] = None
 ) -> str:
     """
     Generate a single image with clear image labeling.
-    
+
     Image roles:
-    - STYLE_REFERENCE: Copy text style, composition, mood, lighting
+    - STYLE_REFERENCE: Visual reference for composition, mood, lighting
     - PERSONA_REFERENCE: Use this person's appearance for consistency
     - PRODUCT_PHOTO: User's product image (base for product slides)
+
+    Text style is passed explicitly via text_style dict for accurate font matching.
     """
+
+    # Build text style instruction from analysis
+    if text_style:
+        text_style_instruction = f"""TEXT STYLE REQUIREMENTS (apply these EXACTLY):
+- Font type: {text_style.get('font_type', 'sans-serif')}
+- Font weight: {text_style.get('font_weight', 'bold')}
+- Font color: {text_style.get('font_color', 'white')}
+- Shadow: {text_style.get('shadow', 'none')}
+- Outline: {text_style.get('outline', 'none')}
+- Background box: {text_style.get('background_box', 'none')}
+- Text size: {text_style.get('text_size', 'medium')} relative to image
+- Position: {text_style.get('position_style', 'varies by slide')}
+
+These text style specifications are CRITICAL - match them precisely!"""
+    else:
+        text_style_instruction = "Use clean, bold, white sans-serif text with subtle shadow."
     
     if slide_type == 'product':
         # PRODUCT SLIDE: User's product photo + style reference
         prompt = f"""Generate a TikTok slide featuring a product AS A CASUAL TIP.
 
-CRITICAL - TEXT STYLE (copy EXACTLY from [STYLE_REFERENCE]):
-▸ Match the EXACT font family
-▸ Match the EXACT font color
-▸ Match the EXACT font size relative to image
-▸ Match the EXACT text positioning style
-▸ Match any text effects (shadow, outline, etc.)
-The text style must be IDENTICAL to the reference - this is the most important element.
+{text_style_instruction}
 
 [PRODUCT_PHOTO] - User's product image. THIS IS THE BASE IMAGE - keep it as the main visual.
 
-[STYLE_REFERENCE] - Reference slide for text style only.
+[STYLE_REFERENCE] - Reference slide for visual composition and mood.
 
 TEXT TO ADD:
 {text_content}
@@ -503,16 +552,9 @@ GOAL: Look like "just another tip" - NOT an advertisement."""
         # CTA SLIDE: Usually text-focused, simple background
         prompt = f"""Generate a TikTok CTA (call-to-action) slide.
 
-CRITICAL - TEXT STYLE (copy EXACTLY from [STYLE_REFERENCE]):
-▸ Match the EXACT font family
-▸ Match the EXACT font color
-▸ Match the EXACT font size relative to image
-▸ Match the EXACT text positioning style
-▸ Match any text effects (shadow, outline, etc.)
-▸ Match the EXACT background style
-The text style must be IDENTICAL to the reference - this is the most important element.
+{text_style_instruction}
 
-[STYLE_REFERENCE] - Reference CTA slide for text and background style.
+[STYLE_REFERENCE] - Reference CTA slide for background style and composition.
 
 TEXT TO DISPLAY:
 {text_content}
@@ -536,15 +578,9 @@ LAYOUT: {text_position_hint}"""
             # With persona - need consistency
             prompt = f"""Generate a TikTok {slide_label} slide.
 
-CRITICAL - TEXT STYLE (copy EXACTLY from [STYLE_REFERENCE]):
-▸ Match the EXACT font family
-▸ Match the EXACT font color
-▸ Match the EXACT font size relative to image
-▸ Match the EXACT text positioning style
-▸ Match any text effects (shadow, outline, etc.)
-The text style must be IDENTICAL to the reference - this is the most important element.
+{text_style_instruction}
 
-[STYLE_REFERENCE] - Reference slide for text style only.
+[STYLE_REFERENCE] - Reference slide for visual composition and mood.
 
 [PERSONA_REFERENCE] - Person to use. Generate the EXACT SAME PERSON in a new scene:
 - SAME face, hair color, skin tone, facial features
@@ -580,15 +616,9 @@ IMPORTANT: Only ONE person in the image - never two people!"""
             # Has persona but NO reference yet - CREATE a new persona
             prompt = f"""Generate a TikTok {slide_label} slide.
 
-CRITICAL - TEXT STYLE (copy EXACTLY from [STYLE_REFERENCE]):
-▸ Match the EXACT font family
-▸ Match the EXACT font color
-▸ Match the EXACT font size relative to image
-▸ Match the EXACT text positioning style
-▸ Match any text effects (shadow, outline, etc.)
-The text style must be IDENTICAL to the reference - this is the most important element.
+{text_style_instruction}
 
-[STYLE_REFERENCE] - Reference slide for text style only.
+[STYLE_REFERENCE] - Reference slide for visual composition and mood.
 (Do NOT copy the person - create a NEW person)
 
 CREATE A NEW PERSONA:
@@ -619,15 +649,9 @@ IMPORTANT: Only ONE person in the image - never two people!"""
             # No persona needed - just style reference
             prompt = f"""Generate a TikTok {slide_label} slide.
 
-CRITICAL - TEXT STYLE (copy EXACTLY from [STYLE_REFERENCE]):
-▸ Match the EXACT font family
-▸ Match the EXACT font color
-▸ Match the EXACT font size relative to image
-▸ Match the EXACT text positioning style
-▸ Match any text effects (shadow, outline, etc.)
-The text style must be IDENTICAL to the reference - this is the most important element.
+{text_style_instruction}
 
-[STYLE_REFERENCE] - Reference slide for text style only.
+[STYLE_REFERENCE] - Reference slide for visual composition and mood.
 
 NEW SCENE: {scene_description}
 
@@ -728,6 +752,7 @@ def generate_all_images(
     os.makedirs(output_dir, exist_ok=True)
 
     new_slides = analysis['new_slides']
+    text_style = analysis.get('text_style', None)  # Extract text style from analysis
 
     # Build all tasks with variations
     all_tasks = []
@@ -814,7 +839,8 @@ def generate_all_images(
                     task['reference_image_path'],
                     task['product_image_path'],
                     persona_ref_path,
-                    task['has_persona']
+                    task['has_persona'],
+                    text_style  # Pass text style from analysis
                 )
             finally:
                 rate_limiter.release()
