@@ -257,6 +257,11 @@
     </div>
 
     <script>
+        // API Base URL - change this for production
+        const API_BASE_URL = window.location.hostname === 'localhost'
+            ? 'http://localhost:5001'
+            : `http://${window.location.hostname}:5001`;
+
         function slideshowGenerator() {
             return {
                 formData: {
@@ -315,7 +320,7 @@
                     this.sessionId = sessionId;
                     this.pollInterval = setInterval(async () => {
                         try {
-                            const res = await fetch(`http://localhost:5001/api/status/${sessionId}`);
+                            const res = await fetch(`${API_BASE_URL}/api/status/${sessionId}`);
                             const status = await res.json();
 
                             this.statusMessage = status.message || 'Processing...';
@@ -383,7 +388,7 @@
                         this.progressPercent = 5;
                         this.currentStep = 1;
 
-                        const response = await fetch('http://localhost:5001/api/generate', {
+                        const response = await fetch(`${API_BASE_URL}/api/generate`, {
                             method: 'POST',
                             body: formData
                         });

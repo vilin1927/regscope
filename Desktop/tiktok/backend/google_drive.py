@@ -2,28 +2,33 @@
 Google Drive Integration Module
 Handles folder creation, file uploads, and sharing via Google Drive API
 
-Supports two auth methods:
-1. OAuth tokens (preferred) - from .oauth_tokens.json
-2. Service account (fallback) - from service-account.json
+Uses OAuth authentication (user grants access once, token is saved).
 """
 import os
-import json
-from pathlib import Path
+import pickle
+import time
 from typing import Optional
 from dotenv import load_dotenv
-from google.oauth2 import service_account
-from google.oauth2.credentials import Credentials
 from google.auth.transport.requests import Request
+from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload
 
 load_dotenv()
 
-# Path to service account credentials (fallback)
-CREDENTIALS_PATH = os.getenv('GOOGLE_APPLICATION_CREDENTIALS', '../credentials/service-account.json')
+from logging_config import get_logger, get_request_logger
 
-# Path to OAuth tokens
-OAUTH_TOKEN_PATH = Path(__file__).parent / '.oauth_tokens.json'
+logger = get_logger('drive')
+
+# OAuth credentials from .env
+CLIENT_ID = os.getenv('GOOGLE_OAUTH_CLIENT_ID')
+CLIENT_SECRET = os.getenv('GOOGLE_OAUTH_CLIENT_SECRET')
+
+# Parent folder ID (optional - uploads to root if not set)
+PARENT_FOLDER_ID = os.getenv('PARENT_FOLDER_ID')
+
+# Token file path (stores OAuth token for reuse)
+TOKEN_PATH = os.path.join(os.path.dirname(__file__), '..', 'credentials', 'oauth_token.pickle')
 
 # Scopes required for Drive API
 SCOPES = ['https://www.googleapis.com/auth/drive.file']
@@ -34,96 +39,58 @@ class GoogleDriveError(Exception):
     pass
 
 
-def _load_oauth_tokens() -> Optional[Credentials]:
-    """Load OAuth tokens from file and refresh if needed"""
-    if not OAUTH_TOKEN_PATH.exists():
-        return None
+def _get_credentials():
+    """Get OAuth credentials, prompting for authorization if needed."""
+    creds = None
 
-    try:
-        with open(OAUTH_TOKEN_PATH, 'r') as f:
-            token_data = json.load(f)
+    # Load existing token if available
+    if os.path.exists(TOKEN_PATH):
+        logger.debug("Loading OAuth token from file")
+        with open(TOKEN_PATH, 'rb') as token:
+            creds = pickle.load(token)
 
-        credentials = Credentials(
-            token=token_data.get('token'),
-            refresh_token=token_data.get('refresh_token'),
-            token_uri=token_data.get('token_uri'),
-            client_id=token_data.get('client_id'),
-            client_secret=token_data.get('client_secret'),
-            scopes=token_data.get('scopes')
-        )
+    # If no valid credentials, get new ones
+    if not creds or not creds.valid:
+        if creds and creds.expired and creds.refresh_token:
+            logger.info("OAuth token expired, refreshing...")
+            creds.refresh(Request())
+            logger.debug("OAuth token refreshed")
+        else:
+            if not CLIENT_ID or not CLIENT_SECRET:
+                logger.error("Missing OAuth credentials in .env")
+                raise GoogleDriveError(
+                    'GOOGLE_OAUTH_CLIENT_ID and GOOGLE_OAUTH_CLIENT_SECRET must be set in .env'
+                )
 
-        # Refresh if expired
-        if credentials.expired and credentials.refresh_token:
-            credentials.refresh(Request())
-            # Save refreshed tokens
-            _save_oauth_tokens(credentials)
+            logger.info("No OAuth token found, starting authorization flow...")
+            # Create OAuth flow from client secrets
+            client_config = {
+                "installed": {
+                    "client_id": CLIENT_ID,
+                    "client_secret": CLIENT_SECRET,
+                    "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+                    "token_uri": "https://oauth2.googleapis.com/token",
+                    "redirect_uris": ["http://localhost"]
+                }
+            }
 
-        return credentials
+            flow = InstalledAppFlow.from_client_config(client_config, SCOPES)
+            creds = flow.run_local_server(port=8080)
+            logger.info("OAuth authorization complete")
 
-    except Exception as e:
-        print(f'Warning: Failed to load OAuth tokens: {e}')
-        return None
+        # Save credentials for next time
+        os.makedirs(os.path.dirname(TOKEN_PATH), exist_ok=True)
+        with open(TOKEN_PATH, 'wb') as token:
+            pickle.dump(creds, token)
+        logger.debug("OAuth token saved")
 
-
-def _save_oauth_tokens(credentials: Credentials):
-    """Save refreshed OAuth tokens"""
-    token_data = {
-        'token': credentials.token,
-        'refresh_token': credentials.refresh_token,
-        'token_uri': credentials.token_uri,
-        'client_id': credentials.client_id,
-        'client_secret': credentials.client_secret,
-        'scopes': list(credentials.scopes) if credentials.scopes else SCOPES
-    }
-
-    with open(OAUTH_TOKEN_PATH, 'w') as f:
-        json.dump(token_data, f, indent=2)
-
-
-def _get_service_account_credentials() -> Optional[service_account.Credentials]:
-    """Load service account credentials (fallback method)"""
-    creds_path = CREDENTIALS_PATH
-    if not os.path.isabs(creds_path):
-        creds_path = os.path.join(os.path.dirname(__file__), creds_path)
-
-    if not os.path.exists(creds_path):
-        return None
-
-    return service_account.Credentials.from_service_account_file(
-        creds_path,
-        scopes=SCOPES
-    )
+    return creds
 
 
 def _get_service():
-    """
-    Initialize and return Google Drive service.
-    Tries OAuth tokens first, falls back to service account.
-    """
-    # Try OAuth tokens first (preferred)
-    credentials = _load_oauth_tokens()
-
-    if credentials:
-        try:
-            service = build('drive', 'v3', credentials=credentials)
-            return service
-        except Exception as e:
-            print(f'Warning: OAuth auth failed, trying service account: {e}')
-
-    # Fall back to service account
-    credentials = _get_service_account_credentials()
-
-    if credentials:
-        try:
-            service = build('drive', 'v3', credentials=credentials)
-            return service
-        except Exception as e:
-            raise GoogleDriveError(f'Service account auth failed: {e}')
-
-    # No credentials available
-    raise GoogleDriveError(
-        'No Google Drive credentials found. Run "python setup_oauth.py" to authenticate.'
-    )
+    """Initialize and return Google Drive service using OAuth."""
+    credentials = _get_credentials()
+    return build('drive', 'v3', credentials=credentials)
 
 
 def create_folder(folder_name: str, parent_id: Optional[str] = None) -> str:
@@ -132,20 +99,23 @@ def create_folder(folder_name: str, parent_id: Optional[str] = None) -> str:
 
     Args:
         folder_name: Name of the folder to create
-        parent_id: Optional parent folder ID
+        parent_id: Optional parent folder ID (defaults to PARENT_FOLDER_ID)
 
     Returns:
         Folder ID
     """
     service = _get_service()
 
+    # Use PARENT_FOLDER_ID if no parent specified
+    actual_parent = parent_id or PARENT_FOLDER_ID
+
     file_metadata = {
         'name': folder_name,
         'mimeType': 'application/vnd.google-apps.folder'
     }
 
-    if parent_id:
-        file_metadata['parents'] = [parent_id]
+    if actual_parent:
+        file_metadata['parents'] = [actual_parent]
 
     try:
         folder = service.files().create(
@@ -265,7 +235,8 @@ def upload_slideshow_output(
     output_dir: str,
     folder_name: str,
     images: list[str],
-    audio_path: Optional[str] = None
+    audio_path: Optional[str] = None,
+    request_id: str = None
 ) -> dict:
     """
     Upload all slideshow output to Google Drive
@@ -275,15 +246,23 @@ def upload_slideshow_output(
         folder_name: Name for the Google Drive folder
         images: List of image file paths
         audio_path: Optional path to audio file
+        request_id: Optional request ID for logging
 
     Returns:
         dict with folder_id, folder_link, and uploaded file info
     """
+    log = get_request_logger('drive', request_id) if request_id else logger
+    start_time = time.time()
+
+    log.info(f"Starting upload: {len(images)} images to folder '{folder_name}'")
+
     # Create main folder
     folder_id = create_folder(folder_name)
+    log.debug(f"Created folder: {folder_id}")
 
     # Make it public
     set_folder_public(folder_id)
+    log.debug("Folder set to public")
 
     result = {
         'folder_id': folder_id,
@@ -293,38 +272,50 @@ def upload_slideshow_output(
     }
 
     # Upload images
-    for img_path in images:
+    for i, img_path in enumerate(images):
         if os.path.exists(img_path):
             try:
+                file_size = os.path.getsize(img_path)
+                log.debug(f"Uploading image {i+1}/{len(images)}: {os.path.basename(img_path)} ({file_size/1024:.1f}KB)")
                 file_id = upload_file(img_path, folder_id)
                 result['uploaded_images'].append({
                     'local_path': img_path,
                     'file_id': file_id
                 })
             except GoogleDriveError as e:
-                print(f'Warning: Failed to upload {img_path}: {e}')
+                log.warning(f"Failed to upload {img_path}: {e}")
 
     # Upload audio if provided
     if audio_path and os.path.exists(audio_path):
         try:
+            log.debug(f"Uploading audio: {os.path.basename(audio_path)}")
             file_id = upload_file(audio_path, folder_id)
             result['audio_file'] = {
                 'local_path': audio_path,
                 'file_id': file_id
             }
+            log.debug("Audio uploaded")
         except GoogleDriveError as e:
-            print(f'Warning: Failed to upload audio: {e}')
+            log.warning(f"Failed to upload audio: {e}")
+
+    elapsed = time.time() - start_time
+    log.info(f"Upload complete in {elapsed:.1f}s: {len(result['uploaded_images'])} images, audio={'yes' if result['audio_file'] else 'no'}")
+    log.info(f"Folder link: {result['folder_link']}")
 
     return result
 
 
 # For testing
 if __name__ == '__main__':
-    print('Google Drive Integration Module')
-    print(f'Credentials path: {CREDENTIALS_PATH}')
+    print('Google Drive Integration Module (OAuth)')
+    print(f'Client ID set: {bool(CLIENT_ID)}')
+    print(f'Client Secret set: {bool(CLIENT_SECRET)}')
+    print(f'Parent folder ID: {PARENT_FOLDER_ID}')
+    print(f'Token exists: {os.path.exists(TOKEN_PATH)}')
 
-    # Check if credentials exist
-    creds_path = CREDENTIALS_PATH
-    if not os.path.isabs(creds_path):
-        creds_path = os.path.join(os.path.dirname(__file__), creds_path)
-    print(f'Credentials exist: {os.path.exists(creds_path)}')
+    # Test connection
+    try:
+        service = _get_service()
+        print('OAuth connection: OK')
+    except GoogleDriveError as e:
+        print(f'Connection error: {e}')

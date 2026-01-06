@@ -3,11 +3,16 @@ TikTok Scraper Module
 Uses RapidAPI TikTok Scraper to extract slideshow images and audio
 """
 import os
+import time
 import requests
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dotenv import load_dotenv
 
 load_dotenv()
+
+from logging_config import get_logger, get_request_logger
+
+logger = get_logger('scraper')
 
 RAPIDAPI_KEY = os.getenv('RAPIDAPI_KEY')
 RAPIDAPI_HOST = 'tiktok-scraper7.p.rapidapi.com'
@@ -28,30 +33,42 @@ def _get_headers() -> dict:
     }
 
 
-def extract_video_data(tiktok_url: str) -> dict:
+def extract_video_data(tiktok_url: str, request_id: str = None) -> dict:
     """
     Extract full video/slideshow data from TikTok URL
 
     Args:
         tiktok_url: Full TikTok video/slideshow URL
+        request_id: Optional request ID for logging
 
     Returns:
         dict with video data including images for slideshows
     """
+    log = get_request_logger('scraper', request_id) if request_id else logger
     url = f'https://{RAPIDAPI_HOST}/'
     params = {'url': tiktok_url, 'hd': '1'}
 
+    log.debug(f"RapidAPI request: {tiktok_url[:60]}...")
+    start_time = time.time()
+
     try:
         response = requests.get(url, headers=_get_headers(), params=params, timeout=30)
+        elapsed = time.time() - start_time
+        log.debug(f"RapidAPI response: status={response.status_code}, time={elapsed:.2f}s")
+
         response.raise_for_status()
         data = response.json()
 
         if data.get('code') != 0:
+            log.error(f"RapidAPI error: {data.get('msg', 'Unknown error')}")
             raise TikTokScraperError(f"API error: {data.get('msg', 'Unknown error')}")
 
-        return data.get('data', {})
+        video_data = data.get('data', {})
+        log.debug(f"Video data keys: {list(video_data.keys())}")
+        return video_data
 
     except requests.exceptions.RequestException as e:
+        log.error(f"RapidAPI request failed: {str(e)}")
         raise TikTokScraperError(f'Request failed: {str(e)}')
 
 
@@ -115,7 +132,7 @@ def extract_audio_url(tiktok_url: str) -> str:
     raise TikTokScraperError('Could not extract audio URL')
 
 
-def download_media(url: str, save_path: str, use_proxy: bool = True) -> str:
+def download_media(url: str, save_path: str, use_proxy: bool = True, request_id: str = None) -> str:
     """
     Download media file (image or audio) from URL
 
@@ -123,10 +140,14 @@ def download_media(url: str, save_path: str, use_proxy: bool = True) -> str:
         url: Media URL
         save_path: Path to save the file
         use_proxy: Whether to use proxy for blocked CDNs
+        request_id: Optional request ID for logging
 
     Returns:
         Path to saved file
     """
+    log = get_request_logger('scraper', request_id) if request_id else logger
+    filename = os.path.basename(save_path)
+
     headers = {
         'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
         'Accept': 'image/webp,image/apng,image/*,*/*;q=0.8',
@@ -139,15 +160,19 @@ def download_media(url: str, save_path: str, use_proxy: bool = True) -> str:
 
     # Try direct download first (short timeout)
     try:
+        log.debug(f"Direct download: {filename}")
         response = requests.get(url, headers=headers, stream=True, timeout=5)
         response.raise_for_status()
         with open(save_path, 'wb') as f:
             for chunk in response.iter_content(chunk_size=8192):
                 f.write(chunk)
+        log.debug(f"Direct download success: {filename}")
         return save_path
     except requests.exceptions.RequestException:
         if not use_proxy:
+            log.warning(f"Direct download failed, proxy disabled: {filename}")
             raise TikTokScraperError(f'Download failed and proxy disabled')
+        log.debug(f"Direct download blocked, trying proxies: {filename}")
 
     # Try multiple proxies (some fail for certain URLs)
     proxy_urls = [
@@ -156,34 +181,42 @@ def download_media(url: str, save_path: str, use_proxy: bool = True) -> str:
         f'https://api.codetabs.com/v1/proxy?quest={requests.utils.quote(url, safe="")}',
     ]
 
-    for proxy_url in proxy_urls:
+    for i, proxy_url in enumerate(proxy_urls):
         try:
+            log.debug(f"Trying proxy {i+1}/3 for: {filename}")
             response = requests.get(proxy_url, headers={'User-Agent': headers['User-Agent']}, timeout=15)
             if response.status_code == 200 and len(response.content) > 1000:
                 with open(save_path, 'wb') as f:
                     f.write(response.content)
+                log.debug(f"Proxy {i+1} success: {filename}")
                 return save_path
         except requests.exceptions.RequestException:
             continue
 
+    log.warning(f"All proxies exhausted: {filename}")
     raise TikTokScraperError(f'Download failed - all proxies exhausted')
 
 
-def scrape_tiktok_slideshow(tiktok_url: str, output_dir: str) -> dict:
+def scrape_tiktok_slideshow(tiktok_url: str, output_dir: str, request_id: str = None) -> dict:
     """
     Full scraping pipeline: extract and download all slideshow content
 
     Args:
         tiktok_url: TikTok slideshow URL
         output_dir: Directory to save downloaded files
+        request_id: Optional request ID for logging
 
     Returns:
         dict with paths to downloaded images and audio
     """
+    log = get_request_logger('scraper', request_id) if request_id else logger
+    start_time = time.time()
+
+    log.info(f"Starting scrape: {tiktok_url[:60]}...")
     os.makedirs(output_dir, exist_ok=True)
 
     # Get video data once (single API call)
-    data = extract_video_data(tiktok_url)
+    data = extract_video_data(tiktok_url, request_id)
 
     result = {
         'images': [],
@@ -194,12 +227,16 @@ def scrape_tiktok_slideshow(tiktok_url: str, output_dir: str) -> dict:
         }
     }
 
+    log.debug(f"Metadata: title='{result['metadata']['title'][:30]}...', author='{result['metadata']['author']}'")
+
     # Extract image URLs
     images = data.get('images', [])
     if not images:
         image_post = data.get('image_post_info', {})
         if image_post:
             images = image_post.get('images', [])
+
+    log.info(f"Found {len(images)} images to download")
 
     # Prepare download tasks
     download_tasks = []
@@ -218,11 +255,12 @@ def scrape_tiktok_slideshow(tiktok_url: str, output_dir: str) -> dict:
     def download_task(task):
         url, path, idx = task
         try:
-            download_media(url, path)
+            download_media(url, path, request_id=request_id)
             return (idx, path)
         except TikTokScraperError:
             return (idx, None)
 
+    log.debug(f"Starting parallel download of {len(download_tasks)} images (8 workers)")
     with ThreadPoolExecutor(max_workers=8) as executor:
         futures = [executor.submit(download_task, task) for task in download_tasks]
         downloaded = {}
@@ -233,6 +271,7 @@ def scrape_tiktok_slideshow(tiktok_url: str, output_dir: str) -> dict:
 
     # Maintain order
     result['images'] = [downloaded[i] for i in sorted(downloaded.keys())]
+    log.info(f"Downloaded {len(result['images'])}/{len(images)} images")
 
     # Extract and download audio (in parallel with nothing, but fast)
     music = data.get('music')
@@ -243,16 +282,21 @@ def scrape_tiktok_slideshow(tiktok_url: str, output_dir: str) -> dict:
         elif isinstance(music, dict):
             audio_url = music.get('play_url') or music.get('play_url_music')
     if audio_url:
+        log.debug("Downloading audio...")
         audio_path = os.path.join(output_dir, 'audio.mp3')
         try:
-            download_media(audio_url, audio_path)
+            download_media(audio_url, audio_path, request_id=request_id)
             result['audio'] = audio_path
+            log.debug("Audio downloaded successfully")
         except TikTokScraperError:
-            pass
+            log.warning("Audio download failed")
 
     if not result['images']:
+        log.error("No slideshow images could be downloaded")
         raise TikTokScraperError('No slideshow images could be downloaded')
 
+    elapsed = time.time() - start_time
+    log.info(f"Scrape complete in {elapsed:.1f}s: {len(result['images'])} images, audio={'yes' if result['audio'] else 'no'}")
     return result
 
 

@@ -31,9 +31,9 @@ The TikTok Slideshow Generator is a web application that allows users to create 
 2. The system must accept product photos upload (up to 10 images)
 3. The system must accept a folder name for organizing output
 4. The system must allow users to specify the number of variations for:
-   - Hook slide (always 1 in source, first slide)
-   - Body slides (variable count, all middle slides)
-   - Product slide (always 1 in source, last slide)
+   - Hook slide (1 base slide)
+   - Body slides (4 base slides)
+   - Product slide (1 base slide)
 5. The system must display uploaded product photos in the interface for user preview
 
 ### TikTok Analysis & Extraction
@@ -82,21 +82,18 @@ The TikTok Slideshow Generator is a web application that allows users to create 
 ## Technical Considerations
 
 ### APIs & Services
-- **Gemini 3 Pro** (`gemini-3-pro-preview`): Analysis, slide categorization, text generation
-- **Gemini 3 Pro Image** (`gemini-3-pro-image-preview`): Image generation and style transfer
+- **Gemini 2.0 Flash** (`gemini-3-pro-image-preview`): Image generation and text overlay
 - **RapidAPI TikTok Scraper**: Extract slides and audio from TikTok URLs
 - **Google Drive API**: File storage and folder management (service account auth)
 
 ### Architecture
-- **Backend**: Python (Flask or FastAPI)
-- **Frontend**: Alpine.js + Tailwind CSS (lightweight, perfect for form-based MVP)
+- **Backend**: Python (Flask/FastAPI) recommended for Gemini SDK integration
+- **Frontend**: Simple HTML/CSS/JS or lightweight framework
 - **Storage**: Google Drive via service account (credentials stored server-side)
-- **Database**: None for MVP (can add SQLite later for run history)
 
-### Gemini API Reference
-- Image generation docs: https://ai.google.dev/gemini-api/docs/image-generation
-- **Analysis model**: `gemini-3-pro-preview` - for categorizing slides, generating text content
-- **Image model**: `gemini-3-pro-image-preview` - for generating/editing images with style transfer
+### Gemini Image Generation Reference
+- Documentation: https://ai.google.dev/gemini-api/docs/image-generation
+- Model: `gemini-3-pro-image-preview`
 
 ### Key Technical Challenges
 1. **Style transfer via Gemini**: Ensuring Gemini accurately replicates both visual style and text font style from reference images in a single generation step

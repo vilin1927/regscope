@@ -15,6 +15,10 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+from logging_config import get_logger, get_request_logger
+
+logger = get_logger('gemini')
+
 from google import genai
 from google.genai import types
 
@@ -41,6 +45,7 @@ class RateLimiter:
         self.min_interval = 60.0 / rpm  # seconds between requests
         self.last_request_time = 0.0
         self.lock = threading.Lock()
+        logger.debug(f"RateLimiter initialized: rpm={rpm}, max_concurrent={max_concurrent}")
 
     def acquire(self):
         """Acquire permission to make a request. Blocks if rate limit exceeded."""
@@ -49,7 +54,9 @@ class RateLimiter:
             now = time.time()
             elapsed = now - self.last_request_time
             if elapsed < self.min_interval:
-                time.sleep(self.min_interval - elapsed)
+                wait_time = self.min_interval - elapsed
+                logger.debug(f"Rate limiter: waiting {wait_time:.2f}s")
+                time.sleep(wait_time)
             self.last_request_time = time.time()
 
     def release(self):
@@ -100,14 +107,19 @@ def analyze_and_plan(
     slide_paths: list[str],
     product_image_path: str,
     product_description: str,
-    output_dir: str
+    output_dir: str,
+    request_id: str = None
 ) -> dict:
     """
     Single API call to analyze ALL slides and create new story plan.
-    
+
     Detects slideshow type, identifies target audience, finds optimal
     product insertion point, and generates complete slide plan.
     """
+    log = get_request_logger('gemini', request_id) if request_id else logger
+    log.info(f"Starting analysis: {len(slide_paths)} slides, product: {product_description[:40]}...")
+    start_time = time.time()
+
     client = _get_client()
     num_slides = len(slide_paths)
 
@@ -227,10 +239,17 @@ POSITION RULES (all types):
 - Product slide should feel like it BELONGS, not interrupts
 
 ═══════════════════════════════════════════════════════════════
-TASK 5: CREATE NEW SLIDESHOW PLAN
+TASK 5: CREATE A COMPLETELY NEW SLIDESHOW (NOT A COPY!)
 ═══════════════════════════════════════════════════════════════
 
-For EVERY slide, specify:
+CRITICAL: Do NOT recreate or copy the original scenes!
+The reference images are ONLY for visual style (font, colors, layout).
+Create ENTIRELY NEW and FRESH content that fits the user's product.
+
+THINK LIKE A CONTENT CREATOR:
+- What tips would actually help someone in this category?
+- What lifestyle moments relate to this product?
+- What would make Gen-Z actually save this post?
 
 TEXT RULES FOR ALL SLIDES:
 - NEVER end sentences with "."
@@ -238,14 +257,22 @@ TEXT RULES FOR ALL SLIDES:
 - Emojis are encouraged ✨⚡💫
 
 HOOK SLIDE (slide 0):
-- Adapt hook to relate to user's product category
-- Keep the SAME hook style/angle as original
-- Example: "hair tips" → "sleep tips" if product is steam eye mask
+- Create a NEW attention-grabbing hook for the product category
+- Use same STYLE (provocative, listicle, relatable) but DIFFERENT content
+- Be creative! Don't just replace one word in the original hook.
 
 BODY SLIDES (tips/steps that are NOT product):
-- Create REAL valuable content (not about product)
-- Must fit the category and audience
-- These tips should SURROUND the product naturally
+- INVENT completely NEW tips relevant to the product's category
+- DO NOT copy or recreate the original tips!!!
+- Think: What are 5-6 DIFFERENT tips a creator would give about this topic?
+- Each tip should be UNIQUE and valuable on its own
+- Mix up the scenes: morning moments, nighttime, self-care, lifestyle activities
+- Example categories of tips to inspire variety:
+  - Environment/setting tips ("keep your bedroom cool")
+  - Habit tips ("no phone 30 mins before bed")
+  - Product-adjacent tips ("silk pillowcase")
+  - Mindset tips ("journal your thoughts")
+  - Routine tips ("stretch for 5 mins")
 
 PRODUCT SLIDE (exactly ONE):
 - Frame as tip/recommendation, NOT advertisement
@@ -261,6 +288,12 @@ CTA SLIDE (only if original has one):
 - Keep engagement style
 - Adapt question to new category
 - If original doesn't have CTA, don't add one
+
+SCENE DIVERSITY REQUIREMENT:
+Make sure each body slide shows a DIFFERENT type of scene:
+- NOT all in bathroom
+- NOT all applying products
+- Mix indoor/outdoor, morning/night, active/relaxed moments
 
 ═══════════════════════════════════════════════════════════════
 OUTPUT FORMAT
@@ -307,7 +340,7 @@ Return ONLY valid JSON:
             "slide_type": "hook",
             "reference_image_index": 0,
             "has_persona": true,
-            "new_scene_description": "describe the image to generate",
+            "new_scene_description": "COMPLETELY NEW scene - different from original!",
             "text_content": "exact text to display on slide",
             "text_position_hint": "where text goes, what NOT to cover"
         }},
@@ -322,6 +355,11 @@ Return ONLY valid JSON:
         }}
     ]
 }}
+
+IMPORTANT - reference_image_index explained:
+- This tells us which ORIGINAL slide to use as STYLE reference
+- STYLE = font, colors, text box design, layout
+- STYLE ≠ scene content! The scene should be COMPLETELY DIFFERENT!
 
 CRITICAL RULES:
 1. Exactly {num_slides} slides in new_slides array
@@ -352,11 +390,14 @@ CRITICAL RULES:
     ))
 
     try:
+        log.debug(f"Calling {ANALYSIS_MODEL} with {len(contents)} content parts")
         response = client.models.generate_content(
             model=ANALYSIS_MODEL,
             contents=contents
         )
+        elapsed = time.time() - start_time
         result_text = response.text
+        log.debug(f"Analysis API response in {elapsed:.1f}s, response length: {len(result_text)}")
 
         # Parse JSON
         start = result_text.find('{')
@@ -364,17 +405,21 @@ CRITICAL RULES:
         if start >= 0 and end > start:
             analysis = json.loads(result_text[start:end])
         else:
+            log.error("No valid JSON in analysis response")
             raise GeminiServiceError('No valid JSON in response')
 
         # Validate structure
         if 'new_slides' not in analysis:
+            log.error("Missing new_slides in analysis")
             raise GeminiServiceError('Missing new_slides in analysis')
         if len(analysis['new_slides']) != num_slides:
+            log.error(f"Slide count mismatch: expected {num_slides}, got {len(analysis['new_slides'])}")
             raise GeminiServiceError(f"Expected {num_slides} slides, got {len(analysis['new_slides'])}")
-        
+
         # Validate exactly one product slide
         product_slides = [s for s in analysis['new_slides'] if s.get('slide_type') == 'product']
         if len(product_slides) != 1:
+            log.error(f"Product slide count error: expected 1, got {len(product_slides)}")
             raise GeminiServiceError(f"Expected exactly 1 product slide, got {len(product_slides)}")
 
         # Save analysis.json
@@ -383,11 +428,15 @@ CRITICAL RULES:
         with open(analysis_path, 'w') as f:
             json.dump(analysis, f, indent=2)
 
+        slideshow_type = analysis.get('slideshow_type', 'unknown')
+        log.info(f"Analysis complete in {elapsed:.1f}s: type={slideshow_type}, {len(analysis['new_slides'])} slides")
         return analysis
 
     except json.JSONDecodeError as e:
+        log.error(f"Failed to parse analysis JSON: {e}")
         raise GeminiServiceError(f'Failed to parse analysis JSON: {e}')
     except Exception as e:
+        log.error(f"Analysis failed: {str(e)}", exc_info=True)
         raise GeminiServiceError(f'Analysis failed: {str(e)}')
 
 
@@ -509,8 +558,41 @@ IMPORTANT: Only ONE person in the image - never two people!"""
                     mime_type=_get_image_mime_type(persona_reference_path)
                 )
             ]
+        elif has_persona:
+            # Has persona but NO reference yet - CREATE a new persona
+            prompt = f"""Generate a TikTok {slide_label} slide.
+
+[STYLE_REFERENCE] - Reference slide. Copy EXACTLY as shown:
+- EXACT same font
+- EXACT same color
+- EXACT same style
+(Do NOT copy the person - create a NEW person)
+
+CREATE A NEW PERSONA:
+- Attractive, relatable TikTok content creator
+- Natural, authentic appearance
+- Will be used as reference for other slides
+
+NEW SCENE: {scene_description}
+
+TEXT TO DISPLAY:
+{text_content}
+
+LAYOUT: {text_position_hint}
+Never cover face with text
+
+IMPORTANT: Only ONE person in the image - never two people!"""
+
+            contents = [
+                prompt,
+                "[STYLE_REFERENCE]",
+                types.Part.from_bytes(
+                    data=_load_image_bytes(reference_image_path),
+                    mime_type=_get_image_mime_type(reference_image_path)
+                )
+            ]
         else:
-            # No persona - just style reference
+            # No persona needed - just style reference
             prompt = f"""Generate a TikTok {slide_label} slide.
 
 [STYLE_REFERENCE] - Reference slide. Copy EXACTLY as shown:
@@ -583,7 +665,8 @@ def generate_all_images(
     progress_callback: Optional[ImageProgressCallback] = None,
     hook_variations: int = 1,
     body_variations: int = 1,
-    product_variations: int = 1
+    product_variations: int = 1,
+    request_id: str = None
 ) -> dict:
     """
     Generate all images with persona consistency and variations support.
@@ -602,12 +685,16 @@ def generate_all_images(
         hook_variations: Number of variations for hook slide (default 1)
         body_variations: Number of variations per body slide (default 1)
         product_variations: Number of variations for product slide (default 1)
+        request_id: Optional request ID for logging
 
     Returns:
         dict with:
             - images: flat list of all generated image paths
             - variations: structured dict by slide type
     """
+    log = get_request_logger('gemini', request_id) if request_id else logger
+    start_time = time.time()
+
     client = _get_client()
     os.makedirs(output_dir, exist_ok=True)
 
@@ -673,6 +760,8 @@ def generate_all_images(
     # Separate persona tasks from non-persona tasks
     persona_tasks = [t for t in all_tasks if t['has_persona']]
     non_persona_tasks = [t for t in all_tasks if not t['has_persona']]
+
+    log.info(f"Generation tasks: {total} total ({len(persona_tasks)} persona, {len(non_persona_tasks)} non-persona)")
 
     # Initialize rate limiter
     rate_limiter = RateLimiter(rpm=RPM_LIMIT, max_concurrent=MAX_CONCURRENT)
@@ -759,6 +848,9 @@ def generate_all_images(
 
     # Check for errors
     if errors:
+        log.error(f"Generation failed: {len(errors)} errors")
+        for task_id, err in errors:
+            log.error(f"  {task_id}: {err}")
         error_msgs = [f"{task_id}: {err}" for task_id, err in errors]
         raise GeminiServiceError(f"Image generation failed:\n" + "\n".join(error_msgs))
 
@@ -771,6 +863,9 @@ def generate_all_images(
 
     # Build flat list (all images in task order)
     all_images = [results[t['task_id']] for t in all_tasks if t['task_id'] in results]
+
+    elapsed = time.time() - start_time
+    log.info(f"All images generated in {elapsed:.1f}s: {len(all_images)} images")
 
     return {
         'images': all_images,
@@ -786,7 +881,8 @@ def run_pipeline(
     progress_callback: Optional[PipelineProgressCallback] = None,
     hook_variations: int = 1,
     body_variations: int = 1,
-    product_variations: int = 1
+    product_variations: int = 1,
+    request_id: str = None
 ) -> dict:
     """
     Run the complete generation pipeline.
@@ -803,6 +899,7 @@ def run_pipeline(
         hook_variations: Number of variations for hook slide (default 1)
         body_variations: Number of variations per body slide (default 1)
         product_variations: Number of variations for product slide (default 1)
+        request_id: Optional request ID for logging
 
     Returns:
         dict with keys:
@@ -815,25 +912,37 @@ def run_pipeline(
         1. Analyze slideshow type, audience, find optimal product insertion
         2. Generate all images with persona consistency and variations
     """
+    log = get_request_logger('gemini', request_id) if request_id else logger
+    start_time = time.time()
+
+    total_variations = hook_variations + (len(slide_paths) - 2) * body_variations + product_variations
+    log.info(f"Starting pipeline: {len(slide_paths)} slides, ~{total_variations} total images")
+    log.debug(f"Variations: hook={hook_variations}, body={body_variations}, product={product_variations}")
+
     if progress_callback:
         progress_callback('analyzing', 'Analyzing slideshow and planning new story...', 30)
 
     # Step 1: Analyze and plan
+    log.info("Step 1/2: Analyzing slideshow")
     analysis = analyze_and_plan(
         slide_paths,
         product_image_path,
         product_description,
-        output_dir
+        output_dir,
+        request_id=request_id
     )
 
     if progress_callback:
         progress_callback('generating', 'Generating images...', 40)
 
     # Step 2: Generate all images with variations
+    log.info("Step 2/2: Generating images")
+
     def image_progress(current, total, message):
         if progress_callback:
             percent = 40 + int(50 * current / total)
             progress_callback('generating', message, percent)
+        log.debug(f"Generation progress: {current}/{total}")
 
     generation_result = generate_all_images(
         analysis,
@@ -843,8 +952,12 @@ def run_pipeline(
         progress_callback=image_progress,
         hook_variations=hook_variations,
         body_variations=body_variations,
-        product_variations=product_variations
+        product_variations=product_variations,
+        request_id=request_id
     )
+
+    elapsed = time.time() - start_time
+    log.info(f"Pipeline complete in {elapsed:.1f}s: {len(generation_result['images'])} images generated")
 
     return {
         'analysis': analysis,
