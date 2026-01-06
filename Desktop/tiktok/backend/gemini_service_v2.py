@@ -680,7 +680,10 @@ IMPORTANT: Only ONE person in the image - never two people!"""
                 contents=contents,
                 config=types.GenerateContentConfig(
                     response_modalities=['image', 'text'],
-                    image_config=types.ImageConfig(aspect_ratio="9:16")
+                    image_config=types.ImageConfig(
+                        aspect_ratio="9:16",
+                        image_size="4K"  # 4096px for better text quality
+                    )
                 )
             )
 
