@@ -13,14 +13,15 @@ NC='\033[0m'
 
 echo -e "${YELLOW}=== TikTok Slideshow Deploy ===${NC}"
 
-# 1. Git add and commit
-if [[ -n $(git status -s) ]]; then
+# 1. Git add and commit (only tiktok project files)
+cd /Users/elizavetapirozkova/Desktop/tiktok
+if [[ -n $(git status -s .) ]]; then
     git add .
     MSG="${1:-Auto-deploy $(date +%Y-%m-%d_%H:%M)}"
     git commit -m "$MSG"
     echo -e "${GREEN}✓ Committed: $MSG${NC}"
 else
-    echo "No changes to commit"
+    echo "No local changes to commit"
 fi
 
 # 2. Push to GitHub
