@@ -32,8 +32,8 @@ echo -e "${GREEN}✓ Pushed to GitHub${NC}"
 echo "Deploying to VPS..."
 ssh $VPS_HOST "cd $VPS_PATH && \
     git pull origin $BRANCH && \
-    source venv/bin/activate && \
-    pip install -r backend/requirements.txt -q && \
+    cd backend && \
+    pip3 install -r requirements.txt -q && \
     sudo systemctl restart $SERVICE"
 
 echo -e "${GREEN}✓ Deployed and service restarted${NC}"
