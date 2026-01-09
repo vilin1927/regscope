@@ -1096,6 +1096,10 @@ def generate_all_images(
         slide_type = slide['slide_type']
         has_persona = slide.get('has_persona', False)
 
+        # Skip CTA slides - don't generate or upload
+        if slide_type == 'cta':
+            continue
+
         # Determine number of variations based on slide type
         if slide_type == 'hook':
             num_variations = hook_variations
@@ -1103,9 +1107,6 @@ def generate_all_images(
         elif slide_type == 'product':
             num_variations = 1  # Product always 1 variation
             slide_key = 'product'
-        elif slide_type == 'cta':
-            num_variations = 1  # CTA always 1
-            slide_key = 'cta'
         else:  # body
             num_variations = body_variations
             body_num = sum(1 for s in new_slides[:idx] if s['slide_type'] == 'body') + 1
@@ -1120,10 +1121,7 @@ def generate_all_images(
             version = v + 1  # 1-indexed
 
             # Determine output filename with version
-            if slide_type == 'cta':
-                output_path = os.path.join(output_dir, 'cta.png')
-            else:
-                output_path = os.path.join(output_dir, f'{slide_key}_v{version}.png')
+            output_path = os.path.join(output_dir, f'{slide_key}_v{version}.png')
 
             task = {
                 'task_id': f'{slide_key}_v{version}',
