@@ -14,7 +14,6 @@ from logging_config import get_logger, get_request_logger
 
 logger = get_logger('scraper')
 
-RAPIDAPI_KEY = os.getenv('RAPIDAPI_KEY')
 RAPIDAPI_HOST = 'tiktok-scraper7.p.rapidapi.com'
 
 
@@ -25,10 +24,11 @@ class TikTokScraperError(Exception):
 
 def _get_headers() -> dict:
     """Get RapidAPI headers"""
-    if not RAPIDAPI_KEY:
+    api_key = os.getenv('RAPIDAPI_KEY')  # Read dynamically for hot-reload support
+    if not api_key:
         raise TikTokScraperError('RAPIDAPI_KEY environment variable not set')
     return {
-        'x-rapidapi-key': RAPIDAPI_KEY,
+        'x-rapidapi-key': api_key,
         'x-rapidapi-host': RAPIDAPI_HOST
     }
 
