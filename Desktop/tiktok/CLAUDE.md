@@ -43,7 +43,7 @@ Copy `backend/.env.example` to `backend/.env` and set:
 backend/
   app.py              - Flask API endpoints
   tiktok_scraper.py   - TikTok scraping module
-  gemini_service.py   - Gemini API integration
+  gemini_service_v2.py - Gemini API integration (analysis + image generation)
   google_drive.py     - Google Drive uploads
 frontend/
   index.html          - Alpine.js + Tailwind UI

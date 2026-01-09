@@ -660,7 +660,7 @@ TEXT TO DISPLAY:
 
 LAYOUT: {text_position_hint}
 
-IMPORTANT: Only ONE person in the image - never two people!"""
+IMPORTANT: Do NOT include any human faces or people in this image. This should be a faceless/object-only composition."""
 
             contents = [
                 prompt,
