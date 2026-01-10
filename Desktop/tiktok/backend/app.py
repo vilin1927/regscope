@@ -84,13 +84,17 @@ def update_progress(session_id, step, message, progress, details=None):
 
 def run_generation(session_id, tiktok_url, folder_name, product_context,
                    saved_product_images, session_scraped, session_generated,
-                   hook_variations=1, body_variations=1):
-    """Background task for generation using v2 pipeline with variations support"""
+                   hook_photo_var=1, hook_text_var=1,
+                   body_photo_var=1, body_text_var=1,
+                   product_text_var=1):
+    """Background task for generation using v2 pipeline with photo × text variations"""
     log = get_request_logger('app', session_id)
     start_time = time.time()
 
     log.info(f"Starting generation pipeline - URL: {tiktok_url[:60]}...")
-    log.debug(f"Params: folder={folder_name}, variations=H{hook_variations}/B{body_variations}")
+    log.debug(f"Params: folder={folder_name}, products={len(saved_product_images)}")
+    log.debug(f"Photo vars: hook={hook_photo_var}, body={body_photo_var}")
+    log.debug(f"Text vars: hook={hook_text_var}, body={body_text_var}, product={product_text_var}")
 
     try:
         # ===== STEP 1: Scrape TikTok =====
@@ -122,12 +126,15 @@ def run_generation(session_id, tiktok_url, folder_name, product_context,
         try:
             result = run_pipeline(
                 slide_paths=scraped['images'],
-                product_image_path=saved_product_images[0],
+                product_image_paths=saved_product_images,
                 product_description=product_context,
                 output_dir=session_generated,
                 progress_callback=progress_callback,
-                hook_variations=hook_variations,
-                body_variations=body_variations,
+                hook_photo_var=hook_photo_var,
+                hook_text_var=hook_text_var,
+                body_photo_var=body_photo_var,
+                body_text_var=body_text_var,
+                product_text_var=product_text_var,
                 request_id=session_id
             )
         except GeminiServiceError as e:
@@ -206,16 +213,23 @@ def generate_slideshow():
         folder_name = request.form.get('folder_name')
         product_context = request.form.get('product_context', 'Product')
 
-        # Variation params (default to 1 if not provided)
-        hook_variations = int(request.form.get('hook_variations', 1))
-        body_variations = int(request.form.get('body_variations', 1))
+        # Photo × Text variation params (default to 1 if not provided)
+        hook_photo_var = int(request.form.get('hook_photo_var', 1))
+        hook_text_var = int(request.form.get('hook_text_var', 1))
+        body_photo_var = int(request.form.get('body_photo_var', 1))
+        body_text_var = int(request.form.get('body_text_var', 1))
+        product_text_var = int(request.form.get('product_text_var', 1))
 
         # Clamp to valid range (1-5)
-        hook_variations = max(1, min(5, hook_variations))
-        body_variations = max(1, min(5, body_variations))
+        hook_photo_var = max(1, min(5, hook_photo_var))
+        hook_text_var = max(1, min(5, hook_text_var))
+        body_photo_var = max(1, min(5, body_photo_var))
+        body_text_var = max(1, min(5, body_text_var))
+        product_text_var = max(1, min(5, product_text_var))
 
         log.info(f"New request: url={tiktok_url[:50]}... folder={folder_name}")
-        log.debug(f"Variations: hook={hook_variations}, body={body_variations}")
+        log.debug(f"Photo vars: hook={hook_photo_var}, body={body_photo_var}")
+        log.debug(f"Text vars: hook={hook_text_var}, body={body_text_var}, product={product_text_var}")
 
         if not tiktok_url:
             log.warning("Validation failed: missing TikTok URL")
@@ -224,35 +238,39 @@ def generate_slideshow():
             log.warning("Validation failed: missing folder name")
             return jsonify({'error': 'Folder name is required'}), 400
 
-        # Get product image (v2: only 1 product image used)
+        # Get product images (multiple allowed for photo variations)
         product_images = request.files.getlist('product_images')
         if not product_images or len(product_images) == 0 or product_images[0].filename == '':
             log.warning("Validation failed: missing product image")
-            return jsonify({'error': 'Product image is required'}), 400
+            return jsonify({'error': 'At least one product image is required'}), 400
 
-        # Save product image
+        # Save all product images
         os.makedirs(session_uploads, exist_ok=True)
         saved_product_images = []
-        img = product_images[0]
-        if img and allowed_file(img.filename):
-            filename = secure_filename(img.filename)
-            filepath = os.path.join(session_uploads, f'product_{filename}')
-            img.save(filepath)
-            saved_product_images.append(filepath)
-            log.debug(f"Saved product image: {filename}")
+        for i, img in enumerate(product_images):
+            if img and img.filename and allowed_file(img.filename):
+                filename = secure_filename(img.filename)
+                filepath = os.path.join(session_uploads, f'product_{i}_{filename}')
+                img.save(filepath)
+                saved_product_images.append(filepath)
+                log.debug(f"Saved product image {i+1}: {filename}")
 
         if not saved_product_images:
             log.warning("Validation failed: invalid product image format")
-            return jsonify({'error': 'Invalid product image'}), 400
+            return jsonify({'error': 'Invalid product image(s)'}), 400
+
+        log.info(f"Saved {len(saved_product_images)} product images")
 
         # Initialize progress
         update_progress(session_id, 'starting', 'Starting generation...', 5)
 
-        # Start background generation thread (v2 pipeline with variations)
+        # Start background generation thread (v2 pipeline with photo × text variations)
         thread = threading.Thread(target=run_generation, args=(
             session_id, tiktok_url, folder_name, product_context,
             saved_product_images, session_scraped, session_generated,
-            hook_variations, body_variations
+            hook_photo_var, hook_text_var,
+            body_photo_var, body_text_var,
+            product_text_var
         ))
         thread.start()
         log.info("Background thread started")

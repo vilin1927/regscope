@@ -303,9 +303,12 @@ def _validate_brand_not_hallucinated(
 
 def analyze_and_plan(
     slide_paths: list[str],
-    product_image_path: str,
+    product_image_paths: list[str],
     product_description: str,
     output_dir: str,
+    hook_text_var: int = 1,
+    body_text_var: int = 1,
+    product_text_var: int = 1,
     request_id: str = None
 ) -> dict:
     """
@@ -572,6 +575,42 @@ CTA SLIDE (only if original has one):
 - Adapt question to new category
 - If original doesn't have CTA, don't add one
 
+═══════════════════════════════════════════════════════════════
+TASK 6: GENERATE TEXT VARIATIONS
+═══════════════════════════════════════════════════════════════
+
+Generate MULTIPLE text alternatives for each slide type:
+- Hook slide: Generate {hook_text_var} different hook text variations
+- Body slides: Generate {body_text_var} different text variations per slide
+- Product slide: Generate {product_text_var} different product pitch variations
+
+VARIATION RULES:
+- Each text variation should convey the SAME message but with DIFFERENT wording
+- Vary emoji usage, sentence structure, and tone slightly
+- All variations must feel authentic to the slideshow style
+- Keep the same general length and vibe
+
+EXAMPLES:
+Hook variations:
+  1. "simple things I do to sleep 10x better 😴"
+  2. "my bedtime secrets for the best sleep ever ✨"
+  3. "habits that completely changed my sleep game"
+
+Body variations:
+  1. "keep the room cold 🥶 under 68°F hits different"
+  2. "cold room = better sleep! I keep mine at 65°F"
+  3. "the secret? a freezing cold bedroom ❄️"
+
+Product variations (must ALL include brand name and purchase location!):
+  1. "obsessed with my lumidew steam mask! got it on amazon ✨"
+  2. "this lumidew mask is a game changer, amazon has them"
+  3. "lumidew steam masks before bed = best sleep! (amazon)"
+
+OUTPUT: Use "text_variations" array instead of single "text_content":
+{{
+    "text_variations": ["option 1", "option 2", "option 3"]
+}}
+
 SCENE DIVERSITY REQUIREMENT:
 Make sure each body slide shows a DIFFERENT type of scene:
 - NOT all in bathroom
@@ -644,7 +683,7 @@ Return ONLY valid JSON:
             "reference_image_index": 0,
             "has_persona": true,
             "new_scene_description": "COMPLETELY NEW scene - different from original!",
-            "text_content": "exact text to display on slide",
+            "text_variations": ["hook text option 1", "hook text option 2"],
             "text_position_hint": "where text goes, what NOT to cover"
         }},
         {{
@@ -653,7 +692,10 @@ Return ONLY valid JSON:
             "reference_image_index": 4,
             "has_persona": false,
             "new_scene_description": "User's product in lifestyle context",
-            "text_content": "Header: steam eye mask before bed\\n\\ntotal game changer for my sleep! I keep lumidew masks on my nightstand, they warm up on their own and feel like a cozy spa moment ✨ got them on amazon",
+            "text_variations": [
+                "Header: steam eye mask before bed\\n\\ntotal game changer! lumidew masks are my fave ✨ got them on amazon",
+                "Header: use a steam mask\\n\\nobsessed with my lumidew mask from amazon! so relaxing before bed"
+            ],
             "text_position_hint": "text at top, DO NOT cover product"
         }}
     ]
@@ -667,11 +709,12 @@ IMPORTANT - reference_image_index explained:
 CRITICAL RULES:
 1. Exactly {num_slides} slides in new_slides array
 2. Exactly ONE slide with slide_type="product"
-3. Product slide text_content must have Header + Body format
+3. Product slide text_variations must have Header + Body format in EACH variation
 4. All other slides are hook, body, or cta
-5. text_content must be the ACTUAL text to display
+5. text_variations must be an ARRAY of text options (count based on slide type)
 6. has_persona must be true/false for each slide
 7. cta_index is null if original has no CTA slide
+8. Hook needs {hook_text_var} text variations, body needs {body_text_var}, product needs {product_text_var}
 """
 
     # Build content with all images
@@ -685,12 +728,16 @@ CRITICAL RULES:
             mime_type=_get_image_mime_type(path)
         ))
 
-    # Add user's product image last
-    contents.append("[USER'S PRODUCT IMAGE]")
-    contents.append(types.Part.from_bytes(
-        data=_load_image_bytes(product_image_path),
-        mime_type=_get_image_mime_type(product_image_path)
-    ))
+    # Add user's product image(s) last
+    for i, product_path in enumerate(product_image_paths):
+        if i == 0:
+            contents.append("[USER'S PRODUCT IMAGE]")
+        else:
+            contents.append(f"[USER'S PRODUCT IMAGE {i+1}]")
+        contents.append(types.Part.from_bytes(
+            data=_load_image_bytes(product_path),
+            mime_type=_get_image_mime_type(product_path)
+        ))
 
     try:
         log.debug(f"Calling {ANALYSIS_MODEL} with {len(contents)} content parts")
@@ -1092,30 +1139,35 @@ PipelineProgressCallback = Callable[[str, str, int], None]
 def generate_all_images(
     analysis: dict,
     slide_paths: list[str],
-    product_image_path: str,
+    product_image_paths: list[str],
     output_dir: str,
     progress_callback: Optional[ImageProgressCallback] = None,
-    hook_variations: int = 1,
-    body_variations: int = 1,
+    hook_photo_var: int = 1,
+    body_photo_var: int = 1,
     request_id: str = None
 ) -> dict:
     """
-    Generate all images with persona consistency and variations support.
+    Generate all images with persona consistency and photo × text variations.
 
     Strategy:
     1. Generate first persona variation FIRST (creates the persona)
     2. Use that generated image as PERSONA_REFERENCE for all other persona slides/variations
-    3. Run all remaining variations in parallel
+    3. Run all remaining variations in parallel (photo × text matrix)
 
     Args:
-        analysis: Output from analyze_and_plan()
+        analysis: Output from analyze_and_plan() - includes text_variations per slide
         slide_paths: List of original slide image paths
-        product_image_path: Path to user's product image
+        product_image_paths: List of user's product images (each = one photo variation)
         output_dir: Directory to save generated images
         progress_callback: Optional callback with signature (current, total, message)
-        hook_variations: Number of variations for hook slide (default 1)
-        body_variations: Number of variations per body slide (default 1)
+        hook_photo_var: Number of photo variations for hook slide (default 1)
+        body_photo_var: Number of photo variations per body slide (default 1)
         request_id: Optional request ID for logging
+
+    Photo × Text Matrix:
+        - Hook: hook_photo_var × len(text_variations) images
+        - Body: body_photo_var × len(text_variations) images per body slide
+        - Product: len(product_image_paths) × len(text_variations) images
 
     Returns:
         dict with:
@@ -1131,7 +1183,7 @@ def generate_all_images(
     new_slides = analysis['new_slides']
     text_style = analysis.get('text_style', None)  # Extract text style from analysis
 
-    # Build all tasks with variations
+    # Build all tasks with photo × text variations
     all_tasks = []
     variations_structure = {}  # Track variations by slide key
 
@@ -1145,15 +1197,23 @@ def generate_all_images(
         if slide_type == 'cta':
             continue
 
-        # Determine number of variations based on slide type
+        # Get text variations from analysis (or fallback to single text_content)
+        text_variations = slide.get('text_variations', [])
+        if not text_variations:
+            # Fallback: use text_content if text_variations not provided
+            text_content = slide.get('text_content', '')
+            text_variations = [text_content] if text_content else ['']
+
+        # Determine photo variations and slide key
         if slide_type == 'hook':
-            num_variations = hook_variations
+            photo_vars = hook_photo_var
             slide_key = 'hook'
         elif slide_type == 'product':
-            num_variations = 1  # Product always 1 variation
+            # Product photo variations = number of uploaded product images
+            photo_vars = len(product_image_paths)
             slide_key = 'product'
         else:  # body
-            num_variations = body_variations
+            photo_vars = body_photo_var
             body_num = sum(1 for s in new_slides[:idx] if s['slide_type'] == 'body') + 1
             slide_key = f'body_{body_num}'
 
@@ -1161,28 +1221,37 @@ def generate_all_images(
         if slide_key not in variations_structure:
             variations_structure[slide_key] = []
 
-        # Create task for each variation
-        for v in range(num_variations):
-            version = v + 1  # 1-indexed
+        # Create photo × text matrix of tasks
+        for p_idx in range(photo_vars):
+            for t_idx, text_content in enumerate(text_variations):
+                photo_ver = p_idx + 1  # 1-indexed
+                text_ver = t_idx + 1   # 1-indexed
 
-            # Determine output filename with version
-            output_path = os.path.join(output_dir, f'{slide_key}_v{version}.png')
+                # Determine output filename with photo and text version
+                output_path = os.path.join(output_dir, f'{slide_key}_p{photo_ver}_t{text_ver}.png')
 
-            task = {
-                'task_id': f'{slide_key}_v{version}',
-                'slide_index': idx,
-                'slide_type': slide_type,
-                'slide_key': slide_key,
-                'version': version,
-                'reference_image_path': slide_paths[ref_idx] if ref_idx < len(slide_paths) else slide_paths[0],
-                'scene_description': slide.get('new_scene_description', ''),
-                'text_content': slide.get('text_content', ''),
-                'text_position_hint': slide.get('text_position_hint', ''),
-                'output_path': output_path,
-                'product_image_path': product_image_path if slide_type == 'product' else None,
-                'has_persona': has_persona
-            }
-            all_tasks.append(task)
+                # For product slides, use the p_idx-th uploaded image
+                product_img = None
+                if slide_type == 'product' and product_image_paths:
+                    product_img = product_image_paths[p_idx] if p_idx < len(product_image_paths) else product_image_paths[0]
+
+                task = {
+                    'task_id': f'{slide_key}_p{photo_ver}_t{text_ver}',
+                    'slide_index': idx,
+                    'slide_type': slide_type,
+                    'slide_key': slide_key,
+                    'photo_version': photo_ver,
+                    'text_version': text_ver,
+                    'version': photo_ver,  # For variation instruction in prompt
+                    'reference_image_path': slide_paths[ref_idx] if ref_idx < len(slide_paths) else slide_paths[0],
+                    'scene_description': slide.get('new_scene_description', ''),
+                    'text_content': text_content,
+                    'text_position_hint': slide.get('text_position_hint', ''),
+                    'output_path': output_path,
+                    'product_image_path': product_img,
+                    'has_persona': has_persona
+                }
+                all_tasks.append(task)
 
     total = len(all_tasks)
 
@@ -1306,29 +1375,40 @@ def generate_all_images(
 
 def run_pipeline(
     slide_paths: list[str],
-    product_image_path: str,
+    product_image_paths: list[str],
     product_description: str,
     output_dir: str,
     progress_callback: Optional[PipelineProgressCallback] = None,
-    hook_variations: int = 1,
-    body_variations: int = 1,
+    hook_photo_var: int = 1,
+    hook_text_var: int = 1,
+    body_photo_var: int = 1,
+    body_text_var: int = 1,
+    product_text_var: int = 1,
     request_id: str = None
 ) -> dict:
     """
-    Run the complete generation pipeline.
+    Run the complete generation pipeline with photo × text variations.
 
     Args:
         slide_paths: List of paths to scraped TikTok slide images
-        product_image_path: Path to user's product image
+        product_image_paths: List of user's product images (multiple for photo variations)
         product_description: Text description of the product
         output_dir: Directory to save analysis and generated images
         progress_callback: Optional callback with signature (status, message, percent)
             - status: Current phase ('analyzing' | 'generating')
             - message: Human-readable progress message
             - percent: Progress percentage (0-100)
-        hook_variations: Number of variations for hook slide (default 1)
-        body_variations: Number of variations per body slide (default 1)
+        hook_photo_var: Number of photo variations for hook slide
+        hook_text_var: Number of text variations for hook slide
+        body_photo_var: Number of photo variations per body slide
+        body_text_var: Number of text variations per body slide
+        product_text_var: Number of text variations for product slide
         request_id: Optional request ID for logging
+
+    Photo × Text Matrix:
+        - Hook: hook_photo_var × hook_text_var images
+        - Body: body_photo_var × body_text_var images per slide
+        - Product: len(product_image_paths) × product_text_var images
 
     Returns:
         dict with keys:
@@ -1338,15 +1418,22 @@ def run_pipeline(
             - analysis_path: Path to saved analysis.json
 
     Steps:
-        1. Analyze slideshow type, audience, find optimal product insertion
-        2. Generate all images with persona consistency and variations
+        1. Analyze slideshow with text variations generation
+        2. Generate all images with photo × text matrix
     """
     log = get_request_logger('gemini', request_id) if request_id else logger
     start_time = time.time()
 
-    total_variations = hook_variations + (len(slide_paths) - 2) * body_variations + 1
-    log.info(f"Starting pipeline: {len(slide_paths)} slides, ~{total_variations} total images")
-    log.debug(f"Variations: hook={hook_variations}, body={body_variations}")
+    # Estimate total images (photo × text for each slide type)
+    hook_total = hook_photo_var * hook_text_var
+    body_count = max(1, len(slide_paths) - 2)  # Estimate body slides
+    body_total = body_count * body_photo_var * body_text_var
+    product_total = len(product_image_paths) * product_text_var
+    total_estimate = hook_total + body_total + product_total
+
+    log.info(f"Starting pipeline: {len(slide_paths)} slides, ~{total_estimate} total images")
+    log.debug(f"Photo vars: hook={hook_photo_var}, body={body_photo_var}, product={len(product_image_paths)}")
+    log.debug(f"Text vars: hook={hook_text_var}, body={body_text_var}, product={product_text_var}")
 
     if progress_callback:
         progress_callback('analyzing', 'Analyzing slideshow and planning new story...', 30)
@@ -1355,13 +1442,16 @@ def run_pipeline(
     pre_extraction = _extract_brand_from_description(product_description)
     log.debug(f"Pre-extracted brand candidates: {pre_extraction}")
 
-    # Step 1: Analyze and plan
+    # Step 1: Analyze and plan (with text variation counts)
     log.info("Step 1/2: Analyzing slideshow")
     analysis = analyze_and_plan(
         slide_paths,
-        product_image_path,
+        product_image_paths,
         product_description,
         output_dir,
+        hook_text_var=hook_text_var,
+        body_text_var=body_text_var,
+        product_text_var=product_text_var,
         request_id=request_id
     )
 
@@ -1405,11 +1495,11 @@ def run_pipeline(
     generation_result = generate_all_images(
         analysis,
         slide_paths,
-        product_image_path,
+        product_image_paths,
         output_dir,
         progress_callback=image_progress,
-        hook_variations=hook_variations,
-        body_variations=body_variations,
+        hook_photo_var=hook_photo_var,
+        body_photo_var=body_photo_var,
         request_id=request_id
     )
 
