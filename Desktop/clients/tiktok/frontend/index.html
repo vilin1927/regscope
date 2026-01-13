@@ -813,45 +813,71 @@ https://vm.tiktok.com/abc..."
                             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                             <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                         </svg>
-                        <span x-text="videoStatus"></span>
+                        Uploading...
                     </span>
                 </button>
 
-                <!-- Video Result -->
-                <div x-show="videoResult" x-cloak class="mt-6 bg-green-900/50 border border-green-700 rounded-xl p-6">
-                    <div class="flex items-center space-x-3 mb-4">
-                        <svg class="w-6 h-6 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                        </svg>
-                        <h3 class="text-lg font-semibold text-green-400">Video Created!</h3>
+                <!-- Video Error (upload errors only) -->
+                <div x-show="videoError" x-cloak class="mt-6 bg-red-900/50 border border-red-700 rounded-xl p-4">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center space-x-2">
+                            <svg class="w-5 h-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                            </svg>
+                            <span class="text-red-400" x-text="videoError"></span>
+                        </div>
+                        <button @click="videoError = null" class="text-gray-400 hover:text-white">&times;</button>
                     </div>
-                    <a
-                        :href="videoResult.drive_url"
-                        target="_blank"
-                        class="inline-flex items-center px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-                    >
-                        <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 24 24">
-                            <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"></path>
-                        </svg>
-                        Open Google Drive Folder
-                    </a>
                 </div>
 
-                <!-- Video Error -->
-                <div x-show="videoError" x-cloak class="mt-6 bg-red-900/50 border border-red-700 rounded-xl p-6">
-                    <div class="flex items-center space-x-3">
-                        <svg class="w-6 h-6 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                        </svg>
-                        <h3 class="text-lg font-semibold text-red-400">Error</h3>
+                <!-- Video Jobs Queue -->
+                <div x-show="videoJobs.length > 0" x-cloak class="mt-6 bg-gray-800/50 border border-gray-700 rounded-xl p-4">
+                    <div class="flex items-center justify-between mb-3">
+                        <h3 class="text-lg font-medium text-white">Video Queue</h3>
+                        <button
+                            x-show="videoJobs.every(j => j.status === 'completed' || j.status === 'failed')"
+                            @click="videoJobs = []"
+                            class="text-xs text-gray-400 hover:text-white"
+                        >Clear All</button>
                     </div>
-                    <p class="text-gray-300 mt-2" x-text="videoError"></p>
-                    <button
-                        @click="videoError = null"
-                        class="mt-4 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
-                    >
-                        Dismiss
-                    </button>
+                    <div class="space-y-2 max-h-64 overflow-y-auto">
+                        <template x-for="job in videoJobs" :key="job.job_id">
+                            <div class="flex items-center justify-between bg-gray-700/50 rounded-lg p-3">
+                                <div class="flex items-center space-x-3">
+                                    <!-- Status icon -->
+                                    <span x-show="job.status === 'pending'" class="w-2 h-2 bg-yellow-400 rounded-full"></span>
+                                    <span x-show="job.status === 'processing'" class="animate-spin w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full"></span>
+                                    <svg x-show="job.status === 'completed'" class="w-4 h-4 text-green-400" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+                                    </svg>
+                                    <svg x-show="job.status === 'failed'" class="w-4 h-4 text-red-400" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"></path>
+                                    </svg>
+                                    <div>
+                                        <span class="text-white text-sm" x-text="job.folder_name"></span>
+                                        <span class="text-xs ml-2"
+                                            :class="{
+                                                'text-yellow-400': job.status === 'pending',
+                                                'text-blue-400': job.status === 'processing',
+                                                'text-green-400': job.status === 'completed',
+                                                'text-red-400': job.status === 'failed'
+                                            }"
+                                            x-text="job.status"></span>
+                                    </div>
+                                </div>
+                                <div class="flex items-center space-x-2">
+                                    <a x-show="job.drive_url" :href="job.drive_url" target="_blank"
+                                       class="text-sm px-3 py-1 bg-purple-600 text-white rounded hover:bg-purple-700 transition-colors">
+                                        View
+                                    </a>
+                                    <span x-show="job.status === 'failed' && job.error"
+                                          class="text-xs text-red-400 max-w-32 truncate"
+                                          :title="job.error"
+                                          x-text="job.error"></span>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
                 </div>
             </div>
         </template>
@@ -1031,12 +1057,10 @@ INSPIRED BY JAPANESE SKIN CARE: Delivers a lifted, contoured look without silico
                 },
                 videoDragOver: false,
                 videoLoading: false,
-                videoStatus: 'Processing...',
-                videoJobId: null,
-                videoResult: null,
                 videoError: null,
                 videoPollInterval: null,
                 draggingVideoIndex: null,
+                videoJobs: [],  // {job_id, folder_name, status, drive_url, error}
 
                 // Single mode methods - multiple file support
                 handleFileSelect(event) {
@@ -1572,9 +1596,8 @@ INSPIRED BY JAPANESE SKIN CARE: Delivers a lifted, contoured look without silico
 
                     this.videoLoading = true;
                     this.videoError = null;
-                    this.videoResult = null;
-                    this.videoStatus = 'Uploading...';
 
+                    const folderName = this.videoData.folder_name || 'Slideshow_Video';
                     const formData = new FormData();
 
                     // Add images in order
@@ -1588,7 +1611,7 @@ INSPIRED BY JAPANESE SKIN CARE: Delivers a lifted, contoured look without silico
                     }
 
                     // Add folder name
-                    formData.append('folder_name', this.videoData.folder_name || 'Slideshow_Video');
+                    formData.append('folder_name', folderName);
 
                     try {
                         const response = await fetch(`${API_BASE_URL}/api/video/create`, {
@@ -1599,39 +1622,57 @@ INSPIRED BY JAPANESE SKIN CARE: Delivers a lifted, contoured look without silico
                         const data = await response.json();
 
                         if (!response.ok) {
-                            throw new Error(data.error || 'Video creation failed');
+                            throw new Error(data.error || 'Upload failed');
                         }
 
                         if (data.job_id) {
-                            this.videoJobId = data.job_id;
-                            this.videoStatus = 'Processing video...';
-                            this.startVideoPoll();
+                            // Add to jobs list (non-blocking)
+                            this.videoJobs.unshift({
+                                job_id: data.job_id,
+                                folder_name: folderName,
+                                status: 'pending',
+                                drive_url: null,
+                                error: null
+                            });
+
+                            // Clear form for next submission
+                            this.clearVideoImages();
+                            this.clearAudio();
+                            this.videoData.folder_name = '';
+
+                            // Start polling
+                            this.startVideoJobsPoll();
                         }
                     } catch (err) {
                         this.videoError = err.message;
+                    } finally {
                         this.videoLoading = false;
                     }
                 },
 
-                startVideoPoll() {
-                    this.videoPollInterval = setInterval(async () => {
-                        try {
-                            const res = await fetch(`${API_BASE_URL}/api/video/status/${this.videoJobId}`);
-                            const status = await res.json();
+                startVideoJobsPoll() {
+                    if (this.videoPollInterval) return; // Already polling
 
-                            if (status.status === 'completed') {
-                                this.stopVideoPoll();
-                                this.videoLoading = false;
-                                this.videoResult = status;
-                            } else if (status.status === 'failed') {
-                                this.stopVideoPoll();
-                                this.videoLoading = false;
-                                this.videoError = status.error_message || 'Video creation failed';
-                            } else if (status.status === 'processing') {
-                                this.videoStatus = 'Creating video...';
-                            }
-                        } catch (e) {}
-                    }, 2000);
+                    this.videoPollInterval = setInterval(async () => {
+                        const activeJobs = this.videoJobs.filter(j =>
+                            j.status === 'pending' || j.status === 'processing'
+                        );
+
+                        if (activeJobs.length === 0) {
+                            this.stopVideoPoll();
+                            return;
+                        }
+
+                        for (const job of activeJobs) {
+                            try {
+                                const res = await fetch(`${API_BASE_URL}/api/video/status/${job.job_id}`);
+                                const status = await res.json();
+                                job.status = status.status;
+                                job.drive_url = status.drive_url;
+                                job.error = status.error_message;
+                            } catch (e) {}
+                        }
+                    }, 3000);
                 },
 
                 stopVideoPoll() {
