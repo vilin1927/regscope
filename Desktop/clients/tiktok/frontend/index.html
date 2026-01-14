@@ -262,6 +262,22 @@
                     </p>
                 </div>
 
+                <!-- Text Preset Selection -->
+                <div class="mb-6">
+                    <label class="block text-gray-300 text-sm font-medium mb-2">
+                        Text Style
+                    </label>
+                    <select
+                        x-model="formData.preset_id"
+                        class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500"
+                    >
+                        <template x-for="preset in textPresets" :key="preset.id">
+                            <option :value="preset.id" x-text="preset.name"></option>
+                        </template>
+                    </select>
+                    <p class="text-gray-500 text-xs mt-2" x-text="textPresets.find(p => p.id === formData.preset_id)?.desc || ''"></p>
+                </div>
+
                 <!-- Submit Button -->
                 <button
                     type="submit"
@@ -984,8 +1000,22 @@ https://vm.tiktok.com/abc..."
                     body_photo_var: 1,
                     body_text_var: 1,
                     product_text_var: 1,
-                    generate_video: false
+                    generate_video: false,
+                    preset_id: 'gemini'
                 },
+                // Text preset options
+                textPresets: [
+                    { id: 'gemini', name: 'Gemini Text (Auto)', desc: 'Gemini generates text in image' },
+                    { id: 'classic_shadow', name: 'Classic + Shadow', desc: 'Montserrat, white text with drop shadow' },
+                    { id: 'classic_outline', name: 'Classic + Outline', desc: 'Montserrat, white text with black stroke' },
+                    { id: 'classic_box', name: 'Classic + Box', desc: 'Montserrat, black text on white pill' },
+                    { id: 'elegance_shadow', name: 'Elegance + Shadow', desc: 'Crimson Text, white with drop shadow' },
+                    { id: 'elegance_outline', name: 'Elegance + Outline', desc: 'Crimson Text, white with black stroke' },
+                    { id: 'elegance_box', name: 'Elegance + Box', desc: 'Crimson Text, black on white pill' },
+                    { id: 'vintage_shadow', name: 'Vintage + Shadow', desc: 'EB Garamond, white with drop shadow' },
+                    { id: 'vintage_outline', name: 'Vintage + Outline', desc: 'EB Garamond, white with black stroke' },
+                    { id: 'vintage_box', name: 'Vintage + Box', desc: 'EB Garamond, black on white pill' }
+                ],
                 productFiles: [],
                 previewImages: [],
                 isLoading: false,
@@ -1242,6 +1272,9 @@ INSPIRED BY JAPANESE SKIN CARE: Delivers a lifted, contoured look without silico
 
                     // Video generation option
                     formData.append('generate_video', this.formData.generate_video);
+
+                    // Text preset
+                    formData.append('preset_id', this.formData.preset_id);
 
                     try {
                         this.statusMessage = 'Uploading...';
