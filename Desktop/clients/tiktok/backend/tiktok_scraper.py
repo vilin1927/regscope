@@ -7,6 +7,7 @@ import time
 import requests
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dotenv import load_dotenv
+from PIL import Image
 
 load_dotenv()
 
@@ -20,6 +21,28 @@ RAPIDAPI_HOST = 'tiktok-scraper7.p.rapidapi.com'
 class TikTokScraperError(Exception):
     """Custom exception for TikTok scraping errors"""
     pass
+
+
+def _validate_image(file_path: str) -> bool:
+    """
+    Validate that a file is a complete, valid image.
+
+    Args:
+        file_path: Path to the image file
+
+    Returns:
+        True if valid image, False otherwise
+    """
+    try:
+        with Image.open(file_path) as img:
+            # Force load the image data to detect truncation
+            img.load()
+            # Basic sanity check - image should have reasonable dimensions
+            if img.width < 10 or img.height < 10:
+                return False
+            return True
+    except Exception:
+        return False
 
 
 def _get_headers() -> dict:
@@ -158,17 +181,26 @@ def download_media(url: str, save_path: str, use_proxy: bool = True, request_id:
     # Create directory if it doesn't exist
     os.makedirs(os.path.dirname(save_path), exist_ok=True)
 
-    # Try direct download first (short timeout)
+    # Try direct download first (increased timeout for large images)
     try:
         log.debug(f"Direct download: {filename}")
-        response = requests.get(url, headers=headers, stream=True, timeout=5)
+        response = requests.get(url, headers=headers, stream=True, timeout=15)
         response.raise_for_status()
         with open(save_path, 'wb') as f:
             for chunk in response.iter_content(chunk_size=8192):
                 f.write(chunk)
-        log.debug(f"Direct download success: {filename}")
-        return save_path
+        # Validate the downloaded image is complete
+        if _validate_image(save_path):
+            log.debug(f"Direct download success: {filename}")
+            return save_path
+        else:
+            log.debug(f"Direct download incomplete/corrupt: {filename}")
+            os.remove(save_path)  # Remove partial file
+            raise requests.exceptions.RequestException("Image validation failed")
     except requests.exceptions.RequestException:
+        # Clean up partial file if exists
+        if os.path.exists(save_path):
+            os.remove(save_path)
         if not use_proxy:
             log.warning(f"Direct download failed, proxy disabled: {filename}")
             raise TikTokScraperError(f'Download failed and proxy disabled')
@@ -184,13 +216,21 @@ def download_media(url: str, save_path: str, use_proxy: bool = True, request_id:
     for i, proxy_url in enumerate(proxy_urls):
         try:
             log.debug(f"Trying proxy {i+1}/3 for: {filename}")
-            response = requests.get(proxy_url, headers={'User-Agent': headers['User-Agent']}, timeout=15)
+            response = requests.get(proxy_url, headers={'User-Agent': headers['User-Agent']}, timeout=20)
             if response.status_code == 200 and len(response.content) > 1000:
                 with open(save_path, 'wb') as f:
                     f.write(response.content)
-                log.debug(f"Proxy {i+1} success: {filename}")
-                return save_path
+                # Validate the downloaded image is complete
+                if _validate_image(save_path):
+                    log.debug(f"Proxy {i+1} success: {filename}")
+                    return save_path
+                else:
+                    log.debug(f"Proxy {i+1} returned incomplete image: {filename}")
+                    os.remove(save_path)  # Remove invalid file, try next proxy
         except requests.exceptions.RequestException:
+            # Clean up partial file if exists
+            if os.path.exists(save_path):
+                os.remove(save_path)
             continue
 
     log.warning(f"All proxies exhausted: {filename}")
