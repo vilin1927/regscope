@@ -35,10 +35,11 @@ class EffectConfig:
     # Outline settings
     outline_color: str = '#000000'
     outline_width: int = 3
-    # Box settings
+    # Box settings (from Figma CSS: padding: 20px 40px)
     box_color: str = '#FFFFFF'
-    box_padding: int = 20
-    box_radius: int = 15
+    box_padding: int = 40  # Horizontal padding (left/right)
+    box_padding_v: int = 20  # Vertical padding (top/bottom)
+    box_radius: int = 20
     # Text color
     text_color: str = '#FFFFFF'  # Default white, can be black for box
 
@@ -93,8 +94,9 @@ EFFECTS = {
         name='Box',
         type='box',
         box_color='#FFFFFF',
-        box_padding=20,
-        box_radius=15,
+        box_padding=40,      # Horizontal padding (increased)
+        box_padding_v=25,    # Vertical padding
+        box_radius=20,       # Corner radius from Remotion
         text_color='#000000'  # Black text on white box
     )
 }

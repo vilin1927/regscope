@@ -481,5 +481,5 @@ def list_all_jobs():
 
 
 if __name__ == '__main__':
-    logger.info("Starting Flask server on port 80")
-    app.run(debug=False, host='0.0.0.0', port=80)
+    logger.info("Starting Flask server on port 5001")
+    app.run(debug=False, host='0.0.0.0', port=5001)

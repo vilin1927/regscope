@@ -337,9 +337,11 @@ def update_batch_status(
     batch_id: str,
     status: str,
     error_message: str = None,
-    drive_folder_url: str = None
+    drive_folder_url: str = None,
+    completed_links: int = None,
+    failed_links: int = None
 ):
-    """Update batch status."""
+    """Update batch status and sync to jobs table."""
     with get_db() as conn:
         cursor = conn.cursor()
         updates = ['status = ?']
@@ -364,6 +366,43 @@ def update_batch_status(
         cursor.execute(f'''
             UPDATE batches SET {', '.join(updates)} WHERE id = ?
         ''', params)
+
+        # Also sync status to jobs table if job_id exists
+        cursor.execute('SELECT job_id, drive_folder_url FROM batches WHERE id = ?', (batch_id,))
+        batch = cursor.fetchone()
+        if batch and batch['job_id']:
+            job_updates = ['status = ?']
+            job_params = [status]
+
+            if status == 'processing':
+                job_updates.append('started_at = ?')
+                job_params.append(datetime.utcnow().isoformat())
+            elif status in ('completed', 'failed', 'cancelled'):
+                job_updates.append('completed_at = ?')
+                job_params.append(datetime.utcnow().isoformat())
+
+            if error_message:
+                job_updates.append('error_message = ?')
+                job_params.append(error_message)
+
+            # Use batch's drive_folder_url if available
+            batch_drive_url = drive_folder_url or batch['drive_folder_url']
+            if batch_drive_url:
+                job_updates.append('drive_folder_url = ?')
+                job_params.append(batch_drive_url)
+
+            if completed_links is not None:
+                job_updates.append('completed_links = ?')
+                job_params.append(completed_links)
+
+            if failed_links is not None:
+                job_updates.append('failed_links = ?')
+                job_params.append(failed_links)
+
+            job_params.append(batch['job_id'])
+            cursor.execute(f'''
+                UPDATE jobs SET {', '.join(job_updates)} WHERE id = ?
+            ''', job_params)
 
 
 def get_batch_status(batch_id: str) -> Dict[str, Any]:

@@ -21,7 +21,7 @@ from database import (
 from tiktok_scraper import scrape_tiktok_slideshow, TikTokScraperError
 from gemini_service_v2 import run_pipeline, GeminiServiceError
 from google_drive import (
-    create_folder, upload_file, set_folder_public, get_folder_link,
+    create_folder, upload_file, upload_files_parallel, set_folder_public, get_folder_link,
     GoogleDriveError
 )
 from video_generator import create_video, VideoGeneratorError
@@ -171,9 +171,10 @@ def process_link(self, batch_link_id: str, parent_drive_folder_id: str):
             body_text_var = variations_config.get('body_text_var', 1)
             product_text_var = variations_config.get('product_text_var', 1)
             generate_video = variations_config.get('generate_video', False)
+            preset_id = variations_config.get('preset_id', 'gemini')
 
             # Step 3: Run generation pipeline
-            logger.info(f"[Link {batch_link_id[:8]}] Running pipeline with hook={hook_photo_var}x{hook_text_var}, body={body_photo_var}x{body_text_var}")
+            logger.info(f"[Link {batch_link_id[:8]}] Running pipeline with hook={hook_photo_var}x{hook_text_var}, body={body_photo_var}x{body_text_var}, preset={preset_id}")
             pipeline_result = run_pipeline(
                 slide_paths=slide_paths,
                 product_image_paths=[product_photo_path],  # List of product images
@@ -184,7 +185,8 @@ def process_link(self, batch_link_id: str, parent_drive_folder_id: str):
                 body_photo_var=body_photo_var,
                 body_text_var=body_text_var,
                 product_text_var=product_text_var,
-                request_id=batch_link_id[:8]
+                request_id=batch_link_id[:8],
+                preset_id=preset_id
             )
 
             generated_images = pipeline_result.get('generated_images', [])
@@ -197,16 +199,13 @@ def process_link(self, batch_link_id: str, parent_drive_folder_id: str):
             set_folder_public(link_folder_id)
             link_folder_url = get_folder_link(link_folder_id)
 
-            # Upload all generated images
-            uploaded_count = 0
-            for img_path in generated_images:
-                if os.path.exists(img_path):
-                    try:
-                        upload_file(img_path, link_folder_id)
-                        uploaded_count += 1
-                    except GoogleDriveError as e:
-                        logger.warning(f"[Link {batch_link_id[:8]}] Failed to upload {img_path}: {e}")
-
+            # Upload all generated images in parallel (5 concurrent uploads)
+            uploaded_count, upload_failed = upload_files_parallel(
+                generated_images,
+                link_folder_id,
+                max_workers=5,
+                request_id=batch_link_id[:8]
+            )
             logger.info(f"[Link {batch_link_id[:8]}] Uploaded {uploaded_count} images to Drive")
 
             # Step 5: Generate video if requested
@@ -339,7 +338,13 @@ def finalize_batch(self, link_results: list, batch_id: str):
             final_status = 'completed'
             error_msg = None
 
-        update_batch_status(batch_id, final_status, error_message=error_msg)
+        update_batch_status(
+            batch_id,
+            final_status,
+            error_message=error_msg,
+            completed_links=completed,
+            failed_links=failed
+        )
 
         return {
             'batch_id': batch_id,

@@ -8,6 +8,12 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+# CRITICAL: Disable OpenCV threading before any Celery workers fork
+# OpenCV uses internal threading which causes SIGSEGV in forked processes
+import cv2
+cv2.setNumThreads(0)
+cv2.ocl.setUseOpenCL(False)  # Disable OpenCL as well for stability
+
 # Redis configuration
 REDIS_HOST = os.getenv('REDIS_HOST', 'localhost')
 REDIS_PORT = os.getenv('REDIS_PORT', '6379')

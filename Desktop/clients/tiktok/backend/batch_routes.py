@@ -142,6 +142,9 @@ def create_batch_job():
         # Get video generation flag
         generate_video = request.form.get('generate_video', 'false').lower() in ('true', '1', 'yes')
 
+        # Get text preset (default: gemini)
+        preset_id = request.form.get('preset_id', 'gemini')
+
         # Build variations config
         variations_config = {
             'hook_photo_var': hook_photo_var,
@@ -149,10 +152,11 @@ def create_batch_job():
             'body_photo_var': body_photo_var,
             'body_text_var': body_text_var,
             'product_text_var': product_text_var,
-            'generate_video': generate_video
+            'generate_video': generate_video,
+            'preset_id': preset_id
         }
 
-        log.debug(f"Variations: hook={hook_photo_var}x{hook_text_var}, body={body_photo_var}x{body_text_var}, product=x{product_text_var}, video={generate_video}")
+        log.debug(f"Variations: hook={hook_photo_var}x{hook_text_var}, body={body_photo_var}x{body_text_var}, product=x{product_text_var}, video={generate_video}, preset={preset_id}")
 
         # Create job entry in unified jobs table first (for Job History)
         job_id = create_job(

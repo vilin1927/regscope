@@ -7,7 +7,8 @@ Uses OAuth authentication (user grants access once, token is saved).
 import os
 import pickle
 import time
-from typing import Optional
+from typing import Optional, List, Tuple
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from dotenv import load_dotenv
 from google.auth.transport.requests import Request
 from google_auth_oauthlib.flow import InstalledAppFlow
@@ -187,6 +188,55 @@ def upload_file(file_path: str, folder_id: str, file_name: Optional[str] = None)
 
     except Exception as e:
         raise GoogleDriveError(f'Failed to upload file: {str(e)}')
+
+
+def upload_files_parallel(
+    file_paths: List[str],
+    folder_id: str,
+    max_workers: int = 5,
+    request_id: str = None
+) -> Tuple[int, int]:
+    """
+    Upload multiple files to Google Drive in parallel.
+
+    Args:
+        file_paths: List of local file paths to upload
+        folder_id: Google Drive folder ID
+        max_workers: Maximum parallel uploads (default: 5)
+        request_id: Optional request ID for logging
+
+    Returns:
+        Tuple of (successful_uploads, failed_uploads)
+    """
+    req_logger = get_request_logger('drive', request_id) if request_id else logger
+
+    # Filter to only existing files
+    existing_files = [f for f in file_paths if os.path.exists(f)]
+    if not existing_files:
+        return (0, 0)
+
+    successful = 0
+    failed = 0
+
+    def upload_single(file_path: str) -> bool:
+        try:
+            upload_file(file_path, folder_id)
+            return True
+        except GoogleDriveError as e:
+            req_logger.warning(f"Failed to upload {os.path.basename(file_path)}: {e}")
+            return False
+
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        futures = {executor.submit(upload_single, f): f for f in existing_files}
+
+        for future in as_completed(futures):
+            if future.result():
+                successful += 1
+            else:
+                failed += 1
+
+    req_logger.info(f"Parallel upload complete: {successful}/{len(existing_files)} succeeded")
+    return (successful, failed)
 
 
 def set_folder_public(folder_id: str) -> bool:

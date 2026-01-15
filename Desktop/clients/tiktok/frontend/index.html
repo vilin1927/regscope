@@ -33,8 +33,9 @@
                     Single Link
                 </button>
                 <button
-                    disabled
-                    class="px-4 py-2 rounded-md transition-all font-medium text-gray-600 cursor-not-allowed"
+                    @click="mode = 'batch'"
+                    :class="mode === 'batch' ? 'bg-purple-600 text-white' : 'text-gray-400 hover:text-white'"
+                    class="px-4 py-2 rounded-md transition-all font-medium"
                 >
                     Batch Mode
                 </button>
@@ -449,6 +450,20 @@ https://vm.tiktok.com/abc..."
                                 <span class="text-purple-400 font-bold" x-text="calculateBatchTotal()"></span>
                             </p>
                         </div>
+                    </div>
+
+                    <!-- Text Preset Selection -->
+                    <div class="bg-gray-700/50 rounded-lg p-4 mb-4">
+                        <label class="block text-gray-300 font-medium mb-2">Text Style Preset</label>
+                        <select
+                            x-model="batchData.preset_id"
+                            class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-purple-500"
+                        >
+                            <template x-for="preset in textPresets" :key="preset.id">
+                                <option :value="preset.id" x-text="preset.name"></option>
+                            </template>
+                        </select>
+                        <p class="text-gray-500 text-xs mt-2" x-text="textPresets.find(p => p.id === batchData.preset_id)?.desc || ''"></p>
                     </div>
 
                     <!-- Next Button -->
@@ -1053,6 +1068,7 @@ INSPIRED BY JAPANESE SKIN CARE: Delivers a lifted, contoured look without silico
                     body_photo_var: 1,
                     body_text_var: 1,
                     product_text_var: 1,
+                    preset_id: 'gemini',
                     applyToAll: true,
                     generateVideo: false,
                     products: [{ file: null, preview: null, description: '' }]
@@ -1388,6 +1404,9 @@ INSPIRED BY JAPANESE SKIN CARE: Delivers a lifted, contoured look without silico
 
                     // Add video generation flag
                     formData.append('generate_video', this.batchData.generateVideo);
+
+                    // Add text preset
+                    formData.append('preset_id', this.batchData.preset_id);
 
                     // Add products
                     if (this.batchData.applyToAll) {
