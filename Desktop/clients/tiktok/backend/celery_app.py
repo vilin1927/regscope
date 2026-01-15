@@ -36,12 +36,12 @@ celery_app.conf.update(
     timezone='UTC',
     enable_utc=True,
 
-    # Rate limiting - 5 tasks per minute (coordinates with global Gemini limiter)
-    task_default_rate_limit='5/m',
+    # No Celery rate limiting - Gemini's internal rate limiter (25 RPM) handles API quota
+    # This allows batch to process links in parallel like single-run mode
 
     # Worker settings (optimized for 1 CPU VPS)
-    worker_concurrency=2,  # Max 2 parallel tasks
-    worker_prefetch_multiplier=1,  # Don't prefetch, respect rate limits
+    worker_concurrency=5,  # Allow parallel task processing
+    worker_prefetch_multiplier=1,  # Don't prefetch
 
     # Result backend settings
     result_expires=86400,  # Results expire after 24 hours
@@ -50,10 +50,9 @@ celery_app.conf.update(
     task_acks_late=True,  # Acknowledge after task completes (safer)
     task_reject_on_worker_lost=True,  # Requeue if worker dies
 
-    # Retry settings
+    # Retry settings (no rate_limit - Gemini handles API quota internally)
     task_annotations={
         'tasks.generate_variation': {
-            'rate_limit': '5/m',
             'max_retries': 3,
             'default_retry_delay': 60,
         }
