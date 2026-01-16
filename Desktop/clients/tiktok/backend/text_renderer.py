@@ -31,8 +31,9 @@ ROUNDED_TEXT_BOX_SCRIPT = os.path.join(os.path.dirname(__file__), 'rounded_text_
 
 
 # Emoji font paths (in order of preference)
-APPLE_EMOJI_FONT = "/System/Library/Fonts/Apple Color Emoji.ttc"  # macOS - best for iOS look
-TWEMOJI_FONT = "/usr/share/fonts/truetype/Twemoji.ttf"  # Linux - Twitter style, close to iOS
+APPLE_EMOJI_FONT_MACOS = "/System/Library/Fonts/Apple Color Emoji.ttc"  # macOS native
+APPLE_EMOJI_FONT_LINUX = "/usr/share/fonts/truetype/AppleColorEmoji.ttf"  # Linux - real iOS emojis
+TWEMOJI_FONT = "/usr/share/fonts/truetype/Twemoji.ttf"  # Linux - Twitter style
 NOTO_EMOJI_FONT = "/usr/share/fonts/truetype/noto/NotoColorEmoji.ttf"  # Linux - Android style
 
 # Regex pattern to detect emoji characters
@@ -173,8 +174,9 @@ def load_emoji_font(size: int = 160) -> Optional[ImageFont.FreeTypeFont]:
     Load color emoji font for emoji rendering.
 
     Supports (in order of preference):
-    - Apple Color Emoji (macOS) - bitmap font, size 160, best iOS look
-    - Twemoji (Linux) - bitmap font, size 61, Twitter style (close to iOS)
+    - Apple Color Emoji (macOS) - bitmap font, size 160
+    - Apple Color Emoji (Linux) - bitmap font, size 137, real iOS emojis
+    - Twemoji (Linux) - bitmap font, size 61, Twitter style
     - Noto Color Emoji (Linux) - bitmap font, size 109, Android style
 
     Sets global EMOJI_NATIVE_SIZE based on which font is loaded.
@@ -184,19 +186,26 @@ def load_emoji_font(size: int = 160) -> Optional[ImageFont.FreeTypeFont]:
     """
     global EMOJI_NATIVE_SIZE
 
-    # Try Apple Color Emoji first (macOS)
-    if os.path.exists(APPLE_EMOJI_FONT):
+    # Try Apple Color Emoji (macOS native)
+    if os.path.exists(APPLE_EMOJI_FONT_MACOS):
         try:
-            # Apple Color Emoji only works at size 160 (bitmap font)
             EMOJI_NATIVE_SIZE = 160
-            return ImageFont.truetype(APPLE_EMOJI_FONT, 160)
+            return ImageFont.truetype(APPLE_EMOJI_FONT_MACOS, 160)
         except Exception:
             pass
 
-    # Try Twemoji (Linux) - Twitter style, closer to iOS
+    # Try Apple Color Emoji (Linux) - real iOS emojis!
+    if os.path.exists(APPLE_EMOJI_FONT_LINUX):
+        try:
+            # Apple Color Emoji on Linux works at size 137
+            EMOJI_NATIVE_SIZE = 137
+            return ImageFont.truetype(APPLE_EMOJI_FONT_LINUX, 137)
+        except Exception:
+            pass
+
+    # Try Twemoji (Linux) - Twitter style
     if os.path.exists(TWEMOJI_FONT):
         try:
-            # Twemoji only works at size 61 (bitmap font)
             EMOJI_NATIVE_SIZE = 61
             return ImageFont.truetype(TWEMOJI_FONT, 61)
         except Exception:
@@ -205,7 +214,6 @@ def load_emoji_font(size: int = 160) -> Optional[ImageFont.FreeTypeFont]:
     # Fallback to Noto Color Emoji (Linux) - Android style
     if os.path.exists(NOTO_EMOJI_FONT):
         try:
-            # Noto Color Emoji only works at size 109 (bitmap font)
             EMOJI_NATIVE_SIZE = 109
             return ImageFont.truetype(NOTO_EMOJI_FONT, 109)
         except Exception:
