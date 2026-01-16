@@ -163,21 +163,30 @@ def normalize_punctuation(text: str) -> str:
     return text
 
 
+# Native emoji font size - set when loading emoji font
+EMOJI_NATIVE_SIZE = 160
+
+
 def load_emoji_font(size: int = 160) -> Optional[ImageFont.FreeTypeFont]:
     """
     Load color emoji font for emoji rendering.
 
     Supports:
     - Apple Color Emoji (macOS) - bitmap font, only works at size 160
-    - Noto Color Emoji (Linux) - works at any size
+    - Noto Color Emoji (Linux) - bitmap font, only works at size 109
+
+    Sets global EMOJI_NATIVE_SIZE based on which font is loaded.
 
     Returns:
         PIL ImageFont or None if not available
     """
+    global EMOJI_NATIVE_SIZE
+
     # Try Apple Color Emoji first (macOS)
     if os.path.exists(APPLE_EMOJI_FONT):
         try:
             # Apple Color Emoji only works at size 160 (bitmap font)
+            EMOJI_NATIVE_SIZE = 160
             return ImageFont.truetype(APPLE_EMOJI_FONT, 160)
         except Exception:
             pass
@@ -185,17 +194,13 @@ def load_emoji_font(size: int = 160) -> Optional[ImageFont.FreeTypeFont]:
     # Try Noto Color Emoji (Linux)
     if os.path.exists(NOTO_EMOJI_FONT):
         try:
-            # Noto Color Emoji works at any size
-            return ImageFont.truetype(NOTO_EMOJI_FONT, size)
+            # Noto Color Emoji only works at size 109 (bitmap font)
+            EMOJI_NATIVE_SIZE = 109
+            return ImageFont.truetype(NOTO_EMOJI_FONT, 109)
         except Exception:
             pass
 
     return None
-
-
-# Native emoji font size (Apple Color Emoji bitmap size)
-# Note: Noto Color Emoji doesn't have this limitation
-EMOJI_NATIVE_SIZE = 160
 
 
 def hex_to_rgb(hex_color: str) -> Tuple[int, int, int]:
