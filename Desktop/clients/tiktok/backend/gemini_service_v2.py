@@ -33,10 +33,10 @@ from google.genai import types
 ANALYSIS_MODEL = 'gemini-3-pro-preview'
 IMAGE_MODEL = 'gemini-3-pro-image-preview'
 
-# Rate limiting config (user quota: 25 RPM)
-MAX_CONCURRENT = 10   # Up to 10 concurrent requests across all jobs
-RPM_LIMIT = 25        # 25 requests per minute (Gemini quota)
-RATE_WINDOW = 65.0    # Safety margin: 65s instead of 60s
+# Rate limiting config - SIMPLE: 19 requests per minute, sequential
+MAX_CONCURRENT = 1    # Sequential - no concurrent requests (prevents burst overload)
+RPM_LIMIT = 19        # 19 requests per minute (conservative for Gemini Preview stability)
+RATE_WINDOW = 60.0    # Exactly 60 seconds per window
 MAX_RETRIES = 5       # More retries for rate limit recovery
 REQUEST_TIMEOUT = 120 # 120 sec timeout per API call
 
