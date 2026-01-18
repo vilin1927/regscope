@@ -193,12 +193,25 @@ def create_batch_job():
         # Process each link with its product info
         created_links = []
 
-        for i, link_url in valid_links:
-            # Get product description
-            description_key = f'product_description_{i}'
-            product_description = request.form.get(description_key, '')
+        # Check for shared product photo (frontend sends 'product_photo' for all links)
+        shared_photo_path = None
+        if 'product_photo' in request.files:
+            photo = request.files['product_photo']
+            if photo and photo.filename and allowed_file(photo.filename):
+                filename = secure_filename(photo.filename)
+                shared_photo_path = os.path.join(batch_upload_dir, f'shared_{filename}')
+                photo.save(shared_photo_path)
+                log.debug(f"Saved shared product photo: {filename}")
 
-            # Handle product photo upload
+        # Get shared product description
+        shared_description = request.form.get('product_description', '')
+
+        for i, link_url in valid_links:
+            # Get product description (per-link or shared)
+            description_key = f'product_description_{i}'
+            product_description = request.form.get(description_key, shared_description)
+
+            # Handle product photo upload (per-link)
             photo_key = f'product_photo_{i}'
             product_photo_path = None
 
@@ -210,7 +223,11 @@ def create_batch_job():
                     photo.save(product_photo_path)
                     log.debug(f"Saved product photo for link {i}: {filename}")
 
-            # Check for "apply to all" case - use first photo for all
+            # Use shared photo if no per-link photo
+            if not product_photo_path and shared_photo_path:
+                product_photo_path = shared_photo_path
+
+            # Check for "apply to all" case - use first photo for all (legacy)
             if not product_photo_path and i > 0:
                 # Look for photo from link 0
                 first_photo_key = 'product_photo_0'
