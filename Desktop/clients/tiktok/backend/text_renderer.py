@@ -836,6 +836,9 @@ def render_multiline_box_text(
         box_width = box_data['width']
         box_height = box_data['height']
         box_x = zone_x + (zone_w - box_width) // 2
+        # Ensure minimum left margin to prevent cutoff
+        min_left_margin = 15
+        box_x = max(box_x, min_left_margin)
         box_y = start_y
 
         # Draw the path using aggdraw
@@ -857,6 +860,9 @@ def render_multiline_box_text(
         box_width = max_line_width + 2 * box_padding_h
         box_height = len(lines) * line_box_height
         box_x = zone_x + (zone_w - box_width) // 2
+        # Ensure minimum left margin to prevent cutoff
+        min_left_margin = 15
+        box_x = max(box_x, min_left_margin)
         box_y = start_y
 
         draw = ImageDraw.Draw(result)
@@ -999,6 +1005,9 @@ def render_text(
             # Center line horizontally (with emoji-aware width calculation)
             line_width = get_text_width_with_emojis(line, font, emoji_font, temp_draw, font_size)
             x = int(zone_x + (zone_w - line_width) // 2)
+            # Ensure minimum left margin to prevent text/shadow cutoff
+            min_left_margin = 15
+            x = max(x, min_left_margin)
 
             if effect.type == 'shadow':
                 result = render_shadow_text(

@@ -624,8 +624,8 @@ BODY SLIDES (tips/steps that are NOT product):
 
 PRODUCT SLIDE (exactly ONE):
 - Frame as tip/recommendation, NOT advertisement
-- Header: Action-based tip (e.g., "steam eye mask before bed")
-- Body text: casual, conversational
+- First line: Action-based tip (e.g., "steam eye mask before bed")
+- Second part: casual, conversational recommendation
 
 ⚠️ MANDATORY KEYWORD INCLUSION (CRITICAL!):
 The product slide text MUST naturally include:
@@ -769,8 +769,8 @@ Return ONLY valid JSON:
             "has_persona": false,
             "new_scene_description": "User's product in lifestyle context",
             "text_variations": [
-                "Header: steam eye mask before bed\\n\\ntotal game changer! lumidew masks are my fave ✨ got them on amazon",
-                "Header: use a steam mask\\n\\nobsessed with my lumidew mask from amazon! so relaxing before bed"
+                "steam eye mask before bed\\n\\ntotal game changer! lumidew masks are my fave ✨ got them on amazon",
+                "use a steam mask\\n\\nobsessed with my lumidew mask from amazon! so relaxing before bed"
             ],
             "text_position_hint": "text at top, DO NOT cover product"
         }}
@@ -785,7 +785,7 @@ IMPORTANT - reference_image_index explained:
 CRITICAL RULES:
 1. Exactly {num_slides} slides in new_slides array
 2. Exactly ONE slide with slide_type="product"
-3. Product slide text_variations must have Header + Body format in EACH variation
+3. Product slide text_variations: short tip line + casual recommendation (separated by \\n\\n)
 4. All other slides are hook, body, or cta
 5. text_variations must be an ARRAY of text options (count based on slide type)
 6. has_persona must be true/false for each slide
@@ -1140,14 +1140,25 @@ CRITICAL TEXT PLACEMENT RULES:
 - Main subject must be completely unobstructed
 
 IMPORTANT: Do NOT include any human faces, hands, body parts, or people in this image.
-This MUST be a completely faceless composition showing ONLY:
-- Products
-- Objects
-- Flat lays
-- Aesthetic backgrounds
-- Text overlays
 
-If you generate a human face or body part, the image will be REJECTED.
+GENERATE A LIFESTYLE/AESTHETIC SCENE - NOT a product photo!
+Think "cozy TikTok aesthetic" not "Amazon product listing":
+
+GOOD examples (lifestyle scenes):
+- Cozy bedroom with fairy lights, books, candles
+- Kitchen counter with cooking ingredients, steam from cup
+- Bathroom shelf with aesthetic items, soft towels
+- Desk setup with journal, coffee, plants
+- Cozy reading nook with blanket and book
+
+BAD examples (DO NOT generate these):
+- Close-up of a product bottle on plain surface
+- Generic skincare products on marble
+- Stock-photo style product arrangements
+- Plain white background product shots
+
+The image should feel like a "day in my life" moment, NOT a product advertisement.
+If you generate a stock-photo-style product shot, it will be REJECTED.
 {quality_constraints}"""
 
             contents = [
