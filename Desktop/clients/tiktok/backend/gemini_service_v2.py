@@ -32,6 +32,7 @@ from google.genai import types
 # Model names
 ANALYSIS_MODEL = 'gemini-3-pro-preview'
 IMAGE_MODEL = 'gemini-3-pro-image-preview'
+GROUNDING_MODEL = 'gemini-2.0-flash'  # Fast model for grounding searches
 
 # Rate limiting config - SIMPLE: 19 requests per minute, sequential
 MAX_CONCURRENT = 1    # Sequential - no concurrent requests (prevents burst overload)
@@ -104,6 +105,133 @@ def _get_client(timeout: int = REQUEST_TIMEOUT):
         api_key=api_key,
         http_options={'timeout': timeout * 1000}  # Convert to milliseconds
     )
+
+
+# Cache for grounded product searches (avoid repeated API calls)
+_grounding_cache = {}
+_grounding_cache_lock = threading.Lock()
+
+
+def _get_real_products_for_scene(category: str, scene_type: str = "lifestyle") -> str:
+    """
+    Use Google Search grounding to find real product names for a scene.
+
+    Args:
+        category: Product category (e.g., "skincare", "sleep", "wellness")
+        scene_type: Type of scene (e.g., "bathroom", "bedroom", "morning routine")
+
+    Returns:
+        String with real product names to include in scene generation
+    """
+    cache_key = f"{category}_{scene_type}"
+
+    with _grounding_cache_lock:
+        if cache_key in _grounding_cache:
+            logger.debug(f"Using cached products for {cache_key}")
+            return _grounding_cache[cache_key]
+
+    try:
+        client = _get_client(timeout=30)  # Quick timeout for grounding
+
+        query = f"""For viral TikTok content about {category}, list 5-8 SPECIFIC real product names
+that would naturally appear in a {scene_type} scene.
+
+Return ONLY a comma-separated list of real brand + product names like:
+"CeraVe Hydrating Cleanser, The Ordinary Niacinamide, Glow Recipe Watermelon Toner"
+
+Focus on products that are:
+- Actually popular on TikTok in 2024
+- Recognizable brands (not generic)
+- Would naturally be in this type of scene
+
+Just the product names, nothing else."""
+
+        response = client.models.generate_content(
+            model=GROUNDING_MODEL,
+            contents=query,
+            config=types.GenerateContentConfig(
+                tools=[types.Tool(google_search=types.GoogleSearch())],
+                temperature=0.3  # Lower temp for factual responses
+            )
+        )
+
+        products = response.text.strip()
+
+        # Cache the result
+        with _grounding_cache_lock:
+            _grounding_cache[cache_key] = products
+
+        logger.info(f"Grounded products for {cache_key}: {products[:100]}...")
+        return products
+
+    except Exception as e:
+        logger.warning(f"Grounding search failed for {cache_key}: {e}")
+        # Return empty - scene will generate without specific products
+        return ""
+
+
+def _get_scene_with_real_products(
+    scene_description: str,
+    product_category: str,
+    product_description: str
+) -> str:
+    """
+    Enhance scene description with real products from Google Search.
+
+    Args:
+        scene_description: Original scene description from analysis
+        product_category: Category like "skincare", "sleep aids", "wellness"
+        product_description: User's product description (to determine category)
+
+    Returns:
+        Enhanced scene description with real product names
+    """
+    # Detect category from scene and product description
+    scene_lower = scene_description.lower()
+    prod_lower = product_description.lower()
+
+    # Determine scene type from description
+    if any(word in scene_lower for word in ['bathroom', 'vanity', 'sink', 'mirror']):
+        scene_type = "bathroom vanity"
+    elif any(word in scene_lower for word in ['bed', 'bedroom', 'nightstand', 'pillow']):
+        scene_type = "bedroom nightstand"
+    elif any(word in scene_lower for word in ['kitchen', 'counter', 'morning']):
+        scene_type = "morning routine"
+    elif any(word in scene_lower for word in ['desk', 'office', 'work']):
+        scene_type = "desk setup"
+    else:
+        scene_type = "lifestyle"
+
+    # Determine product category
+    if any(word in prod_lower for word in ['skin', 'face', 'serum', 'cream', 'cleanser', 'moistur']):
+        category = "skincare"
+    elif any(word in prod_lower for word in ['sleep', 'eye mask', 'pillow', 'night', 'rest']):
+        category = "sleep and relaxation"
+    elif any(word in prod_lower for word in ['hair', 'shampoo', 'conditioner']):
+        category = "haircare"
+    elif any(word in prod_lower for word in ['makeup', 'lipstick', 'mascara', 'foundation']):
+        category = "makeup and beauty"
+    elif any(word in prod_lower for word in ['supplement', 'vitamin', 'wellness']):
+        category = "wellness supplements"
+    else:
+        category = "beauty and self-care"
+
+    # Get real products via grounding
+    real_products = _get_real_products_for_scene(category, scene_type)
+
+    if not real_products:
+        return scene_description
+
+    # Enhance the scene description
+    enhanced = f"""{scene_description}
+
+REAL PRODUCTS TO INCLUDE IN SCENE (use 2-3 of these recognizable items):
+{real_products}
+
+These are REAL products that TikTok users will recognize. Include them naturally in the scene
+(on the counter, shelf, or visible in background) to make it look authentic."""
+
+    return enhanced
 
 
 def _load_image_bytes(image_path: str) -> bytes:
@@ -908,7 +1036,8 @@ def _generate_single_image(
     has_persona: bool = False,
     text_style: Optional[dict] = None,
     version: int = 1,
-    clean_image_mode: bool = False
+    clean_image_mode: bool = False,
+    product_description: str = ""
 ) -> str:
     """
     Generate a single image with clear image labeling.
@@ -1178,13 +1307,22 @@ IMPORTANT: Only ONE person in the image - never two people!
             ]
         else:
             # No persona needed - just style reference
+            # Enhance scene description with real products from Google Search
+            enhanced_scene = scene_description
+            if product_description and slide_type == 'body':
+                enhanced_scene = _get_scene_with_real_products(
+                    scene_description,
+                    "",  # Category will be auto-detected
+                    product_description
+                )
+
             prompt = f"""Generate a TikTok {slide_label} slide.
 
 {text_style_instruction}
 {variation_instruction}
 [STYLE_REFERENCE] - Reference slide for visual composition and mood.
 
-NEW SCENE: {scene_description}
+NEW SCENE: {enhanced_scene}
 
 TEXT TO DISPLAY:
 {text_content}
@@ -1320,7 +1458,8 @@ def generate_all_images(
     hook_photo_var: int = 1,
     body_photo_var: int = 1,
     request_id: str = None,
-    clean_image_mode: bool = False
+    clean_image_mode: bool = False,
+    product_description: str = ""
 ) -> dict:
     """
     Generate all images with persona consistency and photo × text variations.
@@ -1528,7 +1667,8 @@ def generate_all_images(
                     task['has_persona'],
                     text_style,  # Pass text style from analysis
                     task['version'],  # Pass version for variation diversity
-                    clean_image_mode  # Generate without text for PIL rendering
+                    clean_image_mode,  # Generate without text for PIL rendering
+                    product_description  # For real product grounding in scenes
                 )
             finally:
                 rate_limiter.release()
@@ -1754,7 +1894,8 @@ def run_pipeline(
         hook_photo_var=hook_photo_var,
         body_photo_var=body_photo_var,
         request_id=request_id,
-        clean_image_mode=clean_image_mode
+        clean_image_mode=clean_image_mode,
+        product_description=product_description
     )
 
     # Step 3: If clean_image_mode, add text via safe zone detection + PIL rendering
