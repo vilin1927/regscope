@@ -851,28 +851,6 @@ Make sure each body slide shows a DIFFERENT type of scene:
 - Mix indoor/outdoor, morning/night, active/relaxed moments
 
 ═══════════════════════════════════════════════════════════════
-LAYOUT TYPE DETECTION
-═══════════════════════════════════════════════════════════════
-
-Analyze the VISUAL LAYOUT of each slide and classify:
-
-"standard" - Single image filling the frame, text overlaid on image
-  Example: Lifestyle photo with text at bottom/middle
-
-"comparison_grid" - Side-by-side product comparisons, multiple items in grid
-  Example: 2+ products with ratings, reviews, scores (like the reference TikTok!)
-  Features: star ratings ⭐, numbered scores (3/10, 9/10), product images side by side
-
-"split_screen" - Before/after or left/right comparison of same subject
-  Example: "ME 2024" vs "ME 2025" transformation
-
-"framed_card" - Image inset within a border/frame, text below image (NOT overlaid)
-  Example: Polaroid-style with solid color border, caption below photo
-
-IMPORTANT: If the original uses comparison_grid or split_screen layout,
-you MUST preserve this in layout_type so we can replicate it correctly!
-
-═══════════════════════════════════════════════════════════════
 OUTPUT FORMAT
 ═══════════════════════════════════════════════════════════════
 
@@ -907,9 +885,7 @@ Return ONLY valid JSON:
         "background_box": "none OR description (e.g., semi-transparent black pill shape behind text)",
         "text_size": "small / medium / large",
         "visual_vibe": "overall feeling in 2-3 words (e.g., clean minimal, soft feminine)",
-        "position_style": "where text is typically placed (e.g., centered middle, bottom third)",
-        "layout_type": "standard | comparison_grid | split_screen | framed_card",
-        "layout_details": "describe the layout if not standard (e.g., side-by-side products with star ratings, before/after split)"
+        "position_style": "where text is typically placed (e.g., centered middle, bottom third)"
     }},
     
     "target_audience": {{
@@ -1152,73 +1128,6 @@ The text appearance is CRITICAL for authenticity - match this exact visual style
     else:
         text_style_instruction = "Use clean, bold, white sans-serif text with subtle shadow."
 
-    # Layout-specific instructions based on detected layout type
-    layout_type = text_style.get('layout_type', 'standard') if text_style else 'standard'
-    layout_details = text_style.get('layout_details', '') if text_style else ''
-
-    if layout_type == 'comparison_grid':
-        layout_instruction = f"""
-═══════════════════════════════════════════════════════════════
-COMPARISON GRID LAYOUT (CRITICAL - MATCH THIS EXACTLY!)
-═══════════════════════════════════════════════════════════════
-
-This slide uses a COMPARISON/REVIEW GRID format. You MUST replicate this layout:
-
-LAYOUT STRUCTURE:
-- Solid colored background (olive/brown/muted tone matching reference)
-- Side-by-side product images at the TOP (2 products visible)
-- Star ratings (⭐⭐⭐⭐⭐) below each product
-- Short review text under each product
-- Numerical scores if in reference (like 3/10, 9/10)
-- Optional: cartoon/illustration comparison at bottom
-
-SPECIFIC DETAILS FROM ORIGINAL: {layout_details}
-
-DO NOT:
-- Put the image inside a frame/border
-- Use a single product photo
-- Make it look like a polaroid card
-- Put all text at the bottom outside the image
-
-COPY THE EXACT GRID STRUCTURE from [STYLE_REFERENCE]!
-"""
-    elif layout_type == 'split_screen':
-        layout_instruction = f"""
-═══════════════════════════════════════════════════════════════
-SPLIT SCREEN LAYOUT (CRITICAL - MATCH THIS EXACTLY!)
-═══════════════════════════════════════════════════════════════
-
-This slide uses a SPLIT SCREEN/BEFORE-AFTER format:
-
-LAYOUT STRUCTURE:
-- Image divided into LEFT and RIGHT sections (or TOP/BOTTOM)
-- Each section shows a different state/comparison
-- Labels like "ME 2024" vs "ME 2025" or "BEFORE" vs "AFTER"
-- Same subject shown in both halves for comparison
-
-SPECIFIC DETAILS: {layout_details}
-
-DO NOT create a single image - MUST be a split comparison!
-"""
-    elif layout_type == 'framed_card':
-        layout_instruction = f"""
-═══════════════════════════════════════════════════════════════
-FRAMED CARD LAYOUT
-═══════════════════════════════════════════════════════════════
-
-This slide uses a CARD/FRAME format:
-
-LAYOUT STRUCTURE:
-- Solid colored border/frame around the main image
-- Image is INSET within the frame (not full bleed)
-- Text appears BELOW the image, outside the photo area
-- Clean, minimal aesthetic
-
-SPECIFIC DETAILS: {layout_details}
-"""
-    else:
-        layout_instruction = ""  # Standard layout - no special instructions
-
     # Quality constraints to prevent weird/AI-looking images
     quality_constraints = """
 IMAGE QUALITY REQUIREMENTS:
@@ -1407,10 +1316,27 @@ IMPORTANT: Only ONE person in the image - never two people!
                     product_description
                 )
 
-            # Build lifestyle scene instructions (only for standard layout)
-            lifestyle_instruction = ""
-            if layout_type == 'standard':
-                lifestyle_instruction = """
+            prompt = f"""Generate a TikTok {slide_label} slide.
+
+{text_style_instruction}
+{variation_instruction}
+[STYLE_REFERENCE] - Reference slide for visual composition and mood.
+
+NEW SCENE: {enhanced_scene}
+
+TEXT TO DISPLAY:
+{text_content}
+
+LAYOUT: {text_position_hint}
+
+CRITICAL TEXT PLACEMENT RULES:
+- NEVER cover main objects/products with text
+- Text should be in empty/background areas only
+- If unsure, place text at TOP or BOTTOM edges of image
+- Main subject must be completely unobstructed
+
+IMPORTANT: Do NOT include any human faces, hands, body parts, or people in this image.
+
 GENERATE AN AUTHENTIC LIFESTYLE SCENE - NOT a stock photo!
 Think "real person's messy-but-aesthetic life" not "studio product shot":
 
@@ -1443,30 +1369,6 @@ AUTHENTICITY REQUIREMENTS:
 
 The image should feel like you peeked into someone's real life.
 If it looks like a stock photo or Amazon listing, it will be REJECTED.
-"""
-
-            prompt = f"""Generate a TikTok {slide_label} slide.
-
-{text_style_instruction}
-{layout_instruction}
-{variation_instruction}
-[STYLE_REFERENCE] - Reference slide for visual composition and mood. COPY THIS LAYOUT EXACTLY!
-
-NEW SCENE: {enhanced_scene}
-
-TEXT TO DISPLAY:
-{text_content}
-
-LAYOUT: {text_position_hint}
-
-CRITICAL TEXT PLACEMENT RULES:
-- NEVER cover main objects/products with text
-- Text should be in empty/background areas only
-- If unsure, place text at TOP or BOTTOM edges of image
-- Main subject must be completely unobstructed
-
-IMPORTANT: Do NOT include any human faces, hands, body parts, or people in this image.
-{lifestyle_instruction}
 {quality_constraints}"""
 
             contents = [
