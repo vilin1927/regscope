@@ -581,7 +581,9 @@ def analyze_and_plan(
     product_image_paths: list[str],
     product_description: str,
     output_dir: str,
+    hook_photo_var: int = 1,
     hook_text_var: int = 1,
+    body_photo_var: int = 1,
     body_text_var: int = 1,
     product_text_var: int = 1,
     request_id: str = None
@@ -881,40 +883,111 @@ CTA SLIDE (only if original has one):
 - If original doesn't have CTA, don't add one
 
 ═══════════════════════════════════════════════════════════════
-TASK 6: GENERATE TEXT VARIATIONS
+TASK 6: GENERATE SCENE & TEXT VARIATIONS (CRITICAL!)
 ═══════════════════════════════════════════════════════════════
 
-Generate MULTIPLE text alternatives for each slide type:
-- Hook slide: Generate {hook_text_var} different hook text variations
-- Body slides: Generate {body_text_var} different text variations per slide
-- Product slide: Generate {product_text_var} different product pitch variations
+⚠️ THIS IS THE MOST IMPORTANT SECTION - READ CAREFULLY!
+
+For BODY SLIDES: Generate {body_photo_var} COMPLETELY DIFFERENT TIPS per slide position!
+For HOOK SLIDES: Generate {hook_photo_var} COMPLETELY DIFFERENT HOOK CONCEPTS!
+
+THIS IS NOT ABOUT REWORDING THE SAME TIP!
+Each "scene variation" = A COMPLETELY DIFFERENT TIP/IDEA with its own scene and texts.
+
+STRUCTURE FOR BODY SLIDES (body_photo_var={body_photo_var}):
+- Each body slide position gets {body_photo_var} DIFFERENT tips
+- Each tip has its OWN scene description (different product/location)
+- Each tip has {body_text_var} text variations (same tip, different wording)
+
+EXAMPLE: Body slide position 2 with body_photo_var=2, body_text_var=3:
+{{
+    "slide_index": 2,
+    "slide_type": "body",
+    "scene_variations": [
+        {{
+            "scene_description": "Kitchen counter with glass of tart cherry juice, morning light",
+            "text_variations": [
+                "tart cherry juice 🍒\\n\\ndrink it 1 hour before bed for natural melatonin",
+                "sleepy girl mocktail 🍷\\n\\ntart cherry juice = nature's sleep aid",
+                "natural melatonin boost ✨\\n\\na glass of cherry juice before bed works magic"
+            ]
+        }},
+        {{
+            "scene_description": "Cozy couch with weighted blanket draped over it, warm ambient light",
+            "text_variations": [
+                "weighted blanket 🛋️\\n\\nthe deep pressure calms your nervous system instantly",
+                "pressure therapy ✨\\n\\nmy weighted blanket is the ultimate anxiety hack",
+                "cozy sleep hack 😴\\n\\nweighted blankets reduce cortisol and help you sleep deeper"
+            ]
+        }}
+    ]
+}}
+
+^^^ THIS IS CORRECT! Two completely different tips (cherry juice vs weighted blanket) for the same slide position!
+
+STRUCTURE FOR HOOK SLIDES (hook_photo_var={hook_photo_var}):
+- Generate {hook_photo_var} DIFFERENT hook concepts
+- Each hook has its OWN scene/angle
+- Each hook has {hook_text_var} text variations
+
+EXAMPLE: Hook slide with hook_photo_var=2, hook_text_var=3:
+{{
+    "slide_index": 0,
+    "slide_type": "hook",
+    "scene_variations": [
+        {{
+            "scene_description": "Girl in cozy loungewear looking relaxed, soft bedroom lighting",
+            "text_variations": [
+                "simple habits that fixed my sleep 😴",
+                "my sleep routine changed everything ✨",
+                "how I finally beat insomnia 🌙"
+            ]
+        }},
+        {{
+            "scene_description": "Close-up selfie with glowing skin, morning light through window",
+            "text_variations": [
+                "the glow up is in the sleep 💫",
+                "proof that sleep = skincare ✨",
+                "my skin cleared when I fixed my sleep 🌟"
+            ]
+        }}
+    ]
+}}
+
+FOR PRODUCT SLIDE (only 1 scene, multiple texts):
+{{
+    "slide_index": 4,
+    "slide_type": "product",
+    "scene_variations": [
+        {{
+            "scene_description": "Product on nightstand with cozy bedroom background",
+            "text_variations": [
+                "steam eye mask ☁️\\n\\nlumidew masks are my fave! got mine from amazon",
+                "heated eye spa 🧖‍♀️\\n\\nobsessed with lumidew masks, found on amazon!"
+            ]
+        }}
+    ]
+}}
+
+FOR CTA SLIDE (only 1 scene):
+{{
+    "slide_index": 6,
+    "slide_type": "cta",
+    "scene_variations": [
+        {{
+            "scene_description": "Peaceful bedroom with morning sunlight",
+            "text_variations": ["save this for better sleep ✨", "comment your fave tip 💬"]
+        }}
+    ]
+}}
 
 VARIATION RULES:
-- Each text variation should convey the SAME message but with DIFFERENT wording
-- Vary emoji usage, sentence structure, and tone slightly
-- All variations must feel authentic to the slideshow style
-- Keep the same general length and vibe
-
-EXAMPLES:
-Hook variations:
-  1. "simple things I do to sleep 10x better 😴"
-  2. "my bedtime secrets for the best sleep ever ✨"
-  3. "habits that completely changed my sleep game"
-
-Body variations:
-  1. "keep the room cold 🥶 under 68°F hits different"
-  2. "cold room = better sleep! I keep mine at 65°F"
-  3. "the secret? a freezing cold bedroom ❄️"
-
-Product variations (must ALL include brand name and end with natural CTA!):
-  1. "obsessed with my lumidew steam mask! i got mine from amazon ✨"
-  2. "this lumidew mask is a game changer, found mine on amazon!"
-  3. "lumidew steam masks before bed = best sleep! amazon has them"
-
-OUTPUT: Use "text_variations" array instead of single "text_content":
-{{
-    "text_variations": ["option 1", "option 2", "option 3"]
-}}
+- scene_variations = array of DIFFERENT TIPS (for body) or DIFFERENT CONCEPTS (for hook)
+- text_variations = array of different WORDINGS for the SAME tip
+- Each scene_variation must have a UNIQUE scene_description
+- Body slides MUST have {body_photo_var} scene_variations
+- Hook slides MUST have {hook_photo_var} scene_variations
+- Product/CTA slides have exactly 1 scene_variation
 
 ═══════════════════════════════════════════════════════════════
 SCENE DIVERSITY REQUIREMENT (ABSOLUTELY CRITICAL!)
@@ -1024,21 +1097,50 @@ Return ONLY valid JSON:
             "slide_type": "hook",
             "reference_image_index": 0,
             "has_persona": true,
-            "new_scene_description": "COMPLETELY NEW scene - different from original!",
-            "text_variations": ["hook text option 1", "hook text option 2"],
-            "text_position_hint": "where text goes, what NOT to cover"
+            "text_position_hint": "where text goes, what NOT to cover",
+            "scene_variations": [
+                {{
+                    "scene_description": "Girl in cozy loungewear, soft bedroom lighting",
+                    "text_variations": ["hook text option 1", "hook text option 2", "hook text option 3"]
+                }},
+                {{
+                    "scene_description": "Close-up selfie with glowing skin, morning light",
+                    "text_variations": ["different hook concept 1", "different hook concept 2", "different hook concept 3"]
+                }}
+            ]
+        }},
+        {{
+            "slide_index": 1,
+            "slide_type": "body",
+            "reference_image_index": 1,
+            "has_persona": false,
+            "text_position_hint": "center middle",
+            "scene_variations": [
+                {{
+                    "scene_description": "Kitchen counter with tart cherry juice glass",
+                    "text_variations": ["tip about cherry juice v1", "tip about cherry juice v2"]
+                }},
+                {{
+                    "scene_description": "Cozy couch with weighted blanket draped over it",
+                    "text_variations": ["tip about weighted blanket v1", "tip about weighted blanket v2"]
+                }}
+            ]
         }},
         {{
             "slide_index": 4,
             "slide_type": "product",
             "reference_image_index": 4,
             "has_persona": false,
-            "new_scene_description": "User's product in lifestyle context",
-            "text_variations": [
-                "steam eye mask before bed\\n\\ntotal game changer! lumidew masks are my fave ✨ got them on amazon",
-                "use a steam mask\\n\\nobsessed with my lumidew mask from amazon! so relaxing before bed"
-            ],
-            "text_position_hint": "text at top, DO NOT cover product"
+            "text_position_hint": "text at top, DO NOT cover product",
+            "scene_variations": [
+                {{
+                    "scene_description": "User's product on nightstand with cozy bedroom background",
+                    "text_variations": [
+                        "steam eye mask before bed\\n\\nlumidew masks are my fave! got them on amazon ✨",
+                        "heated eye spa\\n\\nobsessed with lumidew masks from amazon!"
+                    ]
+                }}
+            ]
         }}
     ]
 }}
@@ -1048,15 +1150,16 @@ IMPORTANT - reference_image_index explained:
 - STYLE = font, colors, text box design, layout
 - STYLE ≠ scene content! The scene should be COMPLETELY DIFFERENT!
 
-CRITICAL RULES:
+CRITICAL RULES FOR scene_variations:
 1. Exactly {num_slides} slides in new_slides array
 2. Exactly ONE slide with slide_type="product"
-3. Product slide text_variations: short tip line + casual recommendation (separated by \\n\\n)
-4. All other slides are hook, body, or cta
-5. text_variations must be an ARRAY of text options (count based on slide type)
-6. has_persona must be true/false for each slide
-7. cta_index is null if original has no CTA slide
-8. Hook needs {hook_text_var} text variations, body needs {body_text_var}, product needs {product_text_var}
+3. Hook slides: {hook_photo_var} scene_variations, each with {hook_text_var} text_variations
+4. Body slides: {body_photo_var} scene_variations, each with {body_text_var} text_variations
+5. Product slides: 1 scene_variation with {product_text_var} text_variations
+6. CTA slides: 1 scene_variation
+7. Each scene_variation MUST have a different scene_description (different tip/concept!)
+8. has_persona must be true/false for each slide
+9. cta_index is null if original has no CTA slide
 """
 
     # Build content with all images
@@ -1320,31 +1423,9 @@ LAYOUT: {text_position_hint}
         # HOOK or BODY SLIDE
         slide_label = "HOOK" if slide_type == "hook" else "TIP"
 
-        # Add variation instruction for versions > 1
+        # Note: Each photo variation now has its own scene from analysis
+        # No need for variation instructions - scene_description already differs per photo_var
         variation_instruction = ""
-        if version > 1:
-            if slide_type == 'body':
-                # For body slides: each variation should be a COMPLETELY DIFFERENT scene
-                variation_instruction = f"""
-VARIATION #{version}: Create a COMPLETELY DIFFERENT scene!
-- DO NOT just change the angle - create an ENTIRELY NEW setting
-- Use a DIFFERENT room/location than variation #1
-- Show DIFFERENT products/items (same theme, different specific items)
-- This should look like a completely separate photo, not just a reshoot
-
-Example: If variation #1 showed "magnesium spray on bathroom vanity",
-variation #{version} could show "chamomile tea on kitchen counter" or "diffuser in bedroom".
-Same relaxation theme, but TOTALLY DIFFERENT scene!
-"""
-            else:
-                # For hook/other slides: different angle is fine
-                variation_instruction = f"""
-VARIATION #{version}: Create a DIFFERENT visual interpretation:
-- Use a different camera angle or perspective
-- Change the pose or body position
-- Adjust the lighting or mood slightly
-- Keep the same text and message, but make the image visually distinct
-"""
 
         if has_persona and persona_reference_path:
             # With persona - need consistency
@@ -1438,23 +1519,9 @@ IMPORTANT: Only ONE person in the image - never two people!
             else:
                 enhanced_scene = scene_description
 
-            # For body slide variations #2+, tell Gemini to create a COMPLETELY NEW scene
-            if slide_type == 'body' and version > 1:
-                scene_instruction = f"""
-IGNORE the scene description below - it was for variation #1.
-For variation #{version}, CREATE A COMPLETELY NEW SCENE that fits the text/tip theme.
-
-The text says: "{text_content}"
-
-Based on this tip, INVENT a totally different scene:
-- DIFFERENT location (if #1 was bathroom, use kitchen/bedroom/desk/etc.)
-- DIFFERENT products (if #1 had magnesium, show chamomile tea or diffuser or weighted blanket)
-- Same relaxation/wellness VIBE but completely different visual
-
-THINK: What's another way to visually represent this tip? Create THAT scene.
-"""
-            else:
-                scene_instruction = f"""
+            # Each photo variation now has its own unique scene from analysis
+            # Just generate the exact scene described
+            scene_instruction = f"""
 NEW SCENE (generate THIS exact setting): {enhanced_scene}
 
 CRITICAL - SHOW ONLY WHAT'S DESCRIBED:
@@ -1666,23 +1733,31 @@ def generate_all_images(
         if slide_type == 'cta':
             continue
 
-        # Get text variations from analysis (or fallback to single text_content)
-        text_variations = slide.get('text_variations', [])
-        if not text_variations:
-            # Fallback: use text_content if text_variations not provided
-            text_content = slide.get('text_content', '')
-            text_variations = [text_content] if text_content else ['']
+        # NEW: Get scene_variations from analysis (each scene_variation = different tip/concept)
+        scene_variations = slide.get('scene_variations', [])
+
+        # FALLBACK: Support old format with new_scene_description + text_variations
+        if not scene_variations:
+            old_scene = slide.get('new_scene_description', '')
+            old_texts = slide.get('text_variations', [])
+            if not old_texts:
+                old_text = slide.get('text_content', '')
+                old_texts = [old_text] if old_text else ['']
+            scene_variations = [{
+                'scene_description': old_scene,
+                'text_variations': old_texts
+            }]
 
         # Determine photo variations and slide key
         if slide_type == 'hook':
-            photo_vars = hook_photo_var
+            expected_photo_vars = hook_photo_var
             slide_key = 'hook'
         elif slide_type == 'product':
             # Product photo variations = number of uploaded product images
-            photo_vars = len(product_image_paths)
+            expected_photo_vars = len(product_image_paths)
             slide_key = 'product'
         else:  # body
-            photo_vars = body_photo_var
+            expected_photo_vars = body_photo_var
             body_num = sum(1 for s in new_slides[:idx] if s['slide_type'] == 'body') + 1
             slide_key = f'body_{body_num}'
 
@@ -1691,7 +1766,16 @@ def generate_all_images(
             variations_structure[slide_key] = []
 
         # Create photo × text matrix of tasks
-        for p_idx in range(photo_vars):
+        # Each scene_variation = one photo variation with its own scene and texts
+        for p_idx in range(expected_photo_vars):
+            # Get the scene_variation for this photo variation
+            # If fewer scene_variations than expected, reuse the last one
+            scene_var_idx = min(p_idx, len(scene_variations) - 1)
+            scene_var = scene_variations[scene_var_idx] if scene_variations else {'scene_description': '', 'text_variations': ['']}
+
+            scene_description = scene_var.get('scene_description', '')
+            text_variations = scene_var.get('text_variations', [''])
+
             for t_idx, text_content in enumerate(text_variations):
                 photo_ver = p_idx + 1  # 1-indexed
                 text_ver = t_idx + 1   # 1-indexed
@@ -1713,7 +1797,7 @@ def generate_all_images(
                     'text_version': text_ver,
                     'version': photo_ver,  # For variation instruction in prompt
                     'reference_image_path': slide_paths[ref_idx] if ref_idx < len(slide_paths) else slide_paths[0],
-                    'scene_description': slide.get('new_scene_description', ''),
+                    'scene_description': scene_description,
                     'text_content': text_content,
                     'text_position_hint': slide.get('text_position_hint', ''),
                     'output_path': output_path,
@@ -1988,14 +2072,16 @@ def run_pipeline(
     pre_extraction = _extract_brand_from_description(product_description)
     log.debug(f"Pre-extracted brand candidates: {pre_extraction}")
 
-    # Step 1: Analyze and plan (with text variation counts)
+    # Step 1: Analyze and plan (with photo and text variation counts)
     log.info("Step 1/2: Analyzing slideshow")
     analysis = analyze_and_plan(
         slide_paths,
         product_image_paths,
         product_description,
         output_dir,
+        hook_photo_var=hook_photo_var,
         hook_text_var=hook_text_var,
+        body_photo_var=body_photo_var,
         body_text_var=body_text_var,
         product_text_var=product_text_var,
         request_id=request_id
