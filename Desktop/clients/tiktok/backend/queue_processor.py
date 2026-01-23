@@ -14,8 +14,10 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-from logging_config import get_logger
+from logging_config import setup_logging, get_logger
 
+# Initialize logging (must be done before get_logger)
+setup_logging()
 logger = get_logger('queue_processor')
 
 from image_queue import (
