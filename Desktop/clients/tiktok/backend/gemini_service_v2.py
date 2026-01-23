@@ -1351,13 +1351,10 @@ IMPORTANT: Only ONE person in the image - never two people!
             ]
         else:
             # No persona needed - just style reference
-            # Enhance body slides with SCENE-APPROPRIATE products
-            # Category is now detected from the scene itself, not user's product
-            # This ensures "water tip" gets water bottles, "sleep tip" gets sleep products, etc.
-            if slide_type == 'body':
-                enhanced_scene = _get_scene_with_real_products(scene_description)
-            else:
-                enhanced_scene = scene_description
+            # DO NOT inject extra products! The scene description already specifies
+            # exactly what should be in the image. Adding "REAL PRODUCTS TO INCLUDE"
+            # causes all slides to show the same skincare products everywhere.
+            enhanced_scene = scene_description
 
             prompt = f"""Generate a TikTok {slide_label} slide.
 
@@ -1368,9 +1365,16 @@ DO NOT copy the scene/location from the reference! Generate a COMPLETELY DIFFERE
 
 NEW SCENE (generate THIS exact setting): {enhanced_scene}
 
-CRITICAL: The scene description above specifies a UNIQUE location. Generate EXACTLY that location,
-not a generic bedroom or bathroom. If it says "kitchen counter" - show a kitchen. If it says
-"reading corner" - show a reading corner. Each slide must look like a DIFFERENT room/space.
+CRITICAL - SHOW ONLY WHAT'S DESCRIBED:
+- Generate EXACTLY what the scene description says - nothing more, nothing less
+- If scene says "glass of water on kitchen counter" → show ONLY water glass on kitchen counter
+- If scene says "journal and pen on bed" → show ONLY journal and pen on bed
+- DO NOT add random skincare products, bottles, or items not mentioned in the scene
+- Each slide should feature ONE MAIN ITEM that matches the tip being given
+- The scene should HIGHLIGHT that specific item, not clutter it with unrelated products
+
+WRONG: Scene says "tart cherry juice" but image shows juice + skincare bottles + random products
+RIGHT: Scene says "tart cherry juice" and image shows ONLY the juice as the hero item
 
 TEXT TO DISPLAY:
 {text_content}
