@@ -1317,14 +1317,10 @@ IMPORTANT: Only ONE person in the image - never two people!
             ]
         else:
             # No persona needed - just style reference
-            # Enhance scene description with real products from Google Search
+            # IMPORTANT: Do NOT inject product recommendations into body slides!
+            # This was causing all slides to show the same products.
+            # Each body slide should have its own unique scene from the analysis.
             enhanced_scene = scene_description
-            if product_description and slide_type == 'body':
-                enhanced_scene = _get_scene_with_real_products(
-                    scene_description,
-                    "",  # Category will be auto-detected
-                    product_description
-                )
 
             prompt = f"""Generate a TikTok {slide_label} slide.
 
