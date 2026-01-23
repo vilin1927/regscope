@@ -851,11 +851,38 @@ OUTPUT: Use "text_variations" array instead of single "text_content":
     "text_variations": ["option 1", "option 2", "option 3"]
 }}
 
-SCENE DIVERSITY REQUIREMENT:
-Make sure each body slide shows a DIFFERENT type of scene:
-- NOT all in bathroom
-- NOT all applying products
-- Mix indoor/outdoor, morning/night, active/relaxed moments
+═══════════════════════════════════════════════════════════════
+SCENE DIVERSITY REQUIREMENT (ABSOLUTELY CRITICAL!)
+═══════════════════════════════════════════════════════════════
+
+Each body slide MUST show a COMPLETELY DIFFERENT:
+1. LOCATION (different room/setting)
+2. PRODUCTS (different items visible in scene)
+3. ACTIVITY (different action/moment)
+
+MANDATORY: Use DIFFERENT locations from this list for each body slide:
+- Bathroom vanity (skincare products, towels, mirror)
+- Bedroom nightstand (books, lamp, alarm clock)
+- Kitchen counter (water bottle, fruit, morning light)
+- Cozy reading corner (blanket, book, tea cup)
+- Home office desk (plants, candles, laptop)
+- Living room couch (pillows, soft lighting)
+- Yoga/meditation space (mat, plants, calm vibes)
+- Outdoor balcony/patio (plants, morning coffee)
+
+BAD EXAMPLE (DO NOT DO THIS - same location repeated):
+- Body slide 1: "bedroom nightstand with products"
+- Body slide 2: "bedroom nightstand different angle"
+- Body slide 3: "nightstand with morning light"
+- Body slide 4: "cozy bedroom nightstand setup"
+^^^ THIS IS WRONG - all slides are basically the same bedroom nightstand!
+
+GOOD EXAMPLE (each slide = completely different world):
+- Body slide 1: "Bathroom vanity with morning skincare routine, CeraVe bottles visible"
+- Body slide 2: "Kitchen counter with lemon water and fruit bowl, morning sunlight"
+- Body slide 3: "Cozy reading corner with blanket, book spine-down, warm lamp"
+- Body slide 4: "Home office desk with plant, candle burning, laptop in background"
+^^^ THIS IS CORRECT - each slide transports viewer to a different space!
 
 SCENE DESCRIPTION RULES (CRITICAL):
 - ALWAYS describe scenes as STANDARD SINGLE IMAGES (one photo filling the frame)
@@ -1336,9 +1363,14 @@ IMPORTANT: Only ONE person in the image - never two people!
 
 {text_style_instruction}
 {variation_instruction}
-[STYLE_REFERENCE] - Reference slide for visual composition and mood.
+[STYLE_REFERENCE] - Reference slide for visual composition and mood ONLY (colors, fonts, text style).
+DO NOT copy the scene/location from the reference! Generate a COMPLETELY DIFFERENT setting.
 
-NEW SCENE: {enhanced_scene}
+NEW SCENE (generate THIS exact setting): {enhanced_scene}
+
+CRITICAL: The scene description above specifies a UNIQUE location. Generate EXACTLY that location,
+not a generic bedroom or bathroom. If it says "kitchen counter" - show a kitchen. If it says
+"reading corner" - show a reading corner. Each slide must look like a DIFFERENT room/space.
 
 TEXT TO DISPLAY:
 {text_content}
