@@ -147,6 +147,9 @@ def create_video(
         # Create concat file
         concat_path = create_concat_file(image_paths, slide_duration, work_dir)
 
+        # Calculate exact video duration
+        total_video_duration = len(image_paths) * slide_duration
+
         # Build FFmpeg command
         # Video filter: scale to 3:4, pad to 9:16 with black bars centered
         video_filter = "scale=1080:1440:force_original_aspect_ratio=decrease,pad=1080:1920:(ow-iw)/2:(oh-ih)/2:black"
@@ -163,6 +166,9 @@ def create_video(
         if audio_path:
             cmd.extend(['-i', audio_path])
 
+        # Explicitly set output duration to prevent last slide extending
+        cmd.extend(['-t', str(total_video_duration)])
+
         # Video encoding settings
         cmd.extend([
             '-vf', video_filter,
@@ -172,12 +178,11 @@ def create_video(
             '-pix_fmt', 'yuv420p',
         ])
 
-        # Audio settings
+        # Audio settings (duration already limited by -t flag above)
         if audio_path:
             cmd.extend([
                 '-c:a', 'aac',
                 '-b:a', '128k',
-                '-shortest',  # End when shortest stream ends
             ])
 
         # Output optimization
