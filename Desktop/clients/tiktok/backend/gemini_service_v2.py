@@ -1323,6 +1323,7 @@ CRITICAL TEXT PLACEMENT RULES:
 - Text should be in empty/background areas only
 - If unsure, place text at TOP or BOTTOM edges of image
 - Main subject/object must be completely unobstructed
+- Place text in ONLY ONE location - NEVER duplicate or repeat text at multiple positions
 
 LAYOUT RULES:
 - Generate ONE SINGLE product image - no comparisons
@@ -1405,6 +1406,7 @@ CRITICAL TEXT PLACEMENT RULES:
 - NEVER cover main objects/products with text
 - Text should be in empty/background areas only
 - If unsure, place text at TOP or BOTTOM edges of image
+- Place text in ONLY ONE location - NEVER duplicate or repeat text at multiple positions
 
 IMPORTANT: Only ONE person in the image - never two people!
 {quality_constraints}"""
@@ -1449,6 +1451,7 @@ CRITICAL TEXT PLACEMENT RULES:
 - NEVER cover main objects/products with text
 - Text should be in empty/background areas only
 - If unsure, place text at TOP or BOTTOM edges of image
+- Place text in ONLY ONE location - NEVER duplicate or repeat text at multiple positions
 
 IMPORTANT: Only ONE person in the image - never two people!
 {quality_constraints}"""
@@ -1505,6 +1508,7 @@ CRITICAL TEXT PLACEMENT RULES:
 - Text should be in empty/background areas only
 - If unsure, place text at TOP or BOTTOM edges of image
 - Main subject must be completely unobstructed
+- Place text in ONLY ONE location - NEVER duplicate or repeat text at multiple positions
 
 IMPORTANT HUMAN BODY RULES:
 - PREFER showing objects/products instead of human body parts
