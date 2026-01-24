@@ -85,10 +85,12 @@ def create_concat_file(image_paths: List[str], duration: float, output_dir: str)
             f.write(f"duration {duration}\n")
 
         # FFmpeg concat demuxer quirk: repeat last image to avoid cut-off
+        # Must include duration to prevent last slide from playing indefinitely
         if image_paths:
             abs_path = os.path.abspath(image_paths[-1])
             escaped_path = abs_path.replace("'", "'\\''")
             f.write(f"file '{escaped_path}'\n")
+            f.write(f"duration 0.001\n")  # Minimal duration for FFmpeg quirk
 
     return concat_path
 

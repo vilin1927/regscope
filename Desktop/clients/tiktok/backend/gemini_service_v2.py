@@ -1525,7 +1525,11 @@ CRITICAL TEXT PLACEMENT RULES:
 - If unsure, place text at TOP or BOTTOM edges of image
 - Main subject must be completely unobstructed
 
-IMPORTANT: Do NOT include any human faces, hands, body parts, or people in this image.
+IMPORTANT HUMAN BODY RULES:
+- PREFER showing objects/products instead of human body parts
+- If the scene REQUIRES human body parts (legs, arms, hands, feet), you MUST show the FULL BODY or at least the full upper/lower half - NEVER crop to show ONLY isolated limbs
+- Example: If showing "legs up the wall", include the torso and head in frame - NOT just floating legs
+- NEVER generate images with cropped/isolated body parts without body context
 
 CRITICAL LAYOUT REQUIREMENT:
 Even though the text may compare two things, generate a SINGLE lifestyle photo.

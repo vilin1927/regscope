@@ -67,7 +67,7 @@ def update_env_file(key: str, value: str) -> bool:
             # Try common locations
             possible_paths = [
                 os.path.join(os.path.dirname(__file__), '.env'),
-                '/root/tiktok-slideshow-generator/Desktop/tiktok/backend/.env'
+                '/root/tiktok-slideshow-generator/Desktop/clients/tiktok/backend/.env'
             ]
             for path in possible_paths:
                 if os.path.exists(path):
