@@ -1604,8 +1604,22 @@ If it looks like a stock photo or Amazon listing, it will be REJECTED.
                 raise GeminiServiceError('Empty response from Gemini - content may have been blocked')
             for part in response.parts:
                 if hasattr(part, 'inline_data') and part.inline_data:
-                    with open(output_path, 'wb') as f:
+                    # Save raw data to temp file first
+                    temp_path = output_path + '.tmp'
+                    with open(temp_path, 'wb') as f:
                         f.write(part.inline_data.data)
+
+                    # Convert to JPEG format
+                    try:
+                        with Image.open(temp_path) as img:
+                            # Convert to RGB if necessary (for JPEG)
+                            if img.mode in ('RGBA', 'P'):
+                                img = img.convert('RGB')
+                            img.save(output_path, 'JPEG', quality=95)
+                        os.remove(temp_path)
+                    except Exception as conv_err:
+                        logger.warning(f"JPEG conversion failed, keeping original: {conv_err}")
+                        os.rename(temp_path, output_path)
 
                     # Validate image structure
                     is_valid, issues = _validate_image_structure(output_path, expected_ratio="3:4")
@@ -1764,7 +1778,7 @@ def generate_all_images(
                 text_ver = t_idx + 1   # 1-indexed
 
                 # Determine output filename with photo and text version
-                output_path = os.path.join(output_dir, f'{slide_key}_p{photo_ver}_t{text_ver}.png')
+                output_path = os.path.join(output_dir, f'{slide_key}_p{photo_ver}_t{text_ver}.jpg')
 
                 # For product slides, use the p_idx-th uploaded image
                 product_img = None
@@ -1844,7 +1858,7 @@ def generate_all_images(
                 # Convert to RGB if necessary and save
                 if img_cropped.mode in ('RGBA', 'P'):
                     img_cropped = img_cropped.convert('RGB')
-                img_cropped.save(dst_path, 'PNG')
+                img_cropped.save(dst_path, 'JPEG', quality=95)
 
             copy_only_results[task['task_id']] = dst_path
             log.debug(f"Copied product image: {os.path.basename(src_path)} -> {os.path.basename(dst_path)}")
@@ -2156,7 +2170,7 @@ def run_pipeline(
             try:
                 # Parse task_id from filename (e.g., hook_p1_t1.png)
                 filename = os.path.basename(img_path)
-                parts = filename.replace('.png', '').split('_')
+                parts = filename.replace('.jpg', '').replace('.png', '').split('_')
 
                 # Extract slide key and text index
                 if parts[0] in ['hook', 'product']:
@@ -2323,7 +2337,7 @@ def submit_to_queue(
                 text_ver = t_idx + 1
 
                 task_id = f"{job_id}_{slide_key}_p{photo_ver}_t{text_ver}"
-                output_path = os.path.join(output_dir, f'{slide_key}_p{photo_ver}_t{text_ver}.png')
+                output_path = os.path.join(output_dir, f'{slide_key}_p{photo_ver}_t{text_ver}.jpg')
 
                 # Determine product image for product slides
                 product_img = None
@@ -2406,7 +2420,7 @@ def _copy_product_image(src_path: str, dst_path: str, log):
 
             if img_cropped.mode in ('RGBA', 'P'):
                 img_cropped = img_cropped.convert('RGB')
-            img_cropped.save(dst_path, 'PNG')
+            img_cropped.save(dst_path, 'JPEG', quality=95)
 
         log.debug(f"Copied product image: {os.path.basename(src_path)} -> {os.path.basename(dst_path)}")
     except Exception as e:
@@ -2592,7 +2606,7 @@ def run_pipeline_queued(
     variations_structure = {}
     for img_path in result['images']:
         filename = os.path.basename(img_path)
-        parts = filename.replace('.png', '').split('_')
+        parts = filename.replace('.jpg', '').replace('.png', '').split('_')
         if parts[0] in ['hook', 'product']:
             slide_key = parts[0]
         else:
@@ -2637,7 +2651,7 @@ def run_pipeline_queued(
         for img_path in generation_result['images']:
             try:
                 filename = os.path.basename(img_path)
-                parts = filename.replace('.png', '').split('_')
+                parts = filename.replace('.jpg', '').replace('.png', '').split('_')
 
                 if parts[0] in ['hook', 'product']:
                     slide_key = parts[0]
