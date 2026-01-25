@@ -1329,6 +1329,8 @@ DO NOT GENERATE:
 - Blurry or low-quality appearance
 - Cluttered or chaotic compositions
 - Floating objects or impossible physics
+- Phone UI elements (navigation buttons, status bars, "Share/Edit/Delete" buttons, black bars/frames)
+- Steam or vapor effects (tea steam, coffee steam, humidifier mist, candle smoke) - these look fake/AI-generated
 """
 
     if slide_type == 'product':
@@ -1600,6 +1602,9 @@ BAD examples (DO NOT generate - too fake/stock):
 - Generic stock photo aesthetics (too clean, too posed)
 - Bright uniform lighting with no shadows
 - Marble countertop with perfectly placed items
+- Images with phone UI elements (navigation bars, black frames, Share/Edit buttons)
+- Steam rising from cups/mugs (obvious AI giveaway)
+- Visible humidifier mist or candle smoke (looks fake)
 
 AUTHENTICITY REQUIREMENTS:
 - Include subtle imperfections (soft focus areas, natural shadows)
