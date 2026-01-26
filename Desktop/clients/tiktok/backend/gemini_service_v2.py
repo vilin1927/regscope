@@ -1322,6 +1322,14 @@ IMAGE QUALITY REQUIREMENTS:
 - Sharp focus on main subjects
 - Harmonious color palette that matches the mood
 
+⚠️ CRITICAL - FULL-BLEED FORMAT (MANDATORY):
+- Image content MUST extend to ALL FOUR EDGES
+- NO black bars, borders, or frames on ANY side (top, bottom, left, right)
+- NO letterboxing or pillarboxing
+- NO phone UI elements, navigation bars, or "Share/Edit/Delete" buttons
+- The scene/background must fill the ENTIRE frame edge-to-edge
+- Think "camera viewport" - subject fills the whole 9:16 frame with NO empty borders
+
 DO NOT GENERATE:
 - Surreal, abstract, or "obviously AI" aesthetics
 - Distorted objects, text, or proportions
@@ -1329,7 +1337,8 @@ DO NOT GENERATE:
 - Blurry or low-quality appearance
 - Cluttered or chaotic compositions
 - Floating objects or impossible physics
-- Phone UI elements (navigation buttons, status bars, "Share/Edit/Delete" buttons, black bars/frames)
+- ANY black/dark bars or frames at edges (ESPECIALLY at bottom!)
+- Phone screenshots with visible UI elements
 - Steam or vapor effects (tea steam, coffee steam, humidifier mist, candle smoke) - these look fake/AI-generated
 """
 
@@ -1603,6 +1612,8 @@ BAD examples (DO NOT generate - too fake/stock):
 - Bright uniform lighting with no shadows
 - Marble countertop with perfectly placed items
 - Images with phone UI elements (navigation bars, black frames, Share/Edit buttons)
+- Images with black/dark bars at top or bottom (letterboxing)
+- Images that don't fill the entire 9:16 frame edge-to-edge
 - Steam rising from cups/mugs (obvious AI giveaway)
 - Visible humidifier mist or candle smoke (looks fake)
 

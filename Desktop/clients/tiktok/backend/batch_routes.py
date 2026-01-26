@@ -158,11 +158,18 @@ def create_batch_job():
 
         log.debug(f"Variations: hook={hook_photo_var}x{hook_text_var}, body={body_photo_var}x{body_text_var}, product=x{product_text_var}, video={generate_video}, preset={preset_id}")
 
+        # Get custom batch name or generate one
+        batch_name = request.form.get('name', '').strip()
+        if not batch_name:
+            batch_name = f"Batch_{str(uuid.uuid4())[:8]}"
+
+        log.info(f"Batch name: {batch_name}")
+
         # Create job entry in unified jobs table first (for Job History)
         job_id = create_job(
             job_type='batch',
             total_links=len(valid_links),
-            folder_name=f"Batch_{str(uuid.uuid4())[:8]}",
+            folder_name=batch_name,
             variations_config=json.dumps(variations_config)
         )
 
