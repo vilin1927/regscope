@@ -868,90 +868,72 @@ EXAMPLE: If original body slide shows "someone applying face serum":
     "slide_index": 2,
     "slide_type": "body",
     "scene_variations": [
+        // Generate exactly {body_photo_var} scene variations here
         {{
             "scene_description": "Close-up of hands applying serum to face, bathroom mirror reflection",
-            "text_variations": [
-                "my nightly serum ritual ✨",
-                "the serum that changed everything",
-                "applying my favorite serum 💫"
-            ]
-        }},
-        {{
-            "scene_description": "Serum dropper with product dripping, soft bathroom lighting",
-            "text_variations": [
-                "a few drops goes a long way ✨",
-                "serum application 101",
-                "this serum hits different 💫"
-            ]
+            "text_variations": ["generate exactly {body_text_var} text items"]
         }}
     ]
 }}
 
-^^^ BOTH variations are about SERUM (matching the original) - not random different products!
+^^^ Variations should be about SERUM (matching the original) - not random different products!
 
 STRUCTURE FOR HOOK SLIDES (hook_photo_var={hook_photo_var}):
 - Generate {hook_photo_var} DIFFERENT hook concepts
 - Each hook has its OWN scene/angle
 - Each hook has {hook_text_var} text variations
 
-EXAMPLE: Hook slide with hook_photo_var=2, hook_text_var=3:
+EXAMPLE: Hook slide structure:
 {{
     "slide_index": 0,
     "slide_type": "hook",
     "scene_variations": [
+        // Generate exactly {hook_photo_var} scene variations here
         {{
             "scene_description": "Girl in cozy loungewear looking relaxed, soft bedroom lighting",
-            "text_variations": [
-                "simple habits that fixed my sleep 😴",
-                "my sleep routine changed everything ✨",
-                "how I finally beat insomnia 🌙"
-            ]
-        }},
-        {{
-            "scene_description": "Close-up selfie with glowing skin, morning light through window",
-            "text_variations": [
-                "the glow up is in the sleep 💫",
-                "proof that sleep = skincare ✨",
-                "my skin cleared when I fixed my sleep 🌟"
-            ]
+            "text_variations": ["generate exactly {hook_text_var} text items"]
         }}
     ]
 }}
 
-FOR PRODUCT SLIDE (only 1 scene, multiple texts):
+FOR PRODUCT SLIDE (exactly 1 scene variation):
 {{
     "slide_index": 4,
     "slide_type": "product",
     "scene_variations": [
         {{
             "scene_description": "Product on nightstand with cozy bedroom background",
-            "text_variations": [
-                "steam eye mask ☁️\\n\\nlumidew masks are my fave! got mine from amazon",
-                "heated eye spa 🧖‍♀️\\n\\nobsessed with lumidew masks, found on amazon!"
-            ]
+            "text_variations": ["generate exactly {product_text_var} text items - must include brand name and amazon"]
         }}
     ]
 }}
 
-FOR CTA SLIDE (only 1 scene):
+FOR CTA SLIDE (exactly 1 scene variation):
 {{
     "slide_index": 6,
     "slide_type": "cta",
     "scene_variations": [
         {{
             "scene_description": "Peaceful bedroom with morning sunlight",
-            "text_variations": ["save this for better sleep ✨", "comment your fave tip 💬"]
+            "text_variations": ["generate exactly 1 text item for CTA"]
         }}
     ]
 }}
 
-VARIATION RULES:
+VARIATION RULES (CRITICAL - FOLLOW EXACTLY!):
+⚠️ THE COUNTS BELOW ARE MANDATORY - DO NOT DEVIATE!
+
+- Hook slides: EXACTLY {hook_photo_var} scene_variations, each with EXACTLY {hook_text_var} text_variations
+- Body slides: EXACTLY {body_photo_var} scene_variations, each with EXACTLY {body_text_var} text_variations
+- Product slides: EXACTLY 1 scene_variation with EXACTLY {product_text_var} text_variations
+- CTA slides: EXACTLY 1 scene_variation with EXACTLY 1 text_variation
+
+If hook_text_var=1, generate exactly 1 text item (not 2, not 3 - exactly 1!)
+If body_text_var=1, generate exactly 1 text item per scene variation!
+
 - scene_variations = array of VARIATIONS of the SAME concept from the original slide
 - text_variations = array of different WORDINGS for the SAME concept
 - Each scene_variation must have a UNIQUE scene_description
-- Body slides MUST have {body_photo_var} scene_variations
-- Hook slides MUST have {hook_photo_var} scene_variations
-- Product/CTA slides have exactly 1 scene_variation
 
 ═══════════════════════════════════════════════════════════════
 MULTI-POSITION TEXT RULE (CRITICAL!)
@@ -1116,13 +1098,10 @@ Return ONLY valid JSON:
             }},
             "text_position_hint": "where text goes, what NOT to cover",
             "scene_variations": [
+                // Generate exactly {hook_photo_var} scene variations, each with exactly {hook_text_var} text variations
                 {{
                     "scene_description": "Girl in cozy loungewear, soft bedroom lighting. COMPOSITION: framing=close-up, angle=straight, position=center, background=blurred bedroom",
-                    "text_variations": ["hook text option 1", "hook text option 2", "hook text option 3"]
-                }},
-                {{
-                    "scene_description": "Close-up selfie with glowing skin, morning light. COMPOSITION: framing=close-up, angle=slightly above, position=center, background=window light",
-                    "text_variations": ["different hook concept 1", "different hook concept 2", "different hook concept 3"]
+                    "text_variations": ["hook text - generate exactly {hook_text_var} items here"]
                 }}
             ]
         }},
@@ -1141,13 +1120,10 @@ Return ONLY valid JSON:
             }},
             "text_position_hint": "center middle",
             "scene_variations": [
+                // Generate exactly {body_photo_var} scene variations, each with exactly {body_text_var} text variations
                 {{
                     "scene_description": "Similar scene to original slide 1 - mimic the content type and vibe. COMPOSITION: framing=medium, angle=above, position=center, background=bedroom",
-                    "text_variations": ["text matching original style v1", "text matching original style v2"]
-                }},
-                {{
-                    "scene_description": "Variation of the same concept from original slide 1. COMPOSITION: framing=medium, angle=straight, position=center, background=bathroom",
-                    "text_variations": ["alternative text v1", "alternative text v2"]
+                    "text_variations": ["body text - generate exactly {body_text_var} items here"]
                 }}
             ]
         }},
@@ -1166,12 +1142,10 @@ Return ONLY valid JSON:
             }},
             "text_position_hint": "text at top, DO NOT cover product",
             "scene_variations": [
+                // Product slide: exactly 1 scene variation with exactly {product_text_var} text variations
                 {{
                     "scene_description": "User's product on nightstand with cozy bedroom background. COMPOSITION: framing=medium, angle=straight, position=center, background=bedroom",
-                    "text_variations": [
-                        "steam eye mask before bed\\n\\nlumidew masks are my fave! got them on amazon ✨",
-                        "heated eye spa\\n\\nobsessed with lumidew masks from amazon!"
-                    ]
+                    "text_variations": ["product text with brand + amazon - generate exactly {product_text_var} items here"]
                 }}
             ]
         }}
