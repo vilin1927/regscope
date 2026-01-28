@@ -442,7 +442,20 @@ def _validate_required_keywords(analysis: dict) -> tuple[bool, list[str]]:
         issues.append("No product slide found in analysis")
         return False, issues
 
-    product_text = product_slides[0].get('text_content', '').lower()
+    # Collect all text from product slide (both old and new format)
+    product_slide = product_slides[0]
+    all_texts = []
+
+    # Old format: text_content
+    if product_slide.get('text_content'):
+        all_texts.append(product_slide.get('text_content'))
+
+    # New format: scene_variations[].text_variations[]
+    for scene_var in product_slide.get('scene_variations', []):
+        for text in scene_var.get('text_variations', []):
+            all_texts.append(text)
+
+    product_text = ' '.join(all_texts).lower()
 
     # Check brand name
     if brand_name and brand_name.lower() not in product_text:
