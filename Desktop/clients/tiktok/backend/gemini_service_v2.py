@@ -815,6 +815,44 @@ Look at the text overlays and describe the typography VISUALLY (not font names):
 This visual description will be used to generate matching text - be VERY specific!
 
 ═══════════════════════════════════════════════════════════════
+TASK 4B: ANALYZE VISUAL STYLE (CRITICAL FOR MATCHING ORIGINAL LOOK)
+═══════════════════════════════════════════════════════════════
+
+Analyze the OVERALL VISUAL STYLE of the slideshow images to ensure generated images match:
+
+1. COLOR TEMPERATURE:
+   - "warm" = golden, orange, yellow tones (cozy, sunset vibes)
+   - "cool" = blue, teal, purple tones (clean, modern vibes)
+   - "neutral" = balanced, no strong color cast
+   - "mixed" = varies by slide
+
+2. COLOR PALETTE:
+   - Describe the dominant colors (e.g., "soft pinks and creams", "earth tones - browns and beiges", "bright whites with pops of green")
+   - Note any signature color that appears across slides
+
+3. LIGHTING STYLE:
+   - "natural-soft" = soft window light, diffused, gentle shadows
+   - "natural-harsh" = direct sunlight, strong shadows
+   - "golden-hour" = warm, glowy, sunset/sunrise lighting
+   - "studio" = even, professional lighting
+   - "ambient-moody" = low light, atmospheric, intimate
+   - "bright-airy" = very bright, minimal shadows, clean
+
+4. SATURATION LEVEL:
+   - "muted" = desaturated, faded colors (vintage/film look)
+   - "natural" = true-to-life colors
+   - "vibrant" = boosted, punchy colors
+   - "high-contrast" = deep blacks, bright whites
+
+5. FILTER/EDITING STYLE:
+   - Describe any visible editing (e.g., "slight grain/film effect", "soft glow", "clean and sharp", "faded blacks", "orange and teal color grade")
+
+6. OVERALL AESTHETIC:
+   - 2-3 words capturing the visual identity (e.g., "clean minimalist", "warm cozy", "moody editorial", "bright lifestyle", "soft feminine")
+
+This visual style MUST be replicated in all generated images!
+
+═══════════════════════════════════════════════════════════════
 TASK 5: DETECT COMPETITOR SLIDE & DETERMINE PRODUCT PLACEMENT
 ═══════════════════════════════════════════════════════════════
 
@@ -1154,6 +1192,15 @@ Return ONLY valid JSON:
         "position_style": "where text is typically placed (e.g., centered middle, bottom third)"
     }},
 
+    "visual_style": {{
+        "color_temperature": "warm | cool | neutral | mixed",
+        "color_palette": "description of dominant colors (e.g., soft pinks and creams, earth tones)",
+        "lighting_style": "natural-soft | natural-harsh | golden-hour | studio | ambient-moody | bright-airy",
+        "saturation": "muted | natural | vibrant | high-contrast",
+        "filter_style": "description of editing style (e.g., slight grain, soft glow, clean and sharp)",
+        "overall_aesthetic": "2-3 words (e.g., clean minimalist, warm cozy, moody editorial)"
+    }},
+
     "target_audience": {{
         "demographic": "who this is for",
         "pain_points": ["problem 1", "problem 2"],
@@ -1362,6 +1409,7 @@ def _generate_single_image(
     persona_reference_path: Optional[str] = None,
     has_persona: bool = False,
     text_style: Optional[dict] = None,
+    visual_style: Optional[dict] = None,
     version: int = 1,
     clean_image_mode: bool = False,
     product_description: str = ""
@@ -1455,6 +1503,31 @@ The text appearance is CRITICAL for authenticity - match this exact visual style
     else:
         text_style_instruction = "Use clean, bold, white sans-serif text with subtle shadow."
 
+    # Build visual style instruction from analysis
+    if visual_style:
+        visual_style_instruction = f"""
+VISUAL STYLE REQUIREMENTS (MATCH THE ORIGINAL'S LOOK):
+
+⚠️ CRITICAL: Match the color grading and lighting of the reference image EXACTLY!
+
+COLOR & LIGHTING:
+- Color Temperature: {visual_style.get('color_temperature', 'neutral')}
+  {"(Use warm golden/orange tones throughout)" if visual_style.get('color_temperature') == 'warm' else "(Use cool blue/teal tones throughout)" if visual_style.get('color_temperature') == 'cool' else "(Keep colors balanced, no strong color cast)"}
+- Color Palette: {visual_style.get('color_palette', 'natural colors')}
+- Lighting Style: {visual_style.get('lighting_style', 'natural-soft')}
+- Saturation: {visual_style.get('saturation', 'natural')}
+  {"(Colors should be muted/faded, not vibrant)" if visual_style.get('saturation') == 'muted' else "(Colors should be punchy and vibrant)" if visual_style.get('saturation') == 'vibrant' else "(Keep natural, true-to-life colors)"}
+
+EDITING STYLE:
+- Filter/Grade: {visual_style.get('filter_style', 'clean and sharp')}
+- Overall Aesthetic: {visual_style.get('overall_aesthetic', 'lifestyle')}
+
+The generated image MUST look like it belongs in the same photo series as the reference.
+Match the color grading, lighting mood, and overall visual feel!
+"""
+    else:
+        visual_style_instruction = ""
+
     # Quality constraints to prevent weird/AI-looking images
     quality_constraints = """
 IMAGE QUALITY REQUIREMENTS:
@@ -1489,6 +1562,7 @@ DO NOT GENERATE:
         prompt = f"""Generate a TikTok slide featuring a product AS A CASUAL TIP.
 
 {text_style_instruction}
+{visual_style_instruction}
 
 [PRODUCT_PHOTO] - User's product image. THIS IS THE BASE IMAGE - keep it as the main visual.
 
@@ -1540,6 +1614,7 @@ GOAL: Look like "just another tip" - NOT an advertisement.
         prompt = f"""Generate a TikTok CTA (call-to-action) slide.
 
 {text_style_instruction}
+{visual_style_instruction}
 
 [STYLE_REFERENCE] - Reference CTA slide for background style and composition.
 
@@ -1571,6 +1646,7 @@ LAYOUT: {text_position_hint}
             prompt = f"""Generate a TikTok {slide_label} slide.
 
 {text_style_instruction}
+{visual_style_instruction}
 {variation_instruction}
 [STYLE_REFERENCE] - Reference slide for visual composition and mood.
 MIRROR the exact composition from the reference:
@@ -1637,6 +1713,7 @@ IMPORTANT: Only ONE person in the image - never two people!
             prompt = f"""Generate a TikTok {slide_label} slide.
 
 {text_style_instruction}
+{visual_style_instruction}
 {variation_instruction}
 [STYLE_REFERENCE] - Reference slide for visual composition and mood.
 MIRROR the exact composition from the reference:
@@ -1721,6 +1798,7 @@ RIGHT: Scene says "tart cherry juice" and image shows ONLY the juice as the hero
             prompt = f"""Generate a TikTok {slide_label} slide.
 
 {text_style_instruction}
+{visual_style_instruction}
 {variation_instruction}
 [STYLE_REFERENCE] - Reference slide for visual composition, mood, and content type.
 MIRROR the exact composition from the reference:
@@ -1979,6 +2057,7 @@ def generate_all_images(
 
     new_slides = analysis['new_slides']
     text_style = analysis.get('text_style', None)  # Extract text style from analysis
+    visual_style = analysis.get('visual_style', None)  # Extract visual style from analysis
 
     # Build all tasks with photo × text variations
     all_tasks = []
@@ -2165,6 +2244,7 @@ def generate_all_images(
                     persona_ref_path,
                     task['has_persona'],
                     text_style,  # Pass text style from analysis
+                    visual_style,  # Pass visual style from analysis
                     task['version'],  # Pass version for variation diversity
                     clean_image_mode,  # Generate without text for PIL rendering
                     product_description  # For real product grounding in scenes
@@ -2547,6 +2627,7 @@ def submit_to_queue(
 
     new_slides = analysis['new_slides']
     text_style = analysis.get('text_style', {})
+    visual_style = analysis.get('visual_style', {})
 
     tasks_submitted = 0
 
@@ -2649,6 +2730,7 @@ def submit_to_queue(
                     persona_reference_path='',  # Set by queue when dependency resolves
                     has_persona=has_persona,
                     text_style=text_style,
+                    visual_style=visual_style,
                     clean_image_mode=clean_image_mode,
                     product_description=product_description,
                     version=photo_ver,

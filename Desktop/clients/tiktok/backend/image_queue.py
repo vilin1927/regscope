@@ -54,6 +54,7 @@ class ImageTask:
     persona_reference_path: str = ""  # Set after persona_first completes
     has_persona: bool = False
     text_style: Dict[str, Any] = field(default_factory=dict)
+    visual_style: Dict[str, Any] = field(default_factory=dict)
     clean_image_mode: bool = False
     product_description: str = ""
     version: int = 1               # For variation diversity
@@ -74,8 +75,9 @@ class ImageTask:
     def to_dict(self) -> dict:
         """Convert to dictionary for Redis storage."""
         data = asdict(self)
-        # Convert text_style dict to JSON string
+        # Convert text_style and visual_style dicts to JSON strings
         data['text_style'] = json.dumps(data['text_style'])
+        data['visual_style'] = json.dumps(data['visual_style'])
         # Convert booleans to strings (Redis doesn't accept booleans)
         for key, value in data.items():
             if isinstance(value, bool):
@@ -91,6 +93,12 @@ class ImageTask:
                 data['text_style'] = json.loads(data['text_style'])
             except (json.JSONDecodeError, TypeError):
                 data['text_style'] = {}
+        # Convert visual_style JSON string back to dict
+        if isinstance(data.get('visual_style'), str):
+            try:
+                data['visual_style'] = json.loads(data['visual_style'])
+            except (json.JSONDecodeError, TypeError):
+                data['visual_style'] = {}
         # Convert boolean strings
         if isinstance(data.get('has_persona'), str):
             data['has_persona'] = data['has_persona'].lower() == 'true'

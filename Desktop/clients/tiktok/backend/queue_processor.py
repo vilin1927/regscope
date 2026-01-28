@@ -205,6 +205,7 @@ class BatchProcessor:
                 persona_reference_path=task.persona_reference_path,
                 has_persona=task.has_persona,
                 text_style=task.text_style,
+                visual_style=task.visual_style,
                 version=task.version,
                 clean_image_mode=task.clean_image_mode,
                 product_description=task.product_description
