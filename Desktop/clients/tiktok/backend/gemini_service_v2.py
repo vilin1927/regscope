@@ -1410,6 +1410,7 @@ def _generate_single_image(
     has_persona: bool = False,
     text_style: Optional[dict] = None,
     visual_style: Optional[dict] = None,
+    persona_info: Optional[dict] = None,
     version: int = 1,
     clean_image_mode: bool = False,
     product_description: str = ""
@@ -1710,6 +1711,40 @@ IMPORTANT: Only ONE person in the image - never two people!
             ]
         elif has_persona:
             # Has persona but NO reference yet - CREATE a new persona
+            # Build persona demographics instruction from analysis
+            if persona_info:
+                persona_demographics = f"""
+CREATE A NEW UNIQUE PERSONA (⚠️ CRITICAL - DO NOT CLONE THE REFERENCE PERSON):
+
+The person in STYLE_REFERENCE is for COMPOSITION ONLY - DO NOT copy their face!
+You MUST create a COMPLETELY DIFFERENT individual with DIFFERENT facial features.
+
+REQUIRED DEMOGRAPHICS TO MATCH (same target audience):
+- Gender: {persona_info.get('gender', 'female')}
+- Age Range: {persona_info.get('age_range', '20s')}
+- Ethnicity/Skin Tone: {persona_info.get('ethnicity', 'varied')}
+- Hair Style: {persona_info.get('appearance', 'natural hair')}
+- Style/Vibe: {persona_info.get('style', 'casual')}, {persona_info.get('vibe', 'authentic')}
+
+⚠️ IMPORTANT DISTINCTION:
+- MATCH: Same age group, same gender, same skin tone, same general style
+- DO NOT MATCH: Facial features, exact face shape, specific face details
+
+The result should appeal to the SAME target audience but be a CLEARLY DIFFERENT person.
+Think "could be their friend or sister" NOT "exact clone/copy".
+
+This persona will be used consistently across all slides - make them:
+- Attractive and relatable TikTok content creator
+- Natural, authentic appearance
+- Clothing appropriate for this scene context"""
+            else:
+                persona_demographics = """
+CREATE A NEW PERSONA:
+- Attractive, relatable TikTok content creator
+- Natural, authentic appearance
+- Clothing appropriate for this scene context
+- Will be used as reference for other slides"""
+
             prompt = f"""Generate a TikTok {slide_label} slide.
 
 {text_style_instruction}
@@ -1721,13 +1756,7 @@ MIRROR the exact composition from the reference:
 - Same camera angle (straight, above, below, side)
 - Same subject position in frame (center, left, right)
 - Similar background vibe and setting
-(Do NOT copy the person - create a NEW person)
-
-CREATE A NEW PERSONA:
-- Attractive, relatable TikTok content creator
-- Natural, authentic appearance
-- Clothing appropriate for this scene context
-- Will be used as reference for other slides
+{persona_demographics}
 
 SKIN REALISM (CRITICAL - apply to all faces):
 Increase skin realism with subtle natural pores, fine micro-bumps, and gentle uneven smoothness.
@@ -2058,6 +2087,7 @@ def generate_all_images(
     new_slides = analysis['new_slides']
     text_style = analysis.get('text_style', None)  # Extract text style from analysis
     visual_style = analysis.get('visual_style', None)  # Extract visual style from analysis
+    persona_info = analysis.get('persona', None)  # Extract persona demographics from analysis
 
     # Build all tasks with photo × text variations
     all_tasks = []
@@ -2245,6 +2275,7 @@ def generate_all_images(
                     task['has_persona'],
                     text_style,  # Pass text style from analysis
                     visual_style,  # Pass visual style from analysis
+                    persona_info,  # Pass persona demographics for new persona creation
                     task['version'],  # Pass version for variation diversity
                     clean_image_mode,  # Generate without text for PIL rendering
                     product_description  # For real product grounding in scenes
@@ -2628,6 +2659,7 @@ def submit_to_queue(
     new_slides = analysis['new_slides']
     text_style = analysis.get('text_style', {})
     visual_style = analysis.get('visual_style', {})
+    persona_info = analysis.get('persona', {})  # Demographics for new persona creation
 
     tasks_submitted = 0
 
@@ -2731,6 +2763,7 @@ def submit_to_queue(
                     has_persona=has_persona,
                     text_style=text_style,
                     visual_style=visual_style,
+                    persona_info=persona_info,  # Demographics for new persona creation
                     clean_image_mode=clean_image_mode,
                     product_description=product_description,
                     version=photo_ver,

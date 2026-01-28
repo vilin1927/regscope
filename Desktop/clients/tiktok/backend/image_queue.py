@@ -55,6 +55,7 @@ class ImageTask:
     has_persona: bool = False
     text_style: Dict[str, Any] = field(default_factory=dict)
     visual_style: Dict[str, Any] = field(default_factory=dict)
+    persona_info: Dict[str, Any] = field(default_factory=dict)  # Demographics for new persona creation
     clean_image_mode: bool = False
     product_description: str = ""
     version: int = 1               # For variation diversity
@@ -75,9 +76,10 @@ class ImageTask:
     def to_dict(self) -> dict:
         """Convert to dictionary for Redis storage."""
         data = asdict(self)
-        # Convert text_style and visual_style dicts to JSON strings
+        # Convert text_style, visual_style, and persona_info dicts to JSON strings
         data['text_style'] = json.dumps(data['text_style'])
         data['visual_style'] = json.dumps(data['visual_style'])
+        data['persona_info'] = json.dumps(data['persona_info'])
         # Convert booleans to strings (Redis doesn't accept booleans)
         for key, value in data.items():
             if isinstance(value, bool):
@@ -99,6 +101,12 @@ class ImageTask:
                 data['visual_style'] = json.loads(data['visual_style'])
             except (json.JSONDecodeError, TypeError):
                 data['visual_style'] = {}
+        # Convert persona_info JSON string back to dict
+        if isinstance(data.get('persona_info'), str):
+            try:
+                data['persona_info'] = json.loads(data['persona_info'])
+            except (json.JSONDecodeError, TypeError):
+                data['persona_info'] = {}
         # Convert boolean strings
         if isinstance(data.get('has_persona'), str):
             data['has_persona'] = data['has_persona'].lower() == 'true'

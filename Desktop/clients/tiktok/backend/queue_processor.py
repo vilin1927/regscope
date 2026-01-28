@@ -206,6 +206,7 @@ class BatchProcessor:
                 has_persona=task.has_persona,
                 text_style=task.text_style,
                 visual_style=task.visual_style,
+                persona_info=task.persona_info,  # Demographics for new persona creation
                 version=task.version,
                 clean_image_mode=task.clean_image_mode,
                 product_description=task.product_description
