@@ -1881,7 +1881,7 @@ LAYOUT: {text_position_hint}
             show_face_tape = shows_product_on_face and face_tape_ref_path and os.path.exists(face_tape_ref_path)
 
             # DEBUG: Log face tape decision
-            log.info(f"FACE_TAPE_DEBUG (existing persona): slide_type={slide_type}, shows_product_on_face={shows_product_on_face}, show_face_tape={show_face_tape}")
+            logger.info(f"FACE_TAPE_DEBUG (existing persona): slide_type={slide_type}, shows_product_on_face={shows_product_on_face}, show_face_tape={show_face_tape}")
 
             if show_face_tape:
                 # ===== FACE TAPE SLIDE =====
@@ -2097,7 +2097,7 @@ Only match: lighting mood, camera angle, setting vibe."""
             show_face_tape = shows_product_on_face and face_tape_ref_path and os.path.exists(face_tape_ref_path)
 
             # DEBUG: Log face tape decision
-            log.info(f"FACE_TAPE_DEBUG: slide_type={slide_type}, shows_product_on_face={shows_product_on_face}, show_face_tape={show_face_tape}")
+            logger.info(f"FACE_TAPE_DEBUG: slide_type={slide_type}, shows_product_on_face={shows_product_on_face}, show_face_tape={show_face_tape}")
 
             # Build face tape instruction using markdown format
             face_tape_instruction = ""
