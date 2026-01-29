@@ -1415,7 +1415,7 @@ Return ONLY valid JSON:
             "role_in_story": "Hook - grabs attention with relatable problem",
             "reference_image_index": 0,
             "has_persona": true,
-            "shows_product_on_face": false,  // true ONLY if original slide shows person wearing face tape/patches
+            "shows_product_on_face": false,  // HOOK: almost always false (hooks rarely show face tape)
             "visual": {{
                 "subject": "woman's face, selfie style",
                 "framing": "close-up",
@@ -1438,7 +1438,7 @@ Return ONLY valid JSON:
             "role_in_story": "Tip 1 - practical advice",
             "reference_image_index": 1,
             "has_persona": false,
-            "shows_product_on_face": false,
+            "shows_product_on_face": false,  // false: original slide 1 does NOT show face tape on person
             "visual": {{
                 "subject": "skincare product on nightstand",
                 "framing": "medium shot",
@@ -1456,12 +1456,34 @@ Return ONLY valid JSON:
             ]
         }},
         {{
+            "slide_index": 2,
+            "slide_type": "body",
+            "role_in_story": "Tip 2 - shows results/application",
+            "reference_image_index": 2,
+            "has_persona": true,
+            "shows_product_on_face": true,  // TRUE: original slide 2 shows person WEARING face tape patches on face!
+            "visual": {{
+                "subject": "woman with face tape patches on forehead and under eyes",
+                "framing": "close-up",
+                "angle": "straight on",
+                "position": "centered",
+                "background": "bathroom mirror"
+            }},
+            "text_position_hint": "top of image, avoid face",
+            "scene_variations": [
+                {{
+                    "scene_description": "Woman wearing face tape patches, morning skincare routine. COMPOSITION: framing=close-up, angle=straight, position=center, background=bathroom",
+                    "text_variations": ["tip text about application"]
+                }}
+            ]
+        }},
+        {{
             "slide_index": 4,
             "slide_type": "product",
             "role_in_story": "Product recommendation - natural fit in the narrative",
             "reference_image_index": 4,
             "has_persona": false,
-            "shows_product_on_face": false,
+            "shows_product_on_face": false,  // false: product slides show product packaging, not worn on face
             "visual": {{
                 "subject": "user's product prominently displayed",
                 "framing": "medium shot",
@@ -1500,7 +1522,7 @@ CRITICAL RULES:
 9. Include "visual" object for each slide with composition details
 10. Include "role_in_story" for each slide describing its narrative purpose
 11. scene_description MUST end with "COMPOSITION: framing=X, angle=Y, position=Z, background=W"
-12. shows_product_on_face: Look at each ORIGINAL slide image. Set true ONLY if that slide shows a person with face tape/patches visibly ON their face (forehead, under eyes, smile lines). ⚠️ ONLY ONE slide should be true - pick the best body/tip slide showing face tape. Hook should be false unless it's the only slide with face tape.
+12. shows_product_on_face: CRITICAL - LOOK AT EACH ORIGINAL SLIDE IMAGE! Set true if that original slide shows a person with face tape/patches ON their face (forehead, under eyes). Set false if the slide shows product packaging only, or person WITHOUT tape on face. ⚠️ ONLY ONE slide should have shows_product_on_face=true - pick the best body slide showing face tape. Hook should be false unless it's the only slide with face tape visible.
 """
 
     # Build content with all images
