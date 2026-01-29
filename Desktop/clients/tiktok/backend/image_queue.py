@@ -113,6 +113,8 @@ class ImageTask:
             data['has_persona'] = data['has_persona'].lower() == 'true'
         if isinstance(data.get('clean_image_mode'), str):
             data['clean_image_mode'] = data['clean_image_mode'].lower() == 'true'
+        if isinstance(data.get('shows_product_on_face'), str):
+            data['shows_product_on_face'] = data['shows_product_on_face'].lower() == 'true'
         # Convert integers
         for int_field in ['slide_index', 'retry_count', 'version']:
             if isinstance(data.get(int_field), str):
