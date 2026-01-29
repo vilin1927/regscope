@@ -1657,8 +1657,26 @@ The text appearance is CRITICAL for authenticity - match this exact visual style
         text_style_instruction = "Use clean, bold, white sans-serif text with subtle shadow."
 
     # Build visual style instruction from analysis
+    # For persona slides, use softer matching that explicitly excludes the person
     if visual_style:
-        visual_style_instruction = f"""
+        if has_persona:
+            # SOFTER version for persona slides - match lighting/colors but NOT the person
+            visual_style_instruction = f"""
+VISUAL STYLE (lighting and colors only):
+
+Match these visual elements from the reference:
+- Color Temperature: {visual_style.get('color_temperature', 'neutral')}
+- Lighting Style: {visual_style.get('lighting_style', 'natural-soft')}
+- Saturation: {visual_style.get('saturation', 'natural')}
+- Overall Aesthetic: {visual_style.get('overall_aesthetic', 'lifestyle')}
+
+⚠️ IMPORTANT: Match the LIGHTING and COLOR GRADING only.
+DO NOT match the person's appearance - generate a DIFFERENT person.
+The reference is for mood/lighting/colors - NOT for copying the person's face or features.
+"""
+        else:
+            # Full matching for non-persona slides
+            visual_style_instruction = f"""
 VISUAL STYLE REQUIREMENTS (MATCH THE ORIGINAL'S LOOK):
 
 ⚠️ CRITICAL: Match the color grading and lighting of the reference image EXACTLY!
@@ -1889,19 +1907,32 @@ IMPORTANT: Only ONE person in the image - never two people!
             # Simple instruction: recreate a similar person, NOT the same face
             if persona_info:
                 persona_demographics = f"""
-PERSONA INSTRUCTION:
-Look at the person in STYLE_REFERENCE. Create a SIMILAR person for the same target audience, but with a COMPLETELY DIFFERENT FACE.
+PERSONA INSTRUCTION - GENERATE A NEW PERSON:
 
-Same vibe: {persona_info.get('gender', 'female')}, {persona_info.get('age_range', '20s')}, {persona_info.get('style', 'casual')} style
-Different face: new facial features, different face shape, different look entirely
+DO NOT COPY from the reference:
+✗ DO NOT copy the person's face
+✗ DO NOT copy the hair color or style
+✗ DO NOT copy the clothing/outfit
 
-Think of it as: "someone who would follow the same TikTok accounts" - NOT a clone or twin.
-This new persona will be used across all slides."""
+GENERATE a new person with:
+✓ Demographics: {persona_info.get('gender', 'female')}, {persona_info.get('age_range', '20s')}, {persona_info.get('style', 'casual')} style
+✓ DIFFERENT face shape and features
+✓ DIFFERENT hair color and style
+✓ DIFFERENT clothing (any casual outfit that fits the vibe)
+
+The ONLY things to match from reference: warm lighting mood, selfie angle, indoor setting vibe.
+Think "someone from the same target audience" - NOT a twin or relative of the reference person."""
             else:
                 persona_demographics = """
-PERSONA INSTRUCTION:
-Look at the person in STYLE_REFERENCE. Create a SIMILAR person (same vibe, same target audience) but with a COMPLETELY DIFFERENT FACE.
-This new persona will be used across all slides."""
+PERSONA INSTRUCTION - GENERATE A NEW PERSON:
+
+DO NOT COPY from the reference:
+✗ DO NOT copy the person's face
+✗ DO NOT copy the hair color or style
+✗ DO NOT copy the clothing/outfit
+
+Generate a completely NEW person with different features, different hair, different clothes.
+Only match: lighting mood, camera angle, setting vibe."""
 
             # Add product-on-face instruction if reference provided
             product_on_face_instruction = ""
@@ -1920,12 +1951,13 @@ The person MUST be WEARING this product:
 {text_style_instruction}
 {visual_style_instruction}
 {variation_instruction}
-[STYLE_REFERENCE] - Reference slide for visual composition and mood.
-MIRROR the exact composition from the reference:
-- Same framing (close-up, medium, wide)
-- Same camera angle (straight, above, below, side)
-- Same subject position in frame (center, left, right)
-- Similar background vibe and setting
+[STYLE_REFERENCE] - Reference for LIGHTING and COMPOSITION only (NOT the person).
+Use from reference:
+✓ Same framing (close-up, medium, wide)
+✓ Same camera angle
+✓ Similar warm lighting mood
+✓ Similar background vibe
+
 {persona_demographics}
 {product_on_face_instruction}
 
