@@ -1806,39 +1806,22 @@ IMPORTANT: Only ONE person in the image - never two people!
             ]
         elif has_persona:
             # Has persona but NO reference yet - CREATE a new persona
-            # Build persona demographics instruction from analysis
+            # Simple instruction: recreate a similar person, NOT the same face
             if persona_info:
                 persona_demographics = f"""
-CREATE A NEW UNIQUE PERSONA (⚠️ CRITICAL - DO NOT CLONE THE REFERENCE PERSON):
+PERSONA INSTRUCTION:
+Look at the person in STYLE_REFERENCE. Create a SIMILAR person for the same target audience, but with a COMPLETELY DIFFERENT FACE.
 
-The person in STYLE_REFERENCE is for COMPOSITION ONLY - DO NOT copy their face!
-You MUST create a COMPLETELY DIFFERENT individual with DIFFERENT facial features.
+Same vibe: {persona_info.get('gender', 'female')}, {persona_info.get('age_range', '20s')}, {persona_info.get('style', 'casual')} style
+Different face: new facial features, different face shape, different look entirely
 
-REQUIRED DEMOGRAPHICS TO MATCH (same target audience):
-- Gender: {persona_info.get('gender', 'female')}
-- Age Range: {persona_info.get('age_range', '20s')}
-- Ethnicity/Skin Tone: {persona_info.get('ethnicity', 'varied')}
-- Hair Style: {persona_info.get('appearance', 'natural hair')}
-- Style/Vibe: {persona_info.get('style', 'casual')}, {persona_info.get('vibe', 'authentic')}
-
-⚠️ IMPORTANT DISTINCTION:
-- MATCH: Same age group, same gender, same skin tone, same general style
-- DO NOT MATCH: Facial features, exact face shape, specific face details
-
-The result should appeal to the SAME target audience but be a CLEARLY DIFFERENT person.
-Think "could be their friend or sister" NOT "exact clone/copy".
-
-This persona will be used consistently across all slides - make them:
-- Attractive and relatable TikTok content creator
-- Natural, authentic appearance
-- Clothing appropriate for this scene context"""
+Think of it as: "someone who would follow the same TikTok accounts" - NOT a clone or twin.
+This new persona will be used across all slides."""
             else:
                 persona_demographics = """
-CREATE A NEW PERSONA:
-- Attractive, relatable TikTok content creator
-- Natural, authentic appearance
-- Clothing appropriate for this scene context
-- Will be used as reference for other slides"""
+PERSONA INSTRUCTION:
+Look at the person in STYLE_REFERENCE. Create a SIMILAR person (same vibe, same target audience) but with a COMPLETELY DIFFERENT FACE.
+This new persona will be used across all slides."""
 
             prompt = f"""Generate a TikTok {slide_label} slide.
 
