@@ -2031,7 +2031,7 @@ If it looks like a stock photo or Amazon listing, it will be REJECTED.
                     response_modalities=['image', 'text'],
                     image_config=types.ImageConfig(
                         aspect_ratio="3:4",
-                        image_size="4K"  # 4096px for better text quality
+                        image_size="2K"  # 2048px resolution
                     ),
                     safety_settings=SAFETY_SETTINGS  # Allow benign lifestyle content
                 )
