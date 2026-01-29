@@ -63,6 +63,52 @@ SAFETY_SETTINGS = [
 
 # Safety fallback: word replacements to sanitize prompts that get blocked
 # These replace potentially triggering words with safer alternatives
+# IMPORTANT: Phrase patterns (multi-word) must come BEFORE single-word patterns
+# to avoid broken grammar like "cozy setting soft linens" instead of "soft blanket"
+SAFETY_PHRASE_REPLACEMENTS = [
+    # Multi-word phrases - MUST be processed first
+    # Bed-related phrases (most common safety triggers)
+    (r'\blying on bed sheets\b', 'resting on a soft blanket'),
+    (r'\blying on the bed sheets\b', 'resting on a soft blanket'),
+    (r'\bon bed sheets\b', 'on a soft blanket'),
+    (r'\bon the bed sheets\b', 'on a soft blanket'),
+    (r'\bbed sheets\b', 'soft blanket'),
+    (r'\bsilk sheets\b', 'soft fabric'),
+    (r'\bsatin sheets\b', 'soft fabric'),
+    (r'\blying on bed\b', 'resting on a sofa'),
+    (r'\blying on the bed\b', 'resting on a sofa'),
+    (r'\blying in bed\b', 'relaxing at home'),
+    (r'\blaying in bed\b', 'relaxing at home'),
+    (r'\blaying on bed\b', 'relaxing on a sofa'),
+    (r'\bon the bed\b', 'on the sofa'),
+    (r'\bon bed\b', 'on a sofa'),
+    (r'\bin bed\b', 'at home'),
+    (r'\binto bed\b', 'to rest'),
+    (r'\bto bed\b', 'to rest'),
+    (r'\bbedroom scene\b', 'cozy living room scene'),
+    (r'\bbedroom background\b', 'cozy living room background'),
+    (r'\bsoft bedroom lighting\b', 'soft warm lighting'),
+    (r'\bbedroom lighting\b', 'warm indoor lighting'),
+    (r'\bcozy bedroom\b', 'cozy living room'),
+    (r'\bin bedroom\b', 'in living room'),
+    (r'\bin the bedroom\b', 'in the living room'),
+
+    # Low light + bed combinations (especially triggering)
+    (r'\blow light.*?bed\b', 'soft warm lighting in living room'),
+    (r'\bbed.*?low light\b', 'sofa in soft warm lighting'),
+
+    # Pillow/bedding phrases
+    (r'\bsilk pillowcases?\b', 'soft cushion covers'),
+    (r'\bpillowcases?\b', 'cushion covers'),
+    (r'\bpillows? on bed\b', 'cushions on sofa'),
+
+    # Body position phrases
+    (r'\blying down\b', 'relaxing'),
+    (r'\blaid down\b', 'resting'),
+    (r'\blay down\b', 'rest'),
+    (r'\blie down\b', 'relax'),
+]
+
 SAFETY_WORD_REPLACEMENTS = [
     # Clothing
     (r'\bslip dress\b', 'elegant dress'),
@@ -76,13 +122,11 @@ SAFETY_WORD_REPLACEMENTS = [
     (r'\bskinny\b', 'fitted'),
     (r'\btight[- ]fitting\b', 'well-fitted'),
 
-    # Settings/atmosphere
-    (r'\bbedroom\b', 'cozy indoor space'),
-    (r'\bbed\b', 'cozy setting'),
-    (r'\bsilk pillowcases?\b', 'soft cushion covers'),
-    (r'\bpillowcases?\b', 'cushion covers'),
+    # Settings/atmosphere - single words (processed after phrases)
+    (r'\bbedroom\b', 'living room'),
+    (r'\bbed\b', 'sofa'),
     (r'\bpillows?\b', 'cushions'),
-    (r'\bsheets\b', 'soft linens'),
+    (r'\bsheets\b', 'blanket'),
     (r'\bduvet\b', 'cozy blanket'),
     (r'\bbedding\b', 'soft furnishings'),
     (r'\bmattress\b', 'comfortable surface'),
@@ -105,17 +149,22 @@ SAFETY_WORD_REPLACEMENTS = [
     (r'\bskin[- ]tight\b', 'form-fitting'),
 
     # Actions
-    (r'\blying in bed\b', 'relaxing at home'),
-    (r'\blaying in bed\b', 'relaxing at home'),
-    (r'\bon the bed\b', 'in cozy setting'),
     (r'\bundressing\b', 'getting ready'),
     (r'\bshowering\b', 'freshening up'),
     (r'\bbathing\b', 'relaxing'),
 ]
 
-def _sanitize_scene_description(scene: str) -> tuple[str, bool]:
+def _sanitize_scene_description(scene: str, aggressive: bool = False) -> tuple[str, bool]:
     """
     Sanitize a scene description by replacing potentially triggering words.
+
+    Processes phrase-level replacements FIRST to avoid broken grammar,
+    then applies single-word replacements for any remaining triggers.
+
+    Args:
+        scene: The scene description to sanitize
+        aggressive: If True, applies more aggressive sanitization that removes
+                   all bed/bedroom-related content entirely
 
     Returns:
         tuple: (sanitized_scene, was_modified)
@@ -123,11 +172,44 @@ def _sanitize_scene_description(scene: str) -> tuple[str, bool]:
     sanitized = scene
     was_modified = False
 
+    # First pass: phrase-level replacements (multi-word patterns)
+    # This prevents "bed sheets" from becoming "sofa blanket" (broken grammar)
+    # Instead it becomes "soft blanket" (coherent phrase)
+    for pattern, replacement in SAFETY_PHRASE_REPLACEMENTS:
+        new_text = re.sub(pattern, replacement, sanitized, flags=re.IGNORECASE)
+        if new_text != sanitized:
+            was_modified = True
+            sanitized = new_text
+
+    # Second pass: single-word replacements for any remaining triggers
     for pattern, replacement in SAFETY_WORD_REPLACEMENTS:
         new_text = re.sub(pattern, replacement, sanitized, flags=re.IGNORECASE)
         if new_text != sanitized:
             was_modified = True
             sanitized = new_text
+
+    # Aggressive mode: if first pass still has issues, do nuclear replacements
+    if aggressive:
+        # Replace any remaining problematic patterns with completely neutral alternatives
+        aggressive_replacements = [
+            # Remove any remaining lying/laying references
+            (r'\b(lying|laying)\s+(on|in|down)\b', 'sitting comfortably in'),
+            # Replace "low light" which can be triggering in certain contexts
+            (r'\blow light\b', 'soft natural lighting'),
+            (r'\bdim light\b', 'soft natural lighting'),
+            (r'\bdimly lit\b', 'softly lit'),
+            # Replace any screen/phone in dark/low light (common trigger)
+            (r'phone.*?(low|dim|dark)\s*light', 'phone on a desk with natural lighting'),
+            (r'screen.*?(low|dim|dark)\s*light', 'screen on a desk with natural lighting'),
+            # Remove "at night" which can be triggering
+            (r'\bat night\b', 'in the evening'),
+            (r'\bnighttime\b', 'evening time'),
+        ]
+        for pattern, replacement in aggressive_replacements:
+            new_text = re.sub(pattern, replacement, sanitized, flags=re.IGNORECASE)
+            if new_text != sanitized:
+                was_modified = True
+                sanitized = new_text
 
     return sanitized, was_modified
 
@@ -1891,11 +1973,11 @@ Think "real person's messy-but-aesthetic life" not "studio product shot":
 STYLE: Candid, lifestyle photography with natural imperfections
 - Real rooms with lived-in details (not perfectly staged)
 - Natural window lighting with soft shadows (NOT studio lights)
-- Slightly messy/casual vibes (a book left open, wrinkled sheets)
+- Slightly messy/casual vibes (a book left open, cozy blanket)
 - Warm, inviting atmosphere
 
 GOOD examples (authentic lifestyle scenes):
-- Unmade bed with morning sunlight, coffee on nightstand, curtains blowing
+- Cozy sofa with morning sunlight, coffee on side table, curtains blowing
 - Kitchen counter with half-eaten breakfast, morning light, real dishes
 - Bathroom vanity with various products scattered naturally, towel draped
 - Cozy corner with blanket, book spine-down, warm lamp light
@@ -1935,9 +2017,10 @@ If it looks like a stock photo or Amazon listing, it will be REJECTED.
 
     # Retry logic with validation and safety fallback
     last_error = None
-    tried_sanitized = False  # Track if we've attempted with sanitized prompt
+    sanitization_level = 0  # 0=none, 1=normal, 2=aggressive
     current_scene = scene_description  # Track current scene description
     current_contents = contents  # Track current prompt contents
+    original_scene = scene_description  # Keep original for reference
 
     for attempt in range(MAX_RETRIES):
         try:
@@ -1956,18 +2039,32 @@ If it looks like a stock photo or Amazon listing, it will be REJECTED.
 
             # Extract generated image - check for safety block
             if not response.parts:
-                # Safety block detected - try sanitizing if we haven't yet
-                if not tried_sanitized:
+                # Safety block detected - try escalating sanitization
+                if sanitization_level == 0:
+                    # First try: normal sanitization
                     sanitized_scene, was_modified = _sanitize_scene_description(current_scene)
                     if was_modified:
                         logger.warning(f"Safety block detected, retrying with sanitized scene: '{current_scene[:50]}...' -> '{sanitized_scene[:50]}...'")
-                        tried_sanitized = True
+                        sanitization_level = 1
                         current_scene = sanitized_scene
-                        # Rebuild prompt with sanitized scene (update the prompt string in contents)
-                        current_contents = [c if not isinstance(c, str) or 'NEW SCENE:' not in c
-                                           else c.replace(scene_description, sanitized_scene)
+                        # Rebuild prompt with sanitized scene
+                        current_contents = [c if not isinstance(c, str)
+                                           else c.replace(original_scene, sanitized_scene)
                                            for c in current_contents]
                         continue  # Retry with sanitized prompt (don't count as attempt)
+                elif sanitization_level == 1:
+                    # Second try: aggressive sanitization
+                    sanitized_scene, was_modified = _sanitize_scene_description(current_scene, aggressive=True)
+                    if was_modified:
+                        logger.warning(f"Normal sanitization failed, trying aggressive: '{current_scene[:50]}...' -> '{sanitized_scene[:50]}...'")
+                        sanitization_level = 2
+                        prev_scene = current_scene
+                        current_scene = sanitized_scene
+                        # Rebuild prompt with aggressively sanitized scene
+                        current_contents = [c if not isinstance(c, str)
+                                           else c.replace(prev_scene, sanitized_scene)
+                                           for c in current_contents]
+                        continue  # Retry with aggressive sanitization (don't count as attempt)
 
                 raise GeminiServiceError('Empty response from Gemini - content may have been blocked')
             for part in response.parts:
@@ -2012,17 +2109,32 @@ If it looks like a stock photo or Amazon listing, it will be REJECTED.
             safety_indicators = ['safety', 'blocked', 'harmful', 'policy', 'content filter']
             is_safety_error = any(indicator in error_str for indicator in safety_indicators)
 
-            if is_safety_error and not tried_sanitized:
-                sanitized_scene, was_modified = _sanitize_scene_description(current_scene)
-                if was_modified:
-                    logger.warning(f"Safety error detected, retrying with sanitized scene: {str(e)[:100]}")
-                    tried_sanitized = True
-                    current_scene = sanitized_scene
-                    current_contents = [c if not isinstance(c, str) or 'NEW SCENE:' not in c
-                                       else c.replace(scene_description, sanitized_scene)
-                                       for c in current_contents]
-                    time.sleep(2)  # Brief pause before retry
-                    continue  # Retry with sanitized prompt
+            if is_safety_error and sanitization_level < 2:
+                if sanitization_level == 0:
+                    # First try: normal sanitization
+                    sanitized_scene, was_modified = _sanitize_scene_description(current_scene)
+                    if was_modified:
+                        logger.warning(f"Safety error detected, retrying with sanitized scene: {str(e)[:100]}")
+                        sanitization_level = 1
+                        current_scene = sanitized_scene
+                        current_contents = [c if not isinstance(c, str)
+                                           else c.replace(original_scene, sanitized_scene)
+                                           for c in current_contents]
+                        time.sleep(2)  # Brief pause before retry
+                        continue  # Retry with sanitized prompt
+                elif sanitization_level == 1:
+                    # Second try: aggressive sanitization
+                    sanitized_scene, was_modified = _sanitize_scene_description(current_scene, aggressive=True)
+                    if was_modified:
+                        logger.warning(f"Normal sanitization failed, trying aggressive: {str(e)[:100]}")
+                        sanitization_level = 2
+                        prev_scene = current_scene
+                        current_scene = sanitized_scene
+                        current_contents = [c if not isinstance(c, str)
+                                           else c.replace(prev_scene, sanitized_scene)
+                                           for c in current_contents]
+                        time.sleep(2)  # Brief pause before retry
+                        continue  # Retry with aggressive sanitization
 
             # Check for rate limit error and extract retry delay
             if '429' in str(e) or 'RESOURCE_EXHAUSTED' in str(e):
