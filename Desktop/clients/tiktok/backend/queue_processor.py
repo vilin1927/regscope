@@ -209,7 +209,8 @@ class BatchProcessor:
                 persona_info=task.persona_info,  # Demographics for new persona creation
                 version=task.version,
                 clean_image_mode=task.clean_image_mode,
-                product_description=task.product_description
+                product_description=task.product_description,
+                product_in_use_reference=task.product_in_use_reference  # Face tape reference
             )
 
             return result_path

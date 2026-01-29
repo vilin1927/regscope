@@ -154,6 +154,32 @@ SAFETY_WORD_REPLACEMENTS = [
     (r'\bbathing\b', 'relaxing'),
 ]
 
+# Product-in-use reference images (for products worn ON the face)
+# These show the actual product being worn, used when product_on_face.show_on_persona = true
+PRODUCT_IN_USE_REFERENCES = {
+    'face_tape': os.path.join(os.path.dirname(__file__), 'static', 'product_references', 'face_tape_reference.png'),
+}
+
+def _get_product_in_use_reference(product_on_face_config: dict) -> Optional[str]:
+    """
+    Get the product-in-use reference image path based on analysis config.
+
+    Args:
+        product_on_face_config: The product_on_face dict from analysis output
+
+    Returns:
+        Path to reference image if product should be shown on face, None otherwise
+    """
+    if not product_on_face_config or not product_on_face_config.get('show_on_persona', False):
+        return None
+
+    # Currently only face tape is supported
+    ref_path = PRODUCT_IN_USE_REFERENCES.get('face_tape')
+    if ref_path and os.path.exists(ref_path):
+        return ref_path
+
+    return None
+
 def _sanitize_scene_description(scene: str, aggressive: bool = False) -> tuple[str, bool]:
     """
     Sanitize a scene description by replacing potentially triggering words.
@@ -990,6 +1016,31 @@ RULE: Insert product in EXACTLY ONE slide. Never multiple.
 - Product slide should feel like it BELONGS, not interrupts
 
 ═══════════════════════════════════════════════════════════════
+TASK 5b: PRODUCT ON FACE DETECTION
+═══════════════════════════════════════════════════════════════
+
+Some products are WORN ON THE FACE (patches, tapes, masks that stick to skin).
+If the product is this type, set product_on_face.show_on_persona = true.
+
+PRODUCTS THAT GO ON FACE (set show_on_persona = true):
+- Face tape / facial tape / wrinkle patches / anti-wrinkle tape
+- Under-eye patches / eye masks that stick to skin
+- Forehead patches / frown line patches
+- Smile line patches / nasolabial patches
+- Pimple patches / acne patches
+- Hydrogel patches / silicone patches worn on face
+
+PRODUCTS THAT DO NOT GO ON FACE (set show_on_persona = false):
+- Steam eye masks (heated, cover eyes like sleep mask)
+- Sheet masks (full face, one-time use)
+- Creams, serums, lotions (applied but not visible)
+- Supplements, drinks, food products
+- Devices, tools, accessories
+
+When show_on_persona = true, the persona slides will show the person WEARING the product.
+This is determined by the PRODUCT DESCRIPTION, not the slideshow content.
+
+═══════════════════════════════════════════════════════════════
 TASK 5: MIMIC THE ORIGINAL SLIDESHOW CONTENT
 ═══════════════════════════════════════════════════════════════
 
@@ -1309,6 +1360,11 @@ Return ONLY valid JSON:
         "insertion_rationale": "why this position makes sense"
     }},
 
+    "product_on_face": {{
+        "show_on_persona": true | false,
+        "reason": "why the product should/shouldn't be shown ON the persona's face (e.g., face tape, under-eye patches, forehead patches are worn ON face)"
+    }},
+
     "structure": {{
         "total_slides": "same as original if replacing, original+1 if adding",
         "hook_index": 0,
@@ -1508,7 +1564,8 @@ def _generate_single_image(
     persona_info: Optional[dict] = None,
     version: int = 1,
     clean_image_mode: bool = False,
-    product_description: str = ""
+    product_description: str = "",
+    product_in_use_reference: Optional[str] = None
 ) -> str:
     """
     Generate a single image with clear image labeling.
@@ -1739,6 +1796,18 @@ LAYOUT: {text_position_hint}
 
         if has_persona and persona_reference_path:
             # With persona - need consistency
+            # Add product-on-face instruction if reference provided
+            product_on_face_instruction = ""
+            if product_in_use_reference and os.path.exists(product_in_use_reference):
+                product_on_face_instruction = """
+PRODUCT ON FACE (CRITICAL):
+[PRODUCT_IN_USE_REFERENCE] shows how the product looks when WORN ON THE FACE.
+The person MUST be WEARING this product:
+- Show lavender/purple face tape patches on the skin
+- Place patches on: forehead (horizontal strips), under eyes (crescent shapes), and/or smile lines
+- The patches should look natural and match the reference image
+- Product must be clearly visible on the person's face"""
+
             prompt = f"""Generate a TikTok {slide_label} slide.
 
 {text_style_instruction}
@@ -1757,6 +1826,7 @@ MIRROR the exact composition from the reference:
 - DIFFERENT clothing appropriate for this scene context
 - The outfit should match the situation (casual at home, dressed for going out, workout clothes for gym, etc.)
 - This must look like the same creator, just in different clothes
+{product_on_face_instruction}
 
 SKIN REALISM (CRITICAL - apply to all faces):
 Increase skin realism with subtle natural pores, fine micro-bumps, and gentle uneven smoothness.
@@ -1804,6 +1874,16 @@ IMPORTANT: Only ONE person in the image - never two people!
                     mime_type=_get_image_mime_type(persona_reference_path)
                 )
             ]
+
+            # Add product-in-use reference if provided
+            if product_in_use_reference and os.path.exists(product_in_use_reference):
+                contents.extend([
+                    "[PRODUCT_IN_USE_REFERENCE]",
+                    types.Part.from_bytes(
+                        data=_load_image_bytes(product_in_use_reference),
+                        mime_type=_get_image_mime_type(product_in_use_reference)
+                    )
+                ])
         elif has_persona:
             # Has persona but NO reference yet - CREATE a new persona
             # Simple instruction: recreate a similar person, NOT the same face
@@ -1823,6 +1903,18 @@ PERSONA INSTRUCTION:
 Look at the person in STYLE_REFERENCE. Create a SIMILAR person (same vibe, same target audience) but with a COMPLETELY DIFFERENT FACE.
 This new persona will be used across all slides."""
 
+            # Add product-on-face instruction if reference provided
+            product_on_face_instruction = ""
+            if product_in_use_reference and os.path.exists(product_in_use_reference):
+                product_on_face_instruction = """
+PRODUCT ON FACE (CRITICAL):
+[PRODUCT_IN_USE_REFERENCE] shows how the product looks when WORN ON THE FACE.
+The person MUST be WEARING this product:
+- Show lavender/purple face tape patches on the skin
+- Place patches on: forehead (horizontal strips), under eyes (crescent shapes), and/or smile lines
+- The patches should look natural and match the reference image
+- Product must be clearly visible on the person's face"""
+
             prompt = f"""Generate a TikTok {slide_label} slide.
 
 {text_style_instruction}
@@ -1835,6 +1927,7 @@ MIRROR the exact composition from the reference:
 - Same subject position in frame (center, left, right)
 - Similar background vibe and setting
 {persona_demographics}
+{product_on_face_instruction}
 
 SKIN REALISM (CRITICAL - apply to all faces):
 Increase skin realism with subtle natural pores, fine micro-bumps, and gentle uneven smoothness.
@@ -1877,6 +1970,16 @@ IMPORTANT: Only ONE person in the image - never two people!
                     mime_type=_get_image_mime_type(reference_image_path)
                 )
             ]
+
+            # Add product-in-use reference if provided
+            if product_in_use_reference and os.path.exists(product_in_use_reference):
+                contents.extend([
+                    "[PRODUCT_IN_USE_REFERENCE]",
+                    types.Part.from_bytes(
+                        data=_load_image_bytes(product_in_use_reference),
+                        mime_type=_get_image_mime_type(product_in_use_reference)
+                    )
+                ])
         else:
             # No persona needed - just style reference
             # For body slides: detect if scene mentions a brandable product,
@@ -2197,6 +2300,12 @@ def generate_all_images(
     visual_style = analysis.get('visual_style', None)  # Extract visual style from analysis
     persona_info = analysis.get('persona', None)  # Extract persona demographics from analysis
 
+    # Get product-in-use reference if AI flagged this product should be shown on face
+    product_on_face_config = analysis.get('product_on_face', {})
+    product_in_use_reference = _get_product_in_use_reference(product_on_face_config)
+    if product_in_use_reference:
+        log.info(f"Product-on-face detected: will show face tape on personas")
+
     # Build all tasks with photo × text variations
     all_tasks = []
     variations_structure = {}  # Track variations by slide key
@@ -2386,7 +2495,8 @@ def generate_all_images(
                     persona_info,  # Pass persona demographics for new persona creation
                     task['version'],  # Pass version for variation diversity
                     clean_image_mode,  # Generate without text for PIL rendering
-                    product_description  # For real product grounding in scenes
+                    product_description,  # For real product grounding in scenes
+                    product_in_use_reference  # Face tape reference if product goes on face
                 )
             finally:
                 rate_limiter.release()
@@ -2769,6 +2879,12 @@ def submit_to_queue(
     visual_style = analysis.get('visual_style', {})
     persona_info = analysis.get('persona', {})  # Demographics for new persona creation
 
+    # Get product-in-use reference if AI flagged this product should be shown on face
+    product_on_face_config = analysis.get('product_on_face', {})
+    product_in_use_reference = _get_product_in_use_reference(product_on_face_config) or ''
+    if product_in_use_reference:
+        log.info(f"Product-on-face detected: will show face tape on personas")
+
     tasks_submitted = 0
 
     # Track persona dependency group
@@ -2874,6 +2990,7 @@ def submit_to_queue(
                     persona_info=persona_info,  # Demographics for new persona creation
                     clean_image_mode=clean_image_mode,
                     product_description=product_description,
+                    product_in_use_reference=product_in_use_reference,  # Face tape reference
                     version=photo_ver,
                     output_path=output_path,
                     output_dir=output_dir

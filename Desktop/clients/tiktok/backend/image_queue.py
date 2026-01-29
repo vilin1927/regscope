@@ -58,6 +58,7 @@ class ImageTask:
     persona_info: Dict[str, Any] = field(default_factory=dict)  # Demographics for new persona creation
     clean_image_mode: bool = False
     product_description: str = ""
+    product_in_use_reference: str = ""  # Reference image for products worn on face (face tape, patches)
     version: int = 1               # For variation diversity
 
     # Output
