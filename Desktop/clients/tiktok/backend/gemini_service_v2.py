@@ -2637,8 +2637,8 @@ def generate_all_images(
                 photo_ver = p_idx + 1  # 1-indexed
                 text_ver = t_idx + 1   # 1-indexed
 
-                # Determine output filename with photo and text version
-                output_path = os.path.join(output_dir, f'{slide_key}_p{photo_ver}_t{text_ver}.jpg')
+                # Determine output filename with slide_index prefix for correct video ordering
+                output_path = os.path.join(output_dir, f'{idx:02d}_{slide_key}_p{photo_ver}_t{text_ver}.jpg')
 
                 # For product slides, use the p_idx-th uploaded image
                 product_img = None
@@ -2646,7 +2646,7 @@ def generate_all_images(
                     product_img = product_image_paths[p_idx] if p_idx < len(product_image_paths) else product_image_paths[0]
 
                 task = {
-                    'task_id': f'{slide_key}_p{photo_ver}_t{text_ver}',
+                    'task_id': f'{idx:02d}_{slide_key}_p{photo_ver}_t{text_ver}',
                     'slide_index': idx,
                     'slide_type': slide_type,
                     'slide_key': slide_key,
@@ -3034,15 +3034,24 @@ def run_pipeline(
         rendered_images = []
         for img_path in generation_result['images']:
             try:
-                # Parse task_id from filename (e.g., hook_p1_t1.png)
+                # Parse task_id from filename (e.g., 00_hook_p1_t1.jpg or 01_body_1_p1_t1.jpg)
                 filename = os.path.basename(img_path)
                 parts = filename.replace('.jpg', '').replace('.png', '').split('_')
 
-                # Extract slide key and text index
-                if parts[0] in ['hook', 'product']:
-                    slide_key = parts[0]
+                # Extract slide key - parts[0] is slide_index prefix, parts[1] is slide type
+                # New format: 00_hook_p1_t1, 01_body_1_p1_t1, 03_product_p1_t1
+                if len(parts) >= 2 and parts[0].isdigit():
+                    # New format with slide_index prefix
+                    if parts[1] in ['hook', 'product']:
+                        slide_key = parts[1]
+                    else:
+                        slide_key = f"{parts[1]}_{parts[2]}"
                 else:
-                    slide_key = f"{parts[0]}_{parts[1]}"
+                    # Legacy format without prefix: hook_p1_t1, body_1_p1_t1
+                    if parts[0] in ['hook', 'product']:
+                        slide_key = parts[0]
+                    else:
+                        slide_key = f"{parts[0]}_{parts[1]}"
 
                 # Get text index from t{n} part
                 text_idx = 0
@@ -3212,8 +3221,8 @@ def submit_to_queue(
                 photo_ver = p_idx + 1
                 text_ver = t_idx + 1
 
-                task_id = f"{job_id}_{slide_key}_p{photo_ver}_t{text_ver}"
-                output_path = os.path.join(output_dir, f'{slide_key}_p{photo_ver}_t{text_ver}.jpg')
+                task_id = f"{job_id}_{idx:02d}_{slide_key}_p{photo_ver}_t{text_ver}"
+                output_path = os.path.join(output_dir, f'{idx:02d}_{slide_key}_p{photo_ver}_t{text_ver}.jpg')
 
                 # Determine product image for product slides
                 product_img = None
@@ -3486,10 +3495,19 @@ def run_pipeline_queued(
     for img_path in result['images']:
         filename = os.path.basename(img_path)
         parts = filename.replace('.jpg', '').replace('.png', '').split('_')
-        if parts[0] in ['hook', 'product']:
-            slide_key = parts[0]
+        # New format: 00_hook_p1_t1, 01_body_1_p1_t1, 03_product_p1_t1
+        if len(parts) >= 2 and parts[0].isdigit():
+            # New format with slide_index prefix
+            if parts[1] in ['hook', 'product']:
+                slide_key = parts[1]
+            else:
+                slide_key = f"{parts[1]}_{parts[2]}"
         else:
-            slide_key = f"{parts[0]}_{parts[1]}"
+            # Legacy format without prefix
+            if parts[0] in ['hook', 'product']:
+                slide_key = parts[0]
+            else:
+                slide_key = f"{parts[0]}_{parts[1]}"
         if slide_key not in variations_structure:
             variations_structure[slide_key] = []
         variations_structure[slide_key].append(img_path)
@@ -3532,10 +3550,19 @@ def run_pipeline_queued(
                 filename = os.path.basename(img_path)
                 parts = filename.replace('.jpg', '').replace('.png', '').split('_')
 
-                if parts[0] in ['hook', 'product']:
-                    slide_key = parts[0]
+                # New format: 00_hook_p1_t1, 01_body_1_p1_t1, 03_product_p1_t1
+                if len(parts) >= 2 and parts[0].isdigit():
+                    # New format with slide_index prefix
+                    if parts[1] in ['hook', 'product']:
+                        slide_key = parts[1]
+                    else:
+                        slide_key = f"{parts[1]}_{parts[2]}"
                 else:
-                    slide_key = f"{parts[0]}_{parts[1]}"
+                    # Legacy format without prefix
+                    if parts[0] in ['hook', 'product']:
+                        slide_key = parts[0]
+                    else:
+                        slide_key = f"{parts[0]}_{parts[1]}"
 
                 text_idx = 0
                 for part in parts:

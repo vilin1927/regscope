@@ -306,48 +306,10 @@ def create_from_slideshow():
             # Fallback: create single video from all images
             variation_groups['all'] = sorted(all_images)
 
-        # Sort images: hook → body slides (except last) → product → last body slide
+        # Sort images by filename - filenames now include slide_index prefix (e.g., 00_hook, 01_body_1, 02_product)
+        # This respects the analysis's product_placement rules directly
         def sort_slides_for_video(images):
-            hooks = []
-            bodies = {}  # {num: path}
-            products = []
-            others = []
-
-            for img_path in images:
-                filename = os.path.basename(img_path).lower()
-                if filename.startswith('hook'):
-                    hooks.append(img_path)
-                elif filename.startswith('body'):
-                    match = re.search(r'body_(\d+)', filename)
-                    num = int(match.group(1)) if match else 0
-                    bodies[num] = img_path
-                elif filename.startswith('product'):
-                    products.append(img_path)
-                else:
-                    others.append(img_path)
-
-            result = []
-            result.extend(sorted(hooks))  # Hooks first
-
-            if bodies:
-                sorted_body_nums = sorted(bodies.keys())
-                if len(sorted_body_nums) > 1:
-                    # Add all body slides except the last
-                    for num in sorted_body_nums[:-1]:
-                        result.append(bodies[num])
-                    # Add products before last body
-                    result.extend(sorted(products))
-                    # Add last body slide
-                    result.append(bodies[sorted_body_nums[-1]])
-                else:
-                    # Only one body slide - product goes after it
-                    result.append(bodies[sorted_body_nums[0]])
-                    result.extend(sorted(products))
-            else:
-                result.extend(sorted(products))
-
-            result.extend(sorted(others))
-            return result
+            return sorted(images, key=lambda x: os.path.basename(x).lower())
 
         # Create a job for each variation
         jobs = []
