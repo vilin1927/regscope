@@ -1841,41 +1841,38 @@ DO NOT GENERATE:
 """
 
     if slide_type == 'product':
-        # PRODUCT SLIDE: User's product photo + style reference
-        prompt = f"""Generate a TikTok slide featuring a product AS A CASUAL TIP.
+        # PRODUCT SLIDE: EDIT the product image - add text only, DO NOT regenerate
+        prompt = f"""EDIT this product image by adding text overlay ONLY.
+
+[PRODUCT_PHOTO] - The product image. DO NOT regenerate or modify. Keep EXACTLY as is.
+
+[STYLE_REFERENCE] - Reference for TEXT STYLING only (typography, color, shadow effects).
 
 {text_style_instruction}
-{visual_style_instruction}
-
-[PRODUCT_PHOTO] - User's product image. THIS IS THE BASE IMAGE - keep it as the main visual.
-
-[STYLE_REFERENCE] - Reference slide for visual composition and mood.
 
 TEXT TO ADD:
 {text_content}
 
-LAYOUT: {text_position_hint}
+POSITION: {text_position_hint}
 
-CRITICAL TEXT PLACEMENT RULES:
-- Product must remain FULLY VISIBLE - NEVER place text over the product
-- Text should be in empty/background areas only
-- If unsure, place text at TOP or BOTTOM edges of image
-- Main subject/object must be completely unobstructed
+TEXT PLACEMENT:
+- Place text in empty/background areas
+- NEVER cover the product
+- If unsure, use TOP or BOTTOM edges
 
-MULTI-POSITION TEXT RULE:
-- If TEXT TO DISPLAY contains " | " (pipe separator), it means TWO separate texts
-- Format: "TOP_TEXT | BOTTOM_TEXT"
-- Place the FIRST part (before |) at the TOP of the image
-- Place the SECOND part (after |) at the BOTTOM of the image
-- NEVER place both texts in the same location - they must be in DIFFERENT positions
+MULTI-POSITION RULE:
+- " | " separator means two texts: TOP_TEXT | BOTTOM_TEXT
+- Place in DIFFERENT positions (top and bottom)
 
-LAYOUT RULES:
-- Generate ONE SINGLE product image - no comparisons
-- NO star ratings, review scores, or rating graphics
-- NO side-by-side comparisons or split screens
-- NO grids or collages
+⚠️ CRITICAL - DO NOT:
+- Regenerate or recreate the product image
+- Change the product appearance, angle, lighting, or colors
+- Add new objects, props, or backgrounds
+- Modify composition or framing
+- Create a "new version" of the product
 
-GOAL: Look like "just another tip" - NOT an advertisement.
+OUTPUT: [PRODUCT_PHOTO] with text overlay added. The product image itself must be UNCHANGED.
+
 {quality_constraints}"""
 
         contents = [
