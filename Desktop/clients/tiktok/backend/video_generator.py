@@ -4,6 +4,7 @@ Creates 9:16 vertical videos from slideshow images + audio using FFmpeg
 """
 import subprocess
 import os
+import re
 import tempfile
 import shutil
 from typing import List, Optional
@@ -162,9 +163,16 @@ def create_video(
             '-i', concat_path,
         ]
 
-        # Add audio input if available
+        # Add audio input if available (with looping for short audio)
         if audio_path:
-            cmd.extend(['-i', audio_path])
+            # Get audio duration to check if looping needed
+            audio_duration = get_audio_duration(audio_path)
+            if audio_duration > 0 and audio_duration < total_video_duration:
+                # Audio shorter than video - loop it
+                logger.info(f"{log_prefix}Audio ({audio_duration:.1f}s) shorter than video ({total_video_duration:.1f}s), enabling loop")
+                cmd.extend(['-stream_loop', '-1', '-i', audio_path])
+            else:
+                cmd.extend(['-i', audio_path])
 
         # Explicitly set output duration to prevent last slide extending
         cmd.extend(['-t', str(total_video_duration)])
@@ -260,7 +268,6 @@ def create_videos_for_variations(
 
         # Extract variation key (e.g., "p1_t1")
         # Look for pattern like _p1_t1 or _p2_t2 at end of filename
-        import re
         match = re.search(r'_p(\d+)_t(\d+)\.(jpg|png)$', filename, re.IGNORECASE)
 
         if match:
@@ -292,6 +299,29 @@ def create_videos_for_variations(
                 logger.warning(f"{log_prefix}Variation {var_key} missing body slides, reusing from p1")
                 # Add p1 body slides to this variation
                 variation_groups[var_key] = images + p1_body_images
+
+    # FIX: When product_text_var < max(hook_text_var, body_text_var), some variations
+    # will be missing product slides. Reuse product from same photo_var with t1.
+    # e.g., p2_t2 missing product -> use product from p2_t1, else p1_t1
+    for var_key, images in list(variation_groups.items()):
+        has_product = any('product' in os.path.basename(img).lower() for img in images)
+        if not has_product:
+            # Extract photo variation number (e.g., "p2" from "p2_t2")
+            match = re.match(r'p(\d+)_t(\d+)', var_key)
+            if match:
+                photo_var = match.group(1)
+                # Try to find product from same photo_var with t1
+                fallback_key = f"p{photo_var}_t1"
+                fallback_images = variation_groups.get(fallback_key, [])
+                fallback_product = [img for img in fallback_images if 'product' in os.path.basename(img).lower()]
+
+                if not fallback_product and 'p1_t1' in variation_groups:
+                    # Last resort: use p1_t1 product
+                    fallback_product = [img for img in variation_groups['p1_t1'] if 'product' in os.path.basename(img).lower()]
+
+                if fallback_product:
+                    logger.warning(f"{log_prefix}Variation {var_key} missing product slide, reusing from {fallback_key if fallback_key in variation_groups else 'p1_t1'}")
+                    variation_groups[var_key] = images + fallback_product
 
     # Sort images by filename - filenames now include slide_index prefix (e.g., 00_hook, 01_body_1, 02_product)
     # This respects the analysis's product_placement rules directly
