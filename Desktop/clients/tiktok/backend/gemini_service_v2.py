@@ -2632,7 +2632,7 @@ def generate_all_images(
 
     for slide in new_slides:
         idx = slide['slide_index']
-        ref_idx = slide.get('reference_image_index', idx)
+        ref_idx = slide.get('reference_image_index') if slide.get('reference_image_index') is not None else idx
         slide_type = slide['slide_type']
         has_persona = slide.get('has_persona', False)
 
@@ -3233,7 +3233,7 @@ def submit_to_queue(
 
     for slide in new_slides:
         idx = slide['slide_index']
-        ref_idx = slide.get('reference_image_index', idx)
+        ref_idx = slide.get('reference_image_index') if slide.get('reference_image_index') is not None else idx
         slide_type = slide['slide_type']
         has_persona = slide.get('has_persona', False)
         shows_product_on_face = slide.get('shows_product_on_face', False)  # Per-slide face tape
