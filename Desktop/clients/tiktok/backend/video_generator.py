@@ -283,20 +283,27 @@ def create_videos_for_variations(
 
     logger.info(f"{log_prefix}Found {len(variation_groups)} variation sets")
 
-    # FIX: When body_photo_var < hook_photo_var, p2+ slideshows will be missing body slides
-    # Detect this and reuse body slides from p1 for completeness
+    # FIX: When variation counts differ between slide types, some variations will be missing slides.
+    # Reuse slides from p1_t1 (the baseline) for completeness.
     if 'p1_t1' in variation_groups and len(variation_groups) > 1:
         p1_images = variation_groups.get('p1_t1', [])
+        p1_hook_images = [img for img in p1_images if 'hook' in os.path.basename(img).lower()]
         p1_body_images = [img for img in p1_images if 'body' in os.path.basename(img).lower()]
 
         for var_key, images in variation_groups.items():
             if var_key == 'p1_t1':
                 continue
 
+            # Check if this variation is missing hook slide
+            has_hook = any('hook' in os.path.basename(img).lower() for img in images)
+            if not has_hook and p1_hook_images:
+                logger.warning(f"{log_prefix}Variation {var_key} missing hook slide, reusing from p1_t1")
+                variation_groups[var_key] = images + p1_hook_images
+
             # Check if this variation is missing body slides
             has_body = any('body' in os.path.basename(img).lower() for img in images)
             if not has_body and p1_body_images:
-                logger.warning(f"{log_prefix}Variation {var_key} missing body slides, reusing from p1")
+                logger.warning(f"{log_prefix}Variation {var_key} missing body slides, reusing from p1_t1")
                 # Add p1 body slides to this variation
                 variation_groups[var_key] = images + p1_body_images
 
