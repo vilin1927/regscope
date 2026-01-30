@@ -1981,6 +1981,8 @@ Add a few natural baby hairs and minimal stray strands around the hairline.
 Introduce very subtle natural asymmetry without changing identity.
 Finish with soft camera realism: light grain, mild shadow noise, natural micro-contrast, no over-sharpening.
 
+TEXT-VISUAL MATCH: Read the TEXT TO DISPLAY below. If the text mentions skin problems (wrinkles, forehead lines, 11 lines, frown lines, acne, dark circles, eye bags, etc.), the persona MUST show those problems visibly in the image. Don't generate perfect smooth skin when the text talks about having lines or skin issues!
+
 DO NOT create: perfect poreless skin, overly smooth texture, plastic or waxy appearance, symmetrical "AI perfect" faces, over-brightened or glowing skin.
 
 NEW SCENE: {scene_description}
@@ -2067,6 +2069,8 @@ Correct highlights to avoid plastic shine—soft realistic specular highlights w
 Add a few natural baby hairs and minimal stray strands around the hairline.
 Introduce very subtle natural asymmetry without changing identity.
 Finish with soft camera realism: light grain, mild shadow noise, natural micro-contrast, no over-sharpening.
+
+TEXT-VISUAL MATCH: Read the TEXT TO DISPLAY below. If the text mentions skin problems (wrinkles, forehead lines, 11 lines, frown lines, acne, dark circles, eye bags, etc.), the persona MUST show those problems visibly in the image. Don't generate perfect smooth skin when the text talks about having lines or skin issues!
 
 DO NOT create: perfect poreless skin, overly smooth texture, plastic or waxy appearance, symmetrical "AI perfect" faces, over-brightened or glowing skin.
 
@@ -2238,6 +2242,8 @@ Correct highlights to avoid plastic shine—soft realistic specular highlights w
 Add a few natural baby hairs and minimal stray strands around the hairline.
 Introduce very subtle natural asymmetry without changing identity.
 Finish with soft camera realism: light grain, mild shadow noise, natural micro-contrast, no over-sharpening.
+
+TEXT-VISUAL MATCH: Read the TEXT TO DISPLAY below. If the text mentions skin problems (wrinkles, forehead lines, 11 lines, frown lines, acne, dark circles, eye bags, etc.), the persona MUST show those problems visibly in the image. Don't generate perfect smooth skin when the text talks about having lines or skin issues!
 
 DO NOT create: perfect poreless skin, overly smooth texture, plastic or waxy appearance, symmetrical "AI perfect" faces, over-brightened or glowing skin.
 
