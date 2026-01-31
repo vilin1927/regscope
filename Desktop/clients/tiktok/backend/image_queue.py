@@ -319,7 +319,7 @@ class GlobalImageQueue:
 
         logger.debug(f"Task {task_id} completed: {result_path}")
 
-    def mark_failed(self, task_id: str, error: str, is_rate_limit: bool = False):
+    def mark_failed(self, task_id: str, error: str, is_rate_limit: bool = False, permanent: bool = False):
         """
         Mark task as failed. Moves to retry queue if retries remaining.
 
@@ -327,6 +327,7 @@ class GlobalImageQueue:
             task_id: Task ID
             error: Error message
             is_rate_limit: If True, don't count against retry limit
+            permanent: If True, mark as permanent failure immediately (no retries)
         """
         task = self._get_task(task_id)
         if not task:
@@ -337,13 +338,13 @@ class GlobalImageQueue:
         self.redis.srem(self.PROCESSING_KEY, task_id)
 
         # Update retry count (unless rate limit error)
-        if not is_rate_limit:
+        if not is_rate_limit and not permanent:
             task.retry_count += 1
 
         task.last_error = error
         self._save_task(task)
 
-        if task.retry_count >= MAX_RETRIES:
+        if permanent or task.retry_count >= MAX_RETRIES:
             # Permanent failure
             self.redis.sadd(self.FAILED_KEY, task_id)
             logger.error(f"Task {task_id} permanently failed after {MAX_RETRIES} attempts: {error}")

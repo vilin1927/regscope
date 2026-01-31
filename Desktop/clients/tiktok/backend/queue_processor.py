@@ -8,6 +8,7 @@ import time
 import signal
 import threading
 import re
+import json
 from concurrent.futures import ThreadPoolExecutor, as_completed, TimeoutError
 from typing import List, Optional
 from dotenv import load_dotenv
@@ -39,6 +40,8 @@ from gemini_service_v2 import (
 BATCH_TIMEOUT = 120  # Max seconds to wait for individual image generation
 PAUSE_ON_RATE_LIMIT = True  # Pause queue on 429 errors
 RATE_LIMIT_PAUSE_DEFAULT = 65  # Default pause duration for rate limits
+CLEANUP_INTERVAL = 10  # Run cleanup every N batches
+STALE_TASK_TIMEOUT = 1800  # Tasks stuck in processing for 30 min are stale
 
 
 class BatchProcessor:
@@ -64,6 +67,7 @@ class BatchProcessor:
         self.batches_processed = 0
         self.images_generated = 0
         self.images_failed = 0
+        self._last_cleanup = 0  # Batch count at last cleanup
 
         logger.info(f"BatchProcessor initialized: batch_size={BATCH_SIZE}, interval={BATCH_INTERVAL}s")
 
@@ -116,6 +120,9 @@ class BatchProcessor:
                 logger.info(f"Processing batch #{self.batches_processed + 1}: {len(tasks)} tasks")
                 self._process_batch(tasks)
                 self.batches_processed += 1
+
+                # Run periodic cleanup
+                self._run_periodic_cleanup()
             else:
                 logger.debug("No tasks in queue, waiting...")
 
@@ -169,6 +176,13 @@ class BatchProcessor:
                     failed += 1
                     self._handle_rate_limit(e)
 
+                except FileNotFoundError as e:
+                    # Missing files - permanent failure, no retries
+                    self.queue.mark_failed(task.task_id, str(e), permanent=True)
+                    failed += 1
+                    self.images_failed += 1
+                    logger.error(f"Task {task.task_id} permanently failed (missing file): {e}")
+
                 except Exception as e:
                     self.queue.mark_failed(task.task_id, str(e))
                     failed += 1
@@ -189,8 +203,17 @@ class BatchProcessor:
 
         Raises:
             RateLimitError: If API returns 429
+            FileNotFoundError: If reference files are missing
             Exception: For other errors
         """
+        # Validate reference files exist before attempting generation
+        if task.reference_image_path and not os.path.exists(task.reference_image_path):
+            raise FileNotFoundError(f"Reference image missing: {task.reference_image_path}")
+        if task.product_image_path and not os.path.exists(task.product_image_path):
+            raise FileNotFoundError(f"Product image missing: {task.product_image_path}")
+        if task.persona_reference_path and not os.path.exists(task.persona_reference_path):
+            raise FileNotFoundError(f"Persona reference missing: {task.persona_reference_path}")
+
         try:
             # Call the low-level generation function
             result_path = _generate_single_image(
@@ -240,6 +263,108 @@ class BatchProcessor:
             self._paused = True
             self._pause_until = time.time() + pause_duration
             logger.warning(f"Rate limit hit! Pausing queue for {pause_duration}s")
+
+    def _run_periodic_cleanup(self):
+        """
+        Run periodic cleanup of stale tasks.
+        Called every CLEANUP_INTERVAL batches.
+        """
+        if self.batches_processed - self._last_cleanup < CLEANUP_INTERVAL:
+            return
+
+        self._last_cleanup = self.batches_processed
+        logger.info("Running periodic queue cleanup...")
+
+        try:
+            cleaned = self._cleanup_stale_tasks()
+            if cleaned > 0:
+                logger.info(f"Cleanup complete: removed {cleaned} stale tasks")
+        except Exception as e:
+            logger.error(f"Cleanup failed: {e}")
+
+    def _cleanup_stale_tasks(self) -> int:
+        """
+        Remove stale tasks from the queue:
+        1. Tasks with missing reference files
+        2. Tasks stuck in processing for too long
+
+        Returns count of removed tasks.
+        """
+        cleaned = 0
+
+        # Get all tasks in processing queue
+        processing_tasks = self.queue.redis.zrange(self.queue.PROCESSING_KEY, 0, -1)
+
+        for task_id in processing_tasks:
+            task_data_key = f"{self.queue.TASK_DATA_PREFIX}{task_id}"
+            task_json = self.queue.redis.get(task_data_key)
+
+            if not task_json:
+                # Task data missing - remove from processing
+                self.queue.redis.zrem(self.queue.PROCESSING_KEY, task_id)
+                cleaned += 1
+                logger.warning(f"Removed orphaned task (no data): {task_id}")
+                continue
+
+            try:
+                task_data = json.loads(task_json)
+            except:
+                self.queue.redis.zrem(self.queue.PROCESSING_KEY, task_id)
+                self.queue.redis.delete(task_data_key)
+                cleaned += 1
+                logger.warning(f"Removed corrupted task: {task_id}")
+                continue
+
+            # Check if reference files exist
+            ref_path = task_data.get('reference_image_path', '')
+            if ref_path and not os.path.exists(ref_path):
+                self.queue.redis.zrem(self.queue.PROCESSING_KEY, task_id)
+                self.queue.redis.delete(task_data_key)
+                self.queue.redis.sadd(self.queue.FAILED_KEY, task_id)
+                cleaned += 1
+                logger.warning(f"Removed task with missing file: {task_id} ({ref_path})")
+                continue
+
+            # Check if task is stuck (in processing too long)
+            started_at = task_data.get('started_at', '')
+            if started_at:
+                try:
+                    from datetime import datetime
+                    start_time = datetime.fromisoformat(started_at)
+                    elapsed = (datetime.now() - start_time).total_seconds()
+                    if elapsed > STALE_TASK_TIMEOUT:
+                        self.queue.redis.zrem(self.queue.PROCESSING_KEY, task_id)
+                        self.queue.redis.delete(task_data_key)
+                        self.queue.redis.sadd(self.queue.FAILED_KEY, task_id)
+                        cleaned += 1
+                        logger.warning(f"Removed stale task (stuck {elapsed:.0f}s): {task_id}")
+                except:
+                    pass
+
+        # Also clean retry queue for tasks with missing files
+        retry_tasks = self.queue.redis.zrange(self.queue.RETRY_KEY, 0, -1)
+        for task_id in retry_tasks:
+            task_data_key = f"{self.queue.TASK_DATA_PREFIX}{task_id}"
+            task_json = self.queue.redis.get(task_data_key)
+
+            if not task_json:
+                self.queue.redis.zrem(self.queue.RETRY_KEY, task_id)
+                cleaned += 1
+                continue
+
+            try:
+                task_data = json.loads(task_json)
+                ref_path = task_data.get('reference_image_path', '')
+                if ref_path and not os.path.exists(ref_path):
+                    self.queue.redis.zrem(self.queue.RETRY_KEY, task_id)
+                    self.queue.redis.delete(task_data_key)
+                    self.queue.redis.sadd(self.queue.FAILED_KEY, task_id)
+                    cleaned += 1
+                    logger.warning(f"Removed retry task with missing file: {task_id}")
+            except:
+                pass
+
+        return cleaned
 
     def get_stats(self) -> dict:
         """Get processor statistics."""
