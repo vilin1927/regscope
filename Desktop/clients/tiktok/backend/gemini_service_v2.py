@@ -1345,7 +1345,8 @@ Return ONLY valid JSON:
         "ethnicity": "description of skin tone and features",
         "appearance": "hair color/style, notable features",
         "style": "casual | glamorous | natural | edgy | professional",
-        "vibe": "overall feeling (e.g., friendly, approachable, authentic)"
+        "vibe": "overall feeling (e.g., friendly, approachable, authentic)",
+        "cultural_context": "null OR specific culture when content EXPLICITLY mentions it (e.g., 'Japanese' if talking about J-beauty, 'Korean' for K-beauty, 'African' for African beauty secrets). Only set when the storyline/text explicitly references a specific culture's beauty practices. Leave null for broad/general audience content."
     }},
 
     "competitor_detection": {{
@@ -1423,6 +1424,7 @@ Return ONLY valid JSON:
             "reference_image_index": 0,
             "has_persona": true,
             "shows_product_on_face": false,  // FALSE: original hook shows person but NO face tape patches visible on face
+            "transformation_role": "before | after | null",  // "before" = shows problem/issue state, "after" = shows improved/result state, null = not part of transformation
             "visual": {{
                 "subject": "woman's face, selfie style",
                 "framing": "close-up",
@@ -1574,6 +1576,21 @@ CRITICAL RULES:
 10. Include "role_in_story" for each slide describing its narrative purpose
 11. scene_description MUST end with "COMPOSITION: framing=X, angle=Y, position=Z, background=W"
 12. shows_product_on_face: CRITICAL - LOOK AT EACH ORIGINAL SLIDE IMAGE! Set true for EVERY slide where the original shows a person with face tape/patches ON their face (forehead, under eyes). Set false if the slide shows product packaging only, or person WITHOUT tape on face. If original has tape in 3 slides, set true for all 3!
+13. persona.cultural_context: ONLY set when the slideshow content EXPLICITLY mentions a specific culture's beauty/skincare practices:
+    - "Japanese" → for J-beauty, Japanese skincare, Japanese routines
+    - "Korean" → for K-beauty, Korean glass skin, Korean skincare
+    - "Chinese" → for Chinese beauty secrets, TCM skincare
+    - "African" → for African beauty, shea butter traditions, African skincare
+    - "Indian" → for Ayurvedic beauty, Indian skincare
+    - "French" → for French pharmacy, French girl beauty
+    - "Scandinavian" → for Nordic beauty, Scandinavian skincare
+    - null → for MOST content with broad/general audience (DEFAULT)
+    The persona diversity system handles ethnicity variation automatically - cultural_context is ONLY for when the STORY is explicitly about a specific culture.
+14. transformation_role: Analyze the storyline to detect before/after transformation:
+    - "before" → slide shows the PROBLEM state (wrinkles, dull skin, issues)
+    - "after" → slide shows the RESULT/IMPROVED state (smooth skin, glowing, transformed)
+    - null → slide is NOT part of a transformation narrative (DEFAULT for most slides)
+    Only use "before"/"after" when the storyline clearly shows a transformation journey. Most slides should be null.
 """
 
     # Build content with all images
@@ -1677,7 +1694,8 @@ def _generate_single_image(
     version: int = 1,
     clean_image_mode: bool = False,
     product_description: str = "",
-    shows_product_on_face: bool = False
+    shows_product_on_face: bool = False,
+    transformation_role: Optional[str] = None  # "before", "after", or None
 ) -> str:
     """
     Generate a single image with clear image labeling.
@@ -1693,6 +1711,36 @@ def _generate_single_image(
 
     Text style is passed explicitly via text_style dict for accurate font matching.
     """
+
+    # Build transformation instruction based on transformation_role
+    if transformation_role == 'after':
+        transformation_instruction = """
+⚠️ TRANSFORMATION SLIDE - "AFTER" STATE (SHOW IMPROVEMENT):
+This is an "AFTER" transformation slide showing RESULTS/IMPROVEMENT.
+The persona's skin should show VISIBLE IMPROVEMENT compared to "before" slides:
+- Noticeably smoother skin around forehead (50-70% fewer visible lines)
+- Reduced wrinkles around eye area (crow's feet less visible)
+- Healthier, more radiant complexion
+- Skin looks refreshed and glowing (but still natural, not airbrushed)
+- Fine lines are softened but person still looks real and age-appropriate
+
+DO NOT show the skin problems even if text mentions them - this is the RESULT slide.
+The transformation should be NOTICEABLE but BELIEVABLE - not unrealistic plastic perfection.
+"""
+    elif transformation_role == 'before':
+        transformation_instruction = """
+⚠️ TRANSFORMATION SLIDE - "BEFORE" STATE (SHOW PROBLEM):
+This is a "BEFORE" transformation slide showing the PROBLEM/ISSUE state.
+The persona should show visible skin concerns:
+- Visible fine lines and wrinkles on forehead
+- Crow's feet around eyes
+- Skin may look tired, dull, or stressed
+- Show the problem that the content addresses
+
+This creates contrast with the "after" slides that show improvement.
+"""
+    else:
+        transformation_instruction = ""
 
     # Handle clean image mode - NO TEXT in generated image
     if clean_image_mode:
@@ -1985,7 +2033,7 @@ Introduce very subtle natural asymmetry without changing identity.
 Finish with soft camera realism: light grain, mild shadow noise, natural micro-contrast, no over-sharpening.
 
 TEXT-VISUAL MATCH: Read the TEXT TO DISPLAY below. If the text mentions skin problems (wrinkles, forehead lines, 11 lines, frown lines, acne, dark circles, eye bags, etc.), the persona MUST show those problems visibly in the image. Don't generate perfect smooth skin when the text talks about having lines or skin issues!
-
+{transformation_instruction}
 DO NOT create: perfect poreless skin, overly smooth texture, plastic or waxy appearance, symmetrical "AI perfect" faces, over-brightened or glowing skin.
 
 NEW SCENE: {scene_description}
@@ -2117,11 +2165,15 @@ IMPORTANT: Only ONE person in the image - never two people!
 
             if USE_EXPANDED_PERSONAS:
                 # NEW: Use expanded persona system with 100+ combinations
+                # Extract cultural_context from persona_info if present
+                cultural_context = persona_info.get('cultural_context') if persona_info else None
                 diverse_persona = generate_diverse_persona(
                     target_audience=persona_info,
-                    version=version
+                    version=version,
+                    cultural_context=cultural_context
                 )
-                logger.info(f"Generated diverse persona v{version}: {get_persona_summary(diverse_persona)}")
+                logger.info(f"Generated diverse persona v{version}: {get_persona_summary(diverse_persona)}" +
+                           (f" (cultural_context={cultural_context})" if cultural_context else ""))
 
                 persona_demographics = f"""
 <persona_instruction>
@@ -2245,7 +2297,7 @@ Introduce very subtle natural asymmetry without changing identity.
 Finish with soft camera realism: light grain, mild shadow noise, natural micro-contrast, no over-sharpening.
 
 TEXT-VISUAL MATCH: Read the TEXT TO DISPLAY below. If the text mentions skin problems (wrinkles, forehead lines, 11 lines, frown lines, acne, dark circles, eye bags, etc.), the persona MUST show those problems visibly in the image. Don't generate perfect smooth skin when the text talks about having lines or skin issues!
-
+{transformation_instruction}
 DO NOT create: perfect poreless skin, overly smooth texture, plastic or waxy appearance, symmetrical "AI perfect" faces, over-brightened or glowing skin.
 
 NEW SCENE: {scene_description}
@@ -2724,7 +2776,8 @@ def generate_all_images(
                     'output_path': output_path,
                     'product_image_path': product_img,
                     'has_persona': has_persona,
-                    'shows_product_on_face': slide.get('shows_product_on_face', False)  # Per-slide face tape detection
+                    'shows_product_on_face': slide.get('shows_product_on_face', False),  # Per-slide face tape detection
+                    'transformation_role': slide.get('transformation_role')  # "before", "after", or None
                 }
                 all_tasks.append(task)
 
@@ -2830,7 +2883,8 @@ def generate_all_images(
                     task['version'],  # Pass version for variation diversity
                     clean_image_mode,  # Generate without text for PIL rendering
                     product_description,  # For real product grounding in scenes
-                    task.get('shows_product_on_face', False)  # Per-slide face tape flag
+                    task.get('shows_product_on_face', False),  # Per-slide face tape flag
+                    task.get('transformation_role')  # "before", "after", or None for transformation slides
                 )
             finally:
                 rate_limiter.release()
@@ -3345,6 +3399,7 @@ def submit_to_queue(
                     clean_image_mode=clean_image_mode,
                     product_description=product_description,
                     shows_product_on_face=shows_product_on_face,  # Per-slide face tape flag
+                    transformation_role=slide.get('transformation_role', ''),  # "before", "after", or ""
                     version=photo_ver,
                     output_path=output_path,
                     output_dir=output_dir

@@ -171,13 +171,44 @@ ETHNICITY_SKIN_TONES = {
     'Mixed heritage': ['light with warm undertones', 'medium beige', 'warm olive', 'golden tan', 'caramel brown'],
     'Pacific Islander': ['warm olive', 'golden tan', 'caramel brown', 'rich brown'],
     'Mediterranean': ['light with warm undertones', 'medium beige', 'warm olive', 'golden tan'],
+    # Specific cultural context ethnicities
+    'Japanese': ['porcelain fair', 'light with warm undertones', 'medium beige'],
+    'Korean': ['porcelain fair', 'light with warm undertones', 'medium beige'],
+    'Chinese': ['porcelain fair', 'light with warm undertones', 'medium beige', 'golden tan'],
+    'Indian': ['medium beige', 'warm olive', 'golden tan', 'caramel brown', 'rich brown'],
+    'Nigerian': ['caramel brown', 'rich brown', 'dark brown', 'deep ebony'],
+    'French': ['porcelain fair', 'light with pink undertones', 'light with warm undertones', 'medium beige'],
+    'Scandinavian': ['porcelain fair', 'light with pink undertones', 'light with warm undertones'],
+    'Brazilian': ['light with warm undertones', 'medium beige', 'warm olive', 'golden tan', 'caramel brown'],
+    'Mexican': ['light with warm undertones', 'medium beige', 'warm olive', 'golden tan', 'caramel brown'],
+}
+
+# Cultural context to ethnicity mapping
+# Maps the cultural_context value from analysis to appropriate ethnicities
+CULTURAL_CONTEXT_ETHNICITIES = {
+    'Japanese': ['Japanese'],
+    'Korean': ['Korean'],
+    'Chinese': ['Chinese'],
+    'Asian': ['East Asian', 'Southeast Asian', 'Japanese', 'Korean', 'Chinese'],
+    'Indian': ['Indian', 'South Asian'],
+    'African': ['Black/African', 'Nigerian'],
+    'Nigerian': ['Nigerian', 'Black/African'],
+    'French': ['French', 'White/European'],
+    'Scandinavian': ['Scandinavian', 'White/European'],
+    'European': ['White/European', 'Mediterranean', 'French', 'Scandinavian'],
+    'Brazilian': ['Brazilian', 'Hispanic/Latina'],
+    'Mexican': ['Mexican', 'Hispanic/Latina'],
+    'Latin': ['Hispanic/Latina', 'Brazilian', 'Mexican'],
+    'Middle Eastern': ['Middle Eastern'],
+    'Arabic': ['Middle Eastern'],
 }
 
 
 def generate_diverse_persona(
     target_audience: Optional[Dict] = None,
     version: int = 1,
-    seed: Optional[int] = None
+    seed: Optional[int] = None,
+    cultural_context: Optional[str] = None
 ) -> Dict:
     """
     Generate a unique, diverse persona within target demographic.
@@ -186,6 +217,8 @@ def generate_diverse_persona(
         target_audience: Dict with gender, age_range, style from analysis
         version: Version number for seeding (1-based)
         seed: Optional explicit seed for reproducibility
+        cultural_context: Optional cultural context from analysis (e.g., 'Japanese', 'Korean')
+                         When set, constrains ethnicity to match the cultural context.
 
     Returns:
         Dict with all persona attributes
@@ -197,8 +230,15 @@ def generate_diverse_persona(
 
     random.seed(seed)
 
-    # Select ethnicity first (affects skin tone options)
-    ethnicity = random.choice(PERSONA_COMPONENTS['ethnicities'])
+    # Select ethnicity based on cultural context or randomly
+    if cultural_context and cultural_context in CULTURAL_CONTEXT_ETHNICITIES:
+        # Cultural context specified - constrain ethnicity to matching options
+        ethnicity_options = CULTURAL_CONTEXT_ETHNICITIES[cultural_context]
+        ethnicity = random.choice(ethnicity_options)
+        logger.info(f"Cultural context '{cultural_context}' → ethnicity constrained to: {ethnicity}")
+    else:
+        # No cultural context - full diversity (default behavior)
+        ethnicity = random.choice(PERSONA_COMPONENTS['ethnicities'])
 
     # Get compatible skin tones for selected ethnicity
     compatible_skin_tones = ETHNICITY_SKIN_TONES.get(

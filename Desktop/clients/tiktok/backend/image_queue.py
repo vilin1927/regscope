@@ -59,6 +59,7 @@ class ImageTask:
     clean_image_mode: bool = False
     product_description: str = ""
     shows_product_on_face: bool = False  # Per-slide flag: original slide shows face tape/patches
+    transformation_role: str = ""  # "before", "after", or "" - for transformation slides
     version: int = 1               # For variation diversity
 
     # Output
