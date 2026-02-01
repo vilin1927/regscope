@@ -1718,32 +1718,58 @@ def _generate_single_image(
     # Build transformation instruction based on transformation_role
     if transformation_role == 'after':
         transformation_instruction = """
-⚠️ TRANSFORMATION SLIDE - "AFTER" STATE (SHOW IMPROVEMENT):
-This is an "AFTER" transformation slide showing RESULTS/IMPROVEMENT.
-The persona's skin should show VISIBLE IMPROVEMENT compared to "before" slides:
-- Noticeably smoother skin around forehead (50-70% fewer visible lines)
-- Reduced wrinkles around eye area (crow's feet less visible)
-- Healthier, more radiant complexion
-- Skin looks refreshed and glowing (but still natural, not airbrushed)
-- Fine lines are softened but person still looks real and age-appropriate
+⚠️⚠️⚠️ TRANSFORMATION SLIDE - "AFTER" STATE (DRAMATIC IMPROVEMENT) ⚠️⚠️⚠️
+This is an "AFTER" transformation slide - show DRAMATIC, VISIBLE improvement:
 
-DO NOT show the skin problems even if text mentions them - this is the RESULT slide.
-The transformation should be NOTICEABLE but BELIEVABLE - not unrealistic plastic perfection.
+SKIN TRANSFORMATION (make it OBVIOUS):
+- Skin looks 10 years younger - smooth, plump, hydrated
+- Forehead: ZERO visible lines (was wrinkled before)
+- Under eyes: Bright, no dark circles, no puffiness
+- Overall: Radiant GLOW, dewy "glass skin" effect
+- Healthy rosy undertones, even skin tone
+- Pores minimized, skin looks airbrushed but natural
+
+OVERALL APPEARANCE:
+- Person looks well-rested, energized, happy
+- Better posture, confident expression
+- Brighter lighting to enhance the "glow up"
+- Think "best photo they've ever taken"
+
+The difference from "before" should be INSTANTLY NOTICEABLE at a glance.
+DO NOT show ANY skin problems - this is the SUCCESS/RESULT slide.
 """
     elif transformation_role == 'before':
         transformation_instruction = """
-⚠️ TRANSFORMATION SLIDE - "BEFORE" STATE (SHOW PROBLEM):
-This is a "BEFORE" transformation slide showing the PROBLEM/ISSUE state.
-The persona should show visible skin concerns:
-- Visible fine lines and wrinkles on forehead
-- Crow's feet around eyes
-- Skin may look tired, dull, or stressed
-- Show the problem that the content addresses
+⚠️⚠️⚠️ TRANSFORMATION SLIDE - "BEFORE" STATE (SHOW THE PROBLEM) ⚠️⚠️⚠️
+This is a "BEFORE" transformation slide - show VISIBLE problems:
 
-This creates contrast with the "after" slides that show improvement.
+SKIN ISSUES (make them OBVIOUS):
+- Visible fine lines and wrinkles on forehead
+- Crow's feet around eyes clearly visible
+- Under-eye bags, dark circles, puffiness
+- Dull, tired-looking skin - lacks radiance
+- Uneven skin tone, some redness
+- Visible pores, dehydrated appearance
+- Skin looks stressed, lackluster
+
+OVERALL APPEARANCE:
+- Person looks tired, stressed, or worn out
+- Slightly less flattering lighting
+- Expression shows concern or tiredness
+- Think "before discovering the solution"
+
+This creates DRAMATIC contrast with the "after" slides.
+The problems should be clearly visible but still look realistic/natural.
 """
     else:
         transformation_instruction = ""
+
+    # Pre-process pipe character: Convert " | " to actual newline for Gemini
+    # This prevents the literal "|" from appearing in generated images
+    if text_content and " | " in text_content:
+        original_text = text_content
+        text_content = text_content.replace(" | ", "\n")
+        logger.info(f"Pipe separator converted to newline: '{original_text}' -> '{text_content}'")
 
     # Handle clean image mode - NO TEXT in generated image
     if clean_image_mode:
@@ -1890,16 +1916,34 @@ DO NOT GENERATE:
 - Phone screenshots with visible UI elements
 - Steam or vapor effects (tea steam, coffee steam, humidifier mist, candle smoke) - these look fake/AI-generated
 
+⚠️ MODESTY REQUIREMENT (CRITICAL - ALWAYS APPLY):
+- Person must ALWAYS be appropriately clothed (casual clothes, activewear, etc.)
+- NO revealing clothing, swimwear, lingerie, towels-only, or bare shoulders
+- NO suggestive poses or intimate settings
+- Safe for all audiences - think "Instagram-appropriate family content"
+- If scene involves bath/spa/water: show ONLY partial body parts like legs with dry brushing/scrubbing, or hands with products, or person CLOTHED near water - NEVER full body in water
+- When in doubt, add a t-shirt, tank top, or casual top
+
 ⚠️ CRITICAL - NO PRODUCT MIXING:
 - DO NOT copy any products from the reference images onto the persona
 - DO NOT show face patches, nose strips, under-eye patches, or ANY skincare products ON the persona's face
 - The persona's face must be CLEAN - no products attached to skin
 - If the reference shows someone wearing patches/products, IGNORE those products entirely
 - Only the PRODUCT SLIDE should show the user's actual product
+
+⚠️ CRITICAL - EXACT TEXT COPYING:
+- Use ONLY the EXACT text provided in "TEXT TO DISPLAY"
+- DO NOT invent, rephrase, summarize, or modify the text in any way
+- DO NOT add extra words, change word order, or paraphrase
+- Copy the text CHARACTER BY CHARACTER as provided
+- If text looks wrong or gibberish, still copy it exactly - do not "fix" it
 """
 
     if slide_type == 'product':
         # PRODUCT SLIDE: EDIT the product image - add text only, DO NOT regenerate
+        logger.info(f"PRODUCT_SLIDE_DEBUG: slide_type=product, product_image_path={product_image_path}, has_product_image={product_image_path is not None}")
+        if not product_image_path:
+            logger.warning("PRODUCT_SLIDE_WARNING: No product image provided for product slide! Will use reference image instead.")
         prompt = f"""EDIT this product image by adding text overlay ONLY.
 
 [PRODUCT_PHOTO] - The product image. DO NOT regenerate or modify. Keep EXACTLY as is.
@@ -2044,7 +2088,12 @@ Add a few natural baby hairs and minimal stray strands around the hairline.
 Introduce very subtle natural asymmetry without changing identity.
 Finish with soft camera realism: light grain, mild shadow noise, natural micro-contrast, no over-sharpening.
 
-TEXT-VISUAL MATCH: Read the TEXT TO DISPLAY below. If the text mentions skin problems (wrinkles, forehead lines, 11 lines, frown lines, acne, dark circles, eye bags, etc.), the persona MUST show those problems visibly in the image. Don't generate perfect smooth skin when the text talks about having lines or skin issues!
+TEXT-VISUAL MATCH (READ THE TEXT CAREFULLY):
+- SKIN: If text mentions skin problems (wrinkles, forehead lines, acne, dark circles, etc.), show those problems visibly
+- BODY TYPE: If text mentions "slim", "tiny waist", "thin", "lean" → generate SLIM body type
+- BODY TYPE: If text mentions "curvy", "thick", "plus-size" → generate that body type
+- GLASS SKIN: If text mentions "glass skin", "glowing skin", "clear skin" → show radiant, dewy, luminous skin
+- Match the visual to what the text describes - the image should ILLUSTRATE the text content
 {transformation_instruction}
 DO NOT create: perfect poreless skin, overly smooth texture, plastic or waxy appearance, symmetrical "AI perfect" faces, over-brightened or glowing skin.
 
@@ -2129,7 +2178,12 @@ Add a few natural baby hairs and minimal stray strands around the hairline.
 Introduce very subtle natural asymmetry without changing identity.
 Finish with soft camera realism: light grain, mild shadow noise, natural micro-contrast, no over-sharpening.
 
-TEXT-VISUAL MATCH: Read the TEXT TO DISPLAY below. If the text mentions skin problems (wrinkles, forehead lines, 11 lines, frown lines, acne, dark circles, eye bags, etc.), the persona MUST show those problems visibly in the image. Don't generate perfect smooth skin when the text talks about having lines or skin issues!
+TEXT-VISUAL MATCH (READ THE TEXT CAREFULLY):
+- SKIN: If text mentions skin problems (wrinkles, forehead lines, acne, dark circles, etc.), show those problems visibly
+- BODY TYPE: If text mentions "slim", "tiny waist", "thin", "lean" → generate SLIM body type
+- BODY TYPE: If text mentions "curvy", "thick", "plus-size" → generate that body type
+- GLASS SKIN: If text mentions "glass skin", "glowing skin", "clear skin" → show radiant, dewy, luminous skin
+- Match the visual to what the text describes - the image should ILLUSTRATE the text content
 
 DO NOT create: perfect poreless skin, overly smooth texture, plastic or waxy appearance, symmetrical "AI perfect" faces, over-brightened or glowing skin.
 
@@ -2317,7 +2371,12 @@ Add a few natural baby hairs and minimal stray strands around the hairline.
 Introduce very subtle natural asymmetry without changing identity.
 Finish with soft camera realism: light grain, mild shadow noise, natural micro-contrast, no over-sharpening.
 
-TEXT-VISUAL MATCH: Read the TEXT TO DISPLAY below. If the text mentions skin problems (wrinkles, forehead lines, 11 lines, frown lines, acne, dark circles, eye bags, etc.), the persona MUST show those problems visibly in the image. Don't generate perfect smooth skin when the text talks about having lines or skin issues!
+TEXT-VISUAL MATCH (READ THE TEXT CAREFULLY):
+- SKIN: If text mentions skin problems (wrinkles, forehead lines, acne, dark circles, etc.), show those problems visibly
+- BODY TYPE: If text mentions "slim", "tiny waist", "thin", "lean" → generate SLIM body type
+- BODY TYPE: If text mentions "curvy", "thick", "plus-size" → generate that body type
+- GLASS SKIN: If text mentions "glass skin", "glowing skin", "clear skin" → show radiant, dewy, luminous skin
+- Match the visual to what the text describes - the image should ILLUSTRATE the text content
 {transformation_instruction}
 DO NOT create: perfect poreless skin, overly smooth texture, plastic or waxy appearance, symmetrical "AI perfect" faces, over-brightened or glowing skin.
 
