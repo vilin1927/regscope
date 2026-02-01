@@ -1718,32 +1718,36 @@ def _generate_single_image(
     # Build transformation instruction based on transformation_role
     if transformation_role == 'after':
         transformation_instruction = """
-⚠️⚠️⚠️ TRANSFORMATION SLIDE - "AFTER" STATE (DRAMATIC IMPROVEMENT) ⚠️⚠️⚠️
-This is an "AFTER" transformation slide - show DRAMATIC, VISIBLE improvement:
+<transformation role="after">
+This is an "AFTER" transformation slide - show DRAMATIC, VISIBLE improvement.
+The difference from "before" should be INSTANTLY NOTICEABLE at a glance.
 
-SKIN TRANSFORMATION (make it OBVIOUS):
+<skin>
 - Skin looks 10 years younger - smooth, plump, hydrated
 - Forehead: ZERO visible lines (was wrinkled before)
 - Under eyes: Bright, no dark circles, no puffiness
 - Overall: Radiant GLOW, dewy "glass skin" effect
 - Healthy rosy undertones, even skin tone
 - Pores minimized, skin looks airbrushed but natural
+</skin>
 
-OVERALL APPEARANCE:
+<appearance>
 - Person looks well-rested, energized, happy
 - Better posture, confident expression
 - Brighter lighting to enhance the "glow up"
 - Think "best photo they've ever taken"
+</appearance>
 
-The difference from "before" should be INSTANTLY NOTICEABLE at a glance.
-DO NOT show ANY skin problems - this is the SUCCESS/RESULT slide.
+<constraint>DO NOT show ANY skin problems - this is the SUCCESS/RESULT slide.</constraint>
+</transformation>
 """
     elif transformation_role == 'before':
         transformation_instruction = """
-⚠️⚠️⚠️ TRANSFORMATION SLIDE - "BEFORE" STATE (SHOW THE PROBLEM) ⚠️⚠️⚠️
-This is a "BEFORE" transformation slide - show VISIBLE problems:
+<transformation role="before">
+This is a "BEFORE" transformation slide - show VISIBLE problems.
+This creates DRAMATIC contrast with the "after" slides.
 
-SKIN ISSUES (make them OBVIOUS):
+<skin>
 - Visible fine lines and wrinkles on forehead
 - Crow's feet around eyes clearly visible
 - Under-eye bags, dark circles, puffiness
@@ -1751,15 +1755,17 @@ SKIN ISSUES (make them OBVIOUS):
 - Uneven skin tone, some redness
 - Visible pores, dehydrated appearance
 - Skin looks stressed, lackluster
+</skin>
 
-OVERALL APPEARANCE:
+<appearance>
 - Person looks tired, stressed, or worn out
 - Slightly less flattering lighting
 - Expression shows concern or tiredness
 - Think "before discovering the solution"
+</appearance>
 
-This creates DRAMATIC contrast with the "after" slides.
-The problems should be clearly visible but still look realistic/natural.
+<constraint>The problems should be clearly visible but still look realistic/natural.</constraint>
+</transformation>
 """
     else:
         transformation_instruction = ""
@@ -1770,6 +1776,54 @@ The problems should be clearly visible but still look realistic/natural.
         original_text = text_content
         text_content = text_content.replace(" | ", "\n")
         logger.info(f"Pipe separator converted to newline: '{original_text}' -> '{text_content}'")
+
+    # ===== REUSABLE XML BLOCKS =====
+    # These are common sections used across all persona prompts
+
+    skin_realism_block = """
+<skin_realism>
+Apply to all faces:
+- Subtle natural pores, fine micro-bumps, gentle uneven smoothness
+- Tasteful micro-imperfections: tiny blemishes, faint redness, subtle under-eye texture, slight natural tone variation
+- Soft realistic specular highlights with mild oiliness in T-zone (avoid plastic shine)
+- Natural baby hairs and minimal stray strands around hairline
+- Very subtle natural asymmetry without changing identity
+- Soft camera realism: light grain, mild shadow noise, natural micro-contrast, no over-sharpening
+
+<avoid>Perfect poreless skin, overly smooth texture, plastic/waxy appearance, symmetrical "AI perfect" faces, over-brightened or glowing skin</avoid>
+</skin_realism>
+"""
+
+    text_visual_match_block = """
+<text_visual_match>
+READ THE TEXT CAREFULLY and match the visual to what it describes:
+- SKIN: If text mentions skin problems (wrinkles, forehead lines, acne, dark circles) → show those problems visibly
+- BODY TYPE: If text mentions "slim", "tiny waist", "thin", "lean" → generate SLIM body type
+- BODY TYPE: If text mentions "curvy", "thick", "plus-size" → generate that body type
+- GLASS SKIN: If text mentions "glass skin", "glowing skin", "clear skin" → show radiant, dewy, luminous skin
+The image should ILLUSTRATE the text content.
+</text_visual_match>
+"""
+
+    text_placement_block = """
+<text_placement>
+<rules>
+- NEVER cover face or person with text
+- NEVER cover main objects/products with text
+- Text should be in empty/background areas only
+- If unsure, place text at TOP or BOTTOM edges of image
+</rules>
+
+<multi_line>
+If text contains multiple lines (was " | " separator):
+- Place FIRST line at TOP of image
+- Place LAST line at BOTTOM of image
+- NEVER place all text in the same location
+</multi_line>
+</text_placement>
+"""
+
+    single_person_constraint = "<constraint>Only ONE person in the image - never two people!</constraint>"
 
     # Handle clean image mode - NO TEXT in generated image
     if clean_image_mode:
@@ -1890,22 +1944,54 @@ Match the color grading, lighting mood, and overall visual feel!
 
     # Quality constraints to prevent weird/AI-looking images
     quality_constraints = """
-IMAGE QUALITY REQUIREMENTS:
-- This must look like authentic TikTok/Instagram content
-- Clean, professional, aspirational aesthetic
-- Proper lighting - natural or soft studio lighting
-- Sharp focus on main subjects
-- Harmonious color palette that matches the mood
+<hard_constraints>
+NEVER violate these rules:
 
-⚠️ CRITICAL - FULL-BLEED FORMAT (MANDATORY):
+<modesty>
+- Person must ALWAYS be appropriately clothed (casual clothes, activewear, etc.)
+- NO revealing clothing, swimwear, lingerie, towels-only, or bare shoulders
+- NO suggestive poses or intimate settings
+- Safe for all audiences - think "Instagram-appropriate family content"
+- If scene involves bath/spa/water: show ONLY partial body parts like legs with dry brushing/scrubbing, or hands with products, or person CLOTHED near water - NEVER full body in water
+- When in doubt, add a t-shirt, tank top, or casual top
+</modesty>
+
+<text_accuracy>
+- Use ONLY the EXACT text provided in "TEXT TO DISPLAY"
+- DO NOT invent, rephrase, summarize, or modify the text in any way
+- DO NOT add extra words, change word order, or paraphrase
+- Copy the text CHARACTER BY CHARACTER as provided
+- If text looks wrong or gibberish, still copy it exactly - do not "fix" it
+</text_accuracy>
+
+<no_product_mixing>
+- DO NOT copy any products from the reference images onto the persona
+- DO NOT show face patches, nose strips, under-eye patches, or ANY skincare products ON the persona's face
+- The persona's face must be CLEAN - no products attached to skin
+- If the reference shows someone wearing patches/products, IGNORE those products entirely
+- Only the PRODUCT SLIDE should show the user's actual product
+</no_product_mixing>
+
+<format>
 - Image content MUST extend to ALL FOUR EDGES
 - NO black bars, borders, or frames on ANY side (top, bottom, left, right)
 - NO letterboxing or pillarboxing
 - NO phone UI elements, navigation bars, or "Share/Edit/Delete" buttons
 - The scene/background must fill the ENTIRE frame edge-to-edge
 - Think "camera viewport" - subject fills the whole 9:16 frame with NO empty borders
+</format>
 
-DO NOT GENERATE:
+</hard_constraints>
+
+<quality>
+- This must look like authentic TikTok/Instagram content
+- Clean, professional, aspirational aesthetic
+- Proper lighting - natural or soft studio lighting
+- Sharp focus on main subjects
+- Harmonious color palette that matches the mood
+</quality>
+
+<avoid>
 - Surreal, abstract, or "obviously AI" aesthetics
 - Distorted objects, text, or proportions
 - Unnatural color combinations or lighting
@@ -1915,28 +2001,7 @@ DO NOT GENERATE:
 - ANY black/dark bars or frames at edges (ESPECIALLY at bottom!)
 - Phone screenshots with visible UI elements
 - Steam or vapor effects (tea steam, coffee steam, humidifier mist, candle smoke) - these look fake/AI-generated
-
-⚠️ MODESTY REQUIREMENT (CRITICAL - ALWAYS APPLY):
-- Person must ALWAYS be appropriately clothed (casual clothes, activewear, etc.)
-- NO revealing clothing, swimwear, lingerie, towels-only, or bare shoulders
-- NO suggestive poses or intimate settings
-- Safe for all audiences - think "Instagram-appropriate family content"
-- If scene involves bath/spa/water: show ONLY partial body parts like legs with dry brushing/scrubbing, or hands with products, or person CLOTHED near water - NEVER full body in water
-- When in doubt, add a t-shirt, tank top, or casual top
-
-⚠️ CRITICAL - NO PRODUCT MIXING:
-- DO NOT copy any products from the reference images onto the persona
-- DO NOT show face patches, nose strips, under-eye patches, or ANY skincare products ON the persona's face
-- The persona's face must be CLEAN - no products attached to skin
-- If the reference shows someone wearing patches/products, IGNORE those products entirely
-- Only the PRODUCT SLIDE should show the user's actual product
-
-⚠️ CRITICAL - EXACT TEXT COPYING:
-- Use ONLY the EXACT text provided in "TEXT TO DISPLAY"
-- DO NOT invent, rephrase, summarize, or modify the text in any way
-- DO NOT add extra words, change word order, or paraphrase
-- Copy the text CHARACTER BY CHARACTER as provided
-- If text looks wrong or gibberish, still copy it exactly - do not "fix" it
+</avoid>
 """
 
     if slide_type == 'product':
@@ -1944,36 +2009,37 @@ DO NOT GENERATE:
         logger.info(f"PRODUCT_SLIDE_DEBUG: slide_type=product, product_image_path={product_image_path}, has_product_image={product_image_path is not None}")
         if not product_image_path:
             logger.warning("PRODUCT_SLIDE_WARNING: No product image provided for product slide! Will use reference image instead.")
-        prompt = f"""EDIT this product image by adding text overlay ONLY.
+        prompt = f"""<task>EDIT this product image by adding text overlay ONLY.</task>
 
-[PRODUCT_PHOTO] - The product image. DO NOT regenerate or modify. Keep EXACTLY as is.
-
-[STYLE_REFERENCE] - Reference for TEXT STYLING only (typography, color, shadow effects).
+<images>
+<product_photo>The product image. DO NOT regenerate or modify. Keep EXACTLY as is.</product_photo>
+<style_reference>Reference for TEXT STYLING only (typography, color, shadow effects).</style_reference>
+</images>
 
 {text_style_instruction}
 
-TEXT TO ADD:
-{text_content}
+<content>
+<text>{text_content}</text>
+<position>{text_position_hint}</position>
+</content>
 
-POSITION: {text_position_hint}
-
-TEXT PLACEMENT:
+<text_placement>
 - Place text in empty/background areas
 - NEVER cover the product
 - If unsure, use TOP or BOTTOM edges
+- " | " separator means two texts: TOP_TEXT | BOTTOM_TEXT - place in DIFFERENT positions
+</text_placement>
 
-MULTI-POSITION RULE:
-- " | " separator means two texts: TOP_TEXT | BOTTOM_TEXT
-- Place in DIFFERENT positions (top and bottom)
-
-⚠️ CRITICAL - DO NOT:
+<hard_constraints>
+DO NOT:
 - Regenerate or recreate the product image
 - Change the product appearance, angle, lighting, or colors
 - Add new objects, props, or backgrounds
 - Modify composition or framing
 - Create a "new version" of the product
+</hard_constraints>
 
-OUTPUT: [PRODUCT_PHOTO] with text overlay added. The product image itself must be UNCHANGED.
+<output>The original [PRODUCT_PHOTO] with text overlay added. The product image itself must be UNCHANGED.</output>
 
 {quality_constraints}"""
 
@@ -1993,17 +2059,20 @@ OUTPUT: [PRODUCT_PHOTO] with text overlay added. The product image itself must b
     
     elif slide_type == 'cta':
         # CTA SLIDE: Usually text-focused, simple background
-        prompt = f"""Generate a TikTok CTA (call-to-action) slide.
+        prompt = f"""<task>Generate a TikTok CTA (call-to-action) slide.</task>
 
 {text_style_instruction}
 {visual_style_instruction}
 
-[STYLE_REFERENCE] - Reference CTA slide for background style and composition.
+<images>
+<style_reference>Reference CTA slide for background style and composition.</style_reference>
+</images>
 
-TEXT TO DISPLAY:
-{text_content}
+<content>
+<text>{text_content}</text>
+<position>{text_position_hint}</position>
+</content>
 
-LAYOUT: {text_position_hint}
 {quality_constraints}"""
 
         contents = [
@@ -2047,77 +2116,60 @@ LAYOUT: {text_position_hint}
                 # ===== FACE TAPE SLIDE =====
                 # DON'T use STYLE_REFERENCE (shows wrong person with face tape)
                 # Use ONLY: PERSONA_REFERENCE (our hook persona) + FACE_TAPE_PRODUCT (hardcoded patches)
-                prompt = f"""Generate a TikTok {slide_label} slide.
+                prompt = f"""<task>Generate a TikTok {slide_label} slide with face tape.</task>
 
 {text_style_instruction}
 {visual_style_instruction}
 
-[PERSONA_REFERENCE] - THE PERSON TO USE (and composition reference):
-✓ Generate the EXACT SAME PERSON from this image
-✓ SAME face, hair color, skin tone, facial features
-✓ SAME body type and general appearance
-✓ Use similar framing and angle as this image
-✓ This person should be wearing face tape from [FACE_TAPE_PRODUCT]
+<images>
+<persona_reference>
+THE PERSON TO USE (and composition reference).
+Generate the EXACT SAME PERSON from this image.
+</persona_reference>
+<face_tape_product>Reference for the exact patch design to apply.</face_tape_product>
+</images>
+
+<persona>
+<identity_match>
+- SAME face, hair color, skin tone, facial features
+- SAME body type and general appearance
+- Use similar framing and angle as reference
 - DIFFERENT clothing appropriate for this scene context
+</identity_match>
+</persona>
 
----
+<face_tape_application>
+The person should be wearing face tape patches that look EXACTLY like [FACE_TAPE_PRODUCT].
 
-### **Face Tape Application**
-The person should be **wearing face tape patches** that look **EXACTLY** like [FACE_TAPE_PRODUCT].
-
-⚠️ CRITICAL - COPY THE EXACT PATCHES FROM THE REFERENCE:
-- Use the EXACT same purple/lavender color as shown in [FACE_TAPE_PRODUCT]
+<patch_design>
+- Use the EXACT same purple/lavender color as shown in reference
 - Use the EXACT same "LumiDew" text pattern (repeated diagonal text as shown)
 - Use the EXACT same oval/pill shape as the reference patches
 - DO NOT simplify or modify the patch design - copy it exactly
+- DO NOT generate a simplified version with just "LumiDew" once - use the full repeated text pattern
+</patch_design>
 
+<placement>
 Apply 1-3 patches on the face:
-* One on the forehead
-* Optionally one or two under eyes (AI decides based on natural look)
+- One on the forehead
+- Optionally one or two under eyes (AI decides based on natural look)
+</placement>
+</face_tape_application>
 
-The patches must look IDENTICAL to [FACE_TAPE_PRODUCT] - same color, same text pattern, same shape.
-DO NOT generate a simplified version with just "LumiDew" once - use the full repeated text pattern.
-
----
-
-SKIN REALISM (CRITICAL - apply to all faces):
-Increase skin realism with subtle natural pores, fine micro-bumps, and gentle uneven smoothness.
-Add tasteful micro-imperfections: tiny blemishes, faint redness, subtle under-eye texture, slight natural tone variation.
-Correct highlights to avoid plastic shine—soft realistic specular highlights with mild oiliness in the T-zone.
-Add a few natural baby hairs and minimal stray strands around the hairline.
-Introduce very subtle natural asymmetry without changing identity.
-Finish with soft camera realism: light grain, mild shadow noise, natural micro-contrast, no over-sharpening.
-
-TEXT-VISUAL MATCH (READ THE TEXT CAREFULLY):
-- SKIN: If text mentions skin problems (wrinkles, forehead lines, acne, dark circles, etc.), show those problems visibly
-- BODY TYPE: If text mentions "slim", "tiny waist", "thin", "lean" → generate SLIM body type
-- BODY TYPE: If text mentions "curvy", "thick", "plus-size" → generate that body type
-- GLASS SKIN: If text mentions "glass skin", "glowing skin", "clear skin" → show radiant, dewy, luminous skin
-- Match the visual to what the text describes - the image should ILLUSTRATE the text content
+{skin_realism_block}
+{text_visual_match_block}
 {transformation_instruction}
-DO NOT create: perfect poreless skin, overly smooth texture, plastic or waxy appearance, symmetrical "AI perfect" faces, over-brightened or glowing skin.
 
-NEW SCENE: {scene_description}
+<scene>{scene_description}</scene>
 
-TEXT TO DISPLAY:
-{text_content}
+<content>
+<text>{text_content}</text>
+<position>{text_position_hint}</position>
+</content>
 
-LAYOUT: {text_position_hint}
+{text_placement_block}
+{single_person_constraint}
 
-CRITICAL TEXT PLACEMENT RULES:
-- NEVER cover face or person with text
-- NEVER cover main objects/products with text
-- Text should be in empty/background areas only
-- If unsure, place text at TOP or BOTTOM edges of image
-
-MULTI-POSITION TEXT RULE:
-- If TEXT TO DISPLAY contains " | " (pipe separator), it means TWO separate texts
-- Format: "TOP_TEXT | BOTTOM_TEXT"
-- Place the FIRST part (before |) at the TOP of the image
-- Place the SECOND part (after |) at the BOTTOM of the image
-- NEVER place both texts in the same location - they must be in DIFFERENT positions
-
-IMPORTANT: Only ONE person in the image - never two people!
 {quality_constraints}"""
 
                 # NO STYLE_REFERENCE - only persona + face tape product
@@ -2139,80 +2191,65 @@ IMPORTANT: Only ONE person in the image - never two people!
                 # Use ONLY PERSONA_REFERENCE (serves as both persona AND style reference)
                 # The persona reference already has styled text on it from previous generation
                 # NO separate style reference - prevents product mixing from original TikTok
-                prompt = f"""Generate a TikTok {slide_label} slide.
+                prompt = f"""<task>Generate a TikTok {slide_label} slide.</task>
 
 {text_style_instruction}
 {visual_style_instruction}
 {variation_instruction}
-⚠️⚠️⚠️ CRITICAL - PERSONA IDENTITY (READ FIRST) ⚠️⚠️⚠️
 
-[PERSONA_REFERENCE] - THIS IS YOUR ONLY REFERENCE (serves as BOTH persona AND style):
-Generate the EXACT SAME PERSON from [PERSONA_REFERENCE]. This is NON-NEGOTIABLE.
+<images>
+<persona_reference>
+THIS IS YOUR ONLY REFERENCE (serves as BOTH persona AND style).
+Generate the EXACT SAME PERSON from this image. This is NON-NEGOTIABLE.
+</persona_reference>
+</images>
 
-MANDATORY IDENTITY MATCH:
-✓ SAME face shape and facial structure
-✓ SAME body type and build (if plus-size, generate plus-size; if slim, generate slim)
-✓ SAME hair color (exact shade - red, burgundy, blonde, etc.)
-✓ SAME skin tone
-✓ SAME approximate age
-✓ SAME general appearance and vibe
+<persona>
+<identity_match>
+MANDATORY - the output person must be RECOGNIZABLE as the same individual:
+- SAME face shape and facial structure
+- SAME body type and build (if plus-size, generate plus-size; if slim, generate slim)
+- SAME hair color (exact shade - red, burgundy, blonde, etc.)
+- SAME skin tone
+- SAME approximate age
+- SAME general appearance and vibe
+</identity_match>
 
-STYLE FROM SAME REFERENCE:
-✓ Match the text styling (font, color, effects) from [PERSONA_REFERENCE]
-✓ Match the overall visual mood and lighting
-✓ Match the composition style (framing, camera angle)
+<style_match>
+- Match the text styling (font, color, effects) from reference
+- Match the overall visual mood and lighting
+- Match the composition style (framing, camera angle)
+</style_match>
 
-WHAT CAN CHANGE:
+<can_change>
 - Clothing (different outfit appropriate for scene)
 - Hairstyle slightly (but SAME color)
 - Expression
 - Background (appropriate for new scene)
+</can_change>
+</persona>
 
-The output person must be RECOGNIZABLE as the same individual from [PERSONA_REFERENCE].
-
-SKIN REALISM (CRITICAL - apply to all faces):
-Increase skin realism with subtle natural pores, fine micro-bumps, and gentle uneven smoothness.
-Add tasteful micro-imperfections: tiny blemishes, faint redness, subtle under-eye texture, slight natural tone variation.
-Correct highlights to avoid plastic shine—soft realistic specular highlights with mild oiliness in the T-zone.
-Add a few natural baby hairs and minimal stray strands around the hairline.
-Introduce very subtle natural asymmetry without changing identity.
-Finish with soft camera realism: light grain, mild shadow noise, natural micro-contrast, no over-sharpening.
-
-TEXT-VISUAL MATCH (READ THE TEXT CAREFULLY):
-- SKIN: If text mentions skin problems (wrinkles, forehead lines, acne, dark circles, etc.), show those problems visibly
-- BODY TYPE: If text mentions "slim", "tiny waist", "thin", "lean" → generate SLIM body type
-- BODY TYPE: If text mentions "curvy", "thick", "plus-size" → generate that body type
-- GLASS SKIN: If text mentions "glass skin", "glowing skin", "clear skin" → show radiant, dewy, luminous skin
-- Match the visual to what the text describes - the image should ILLUSTRATE the text content
-
-DO NOT create: perfect poreless skin, overly smooth texture, plastic or waxy appearance, symmetrical "AI perfect" faces, over-brightened or glowing skin.
-
-⚠️ CRITICAL - NO PRODUCT MIXING:
+<hard_constraints>
+<clean_face>
 - The persona's face must be CLEAN - no patches, tapes, or skincare products attached
 - DO NOT add any face tape, nose strips, under-eye patches, or similar products
 - Only the PRODUCT slide shows the actual product
+</clean_face>
+</hard_constraints>
 
-NEW SCENE: {scene_description}
+{skin_realism_block}
+{text_visual_match_block}
 
-TEXT TO DISPLAY:
-{text_content}
+<scene>{scene_description}</scene>
 
-LAYOUT: {text_position_hint}
+<content>
+<text>{text_content}</text>
+<position>{text_position_hint}</position>
+</content>
 
-CRITICAL TEXT PLACEMENT RULES:
-- NEVER cover face or person with text
-- NEVER cover main objects/products with text
-- Text should be in empty/background areas only
-- If unsure, place text at TOP or BOTTOM edges of image
+{text_placement_block}
+{single_person_constraint}
 
-MULTI-POSITION TEXT RULE:
-- If TEXT TO DISPLAY contains " | " (pipe separator), it means TWO separate texts
-- Format: "TOP_TEXT | BOTTOM_TEXT"
-- Place the FIRST part (before |) at the TOP of the image
-- Place the SECOND part (after |) at the BOTTOM of the image
-- NEVER place both texts in the same location - they must be in DIFFERENT positions
-
-IMPORTANT: Only ONE person in the image - never two people!
 {quality_constraints}"""
 
                 # ONLY PERSONA_REFERENCE - no separate style reference
@@ -2256,50 +2293,60 @@ Generate a completely DIFFERENT person with the SPECIFIC features listed above.
 
                 if persona_info:
                     persona_demographics = f"""
-PERSONA INSTRUCTION - GENERATE A NEW PERSON:
+<persona_instruction>
+GENERATE A NEW PERSON - DO NOT COPY THE REFERENCE PERSON
 
-DO NOT COPY from the reference:
-✗ DO NOT copy the person's face
-✗ DO NOT copy the hair color or style
-✗ DO NOT copy the clothing/outfit
+<do_not_copy>
+- DO NOT copy the person's face
+- DO NOT copy the hair color or style
+- DO NOT copy the clothing/outfit
+</do_not_copy>
 
-TARGET AUDIENCE DEMOGRAPHICS (keep within this demographic):
+<demographics>
 - Gender: {persona_info.get('gender', 'female')}
 - Age Range: {persona_info.get('age_range', '20s')}
 - Style: {persona_info.get('style', 'casual')}
+</demographics>
 
-UNIQUE FACIAL FEATURES (VERSION {version}) - CREATE THIS SPECIFIC LOOK:
+<facial_features version="{version}">
 - Face Shape: {facial_variation['face_shape']}
 - Eye Shape: {facial_variation['eye_shape']}
 - Nose: {facial_variation['nose_type']}
 - Distinctive Feature: {facial_variation['distinctive_feature']}
+</facial_features>
 
-GENERATE a person with:
-✓ The SPECIFIC facial features listed above (face shape, eyes, nose, distinctive feature)
-✓ Hair that fits the demographic but is DIFFERENT from the reference
-✓ Clothing that fits the scene (any casual outfit that fits the vibe)
+<generate>
+- The SPECIFIC facial features listed above
+- Hair that fits the demographic but is DIFFERENT from the reference
+- Clothing that fits the scene
+</generate>
 
-The ONLY things to match from reference: warm lighting mood, selfie angle, indoor setting vibe.
-Think "could be their friend from the same target audience" - NOT a twin, NOT a relative, NOT the same person."""
+Match from reference ONLY: warm lighting mood, selfie angle, indoor setting vibe.
+Think "could be their friend from the same target audience" - NOT a twin, NOT a relative, NOT the same person.
+</persona_instruction>"""
                 else:
                     # Fallback without persona_info - still use facial variation
                     persona_demographics = f"""
-PERSONA INSTRUCTION - GENERATE A NEW PERSON:
+<persona_instruction>
+GENERATE A NEW PERSON - DO NOT COPY THE REFERENCE PERSON
 
-DO NOT COPY from the reference:
-✗ DO NOT copy the person's face
-✗ DO NOT copy the hair color or style
-✗ DO NOT copy the clothing/outfit
+<do_not_copy>
+- DO NOT copy the person's face
+- DO NOT copy the hair color or style
+- DO NOT copy the clothing/outfit
+</do_not_copy>
 
-UNIQUE FACIAL FEATURES (VERSION {version}) - CREATE THIS SPECIFIC LOOK:
+<facial_features version="{version}">
 - Face Shape: {facial_variation['face_shape']}
 - Eye Shape: {facial_variation['eye_shape']}
 - Nose: {facial_variation['nose_type']}
 - Distinctive Feature: {facial_variation['distinctive_feature']}
+</facial_features>
 
 Generate a completely NEW person with the SPECIFIC facial features above.
 Use different hair color and style, different clothes from the reference.
-Only match: lighting mood, camera angle, setting vibe."""
+Match from reference ONLY: lighting mood, camera angle, setting vibe.
+</persona_instruction>"""
 
             # Check if we should show face tape on this new persona (per-slide detection)
             # RE-ENABLED: Show LumiDew patches on persona faces when shows_product_on_face=True
@@ -2319,88 +2366,66 @@ Only match: lighting mood, camera angle, setting vibe."""
             # DEBUG: Log face tape decision
             logger.info(f"FACE_TAPE_DEBUG: slide_type={slide_type}, shows_product_on_face={shows_product_on_face}, show_face_tape={show_face_tape}, ref_path={face_tape_ref_path}")
 
-            # Build face tape instruction using markdown format
+            # Build face tape instruction using XML format
             face_tape_instruction = ""
             if show_face_tape:
                 face_tape_instruction = """
----
+<face_tape_application>
+The person should be wearing face tape patches that look EXACTLY like [FACE_TAPE_PRODUCT].
 
-### **Face Tape Application**
-The person should be **wearing face tape patches** that look **EXACTLY** like [FACE_TAPE_PRODUCT].
-
-⚠️ CRITICAL - COPY THE EXACT PATCHES FROM THE REFERENCE:
-- Use the EXACT same purple/lavender color as shown in [FACE_TAPE_PRODUCT]
+<patch_design>
+- Use the EXACT same purple/lavender color as shown in reference
 - Use the EXACT same "LumiDew" text pattern (repeated diagonal text as shown)
 - Use the EXACT same oval/pill shape as the reference patches
 - DO NOT simplify or modify the patch design - copy it exactly
+- DO NOT generate a simplified version with just "LumiDew" once - use the full repeated text pattern
+</patch_design>
 
+<placement>
 Apply 1-3 patches on the face:
-* One on the forehead
-* Optionally one or two under eyes (AI decides based on natural look)
+- One on the forehead
+- Optionally one or two under eyes (AI decides based on natural look)
+</placement>
+</face_tape_application>"""
 
-The patches must look IDENTICAL to [FACE_TAPE_PRODUCT] - same color, same text pattern, same shape.
-DO NOT generate a simplified version with just "LumiDew" once - use the full repeated text pattern.
-
----"""
-
-            prompt = f"""Generate a TikTok {slide_label} slide.
+            prompt = f"""<task>Generate a TikTok {slide_label} slide with a NEW persona.</task>
 
 {text_style_instruction}
 {visual_style_instruction}
 {variation_instruction}
-[STYLE_REFERENCE] - Reference for LIGHTING and COMPOSITION only (NOT the person).
-Use from reference:
-✓ Same framing (close-up, medium, wide)
-✓ Same camera angle
-✓ Similar warm lighting mood
 
-<scene_variety_rule>
+<images>
+<style_reference>
+Reference for LIGHTING and COMPOSITION only (NOT the person).
+- Same framing (close-up, medium, wide)
+- Same camera angle
+- Similar warm lighting mood
+</style_reference>
+</images>
+
+<scene_variety>
 Create a DIFFERENT scene within the SAME content category.
 Match the VIBE and aesthetic, but vary the specific location/setting.
 Think: different photo from the same week-long photoshoot.
-</scene_variety_rule>
+</scene_variety>
 
 {persona_demographics}
 {face_tape_instruction}
 
-SKIN REALISM (CRITICAL - apply to all faces):
-Increase skin realism with subtle natural pores, fine micro-bumps, and gentle uneven smoothness.
-Add tasteful micro-imperfections: tiny blemishes, faint redness, subtle under-eye texture, slight natural tone variation.
-Correct highlights to avoid plastic shine—soft realistic specular highlights with mild oiliness in the T-zone.
-Add a few natural baby hairs and minimal stray strands around the hairline.
-Introduce very subtle natural asymmetry without changing identity.
-Finish with soft camera realism: light grain, mild shadow noise, natural micro-contrast, no over-sharpening.
-
-TEXT-VISUAL MATCH (READ THE TEXT CAREFULLY):
-- SKIN: If text mentions skin problems (wrinkles, forehead lines, acne, dark circles, etc.), show those problems visibly
-- BODY TYPE: If text mentions "slim", "tiny waist", "thin", "lean" → generate SLIM body type
-- BODY TYPE: If text mentions "curvy", "thick", "plus-size" → generate that body type
-- GLASS SKIN: If text mentions "glass skin", "glowing skin", "clear skin" → show radiant, dewy, luminous skin
-- Match the visual to what the text describes - the image should ILLUSTRATE the text content
+{skin_realism_block}
+{text_visual_match_block}
 {transformation_instruction}
-DO NOT create: perfect poreless skin, overly smooth texture, plastic or waxy appearance, symmetrical "AI perfect" faces, over-brightened or glowing skin.
 
-NEW SCENE: {scene_description}
+<scene>{scene_description}</scene>
 
-TEXT TO DISPLAY:
-{text_content}
+<content>
+<text>{text_content}</text>
+<position>{text_position_hint}</position>
+</content>
 
-LAYOUT: {text_position_hint}
+{text_placement_block}
+{single_person_constraint}
 
-CRITICAL TEXT PLACEMENT RULES:
-- NEVER cover face or person with text
-- NEVER cover main objects/products with text
-- Text should be in empty/background areas only
-- If unsure, place text at TOP or BOTTOM edges of image
-
-MULTI-POSITION TEXT RULE:
-- If TEXT TO DISPLAY contains " | " (pipe separator), it means TWO separate texts
-- Format: "TOP_TEXT | BOTTOM_TEXT"
-- Place the FIRST part (before |) at the TOP of the image
-- Place the SECOND part (after |) at the BOTTOM of the image
-- NEVER place both texts in the same location - they must be in DIFFERENT positions
-
-IMPORTANT: Only ONE person in the image - never two people!
 {quality_constraints}"""
 
             contents = [
@@ -2433,118 +2458,97 @@ IMPORTANT: Only ONE person in the image - never two people!
             # Each photo variation now has its own unique scene from analysis
             # Just generate the exact scene described
             scene_instruction = f"""
-NEW SCENE (generate THIS exact setting): {enhanced_scene}
+<scene>{enhanced_scene}</scene>
 
-CRITICAL - SHOW ONLY WHAT'S DESCRIBED:
-- Generate EXACTLY what the scene description says - nothing more, nothing less
+<scene_constraint>
+Generate EXACTLY what the scene description says - nothing more, nothing less.
 - If scene says "glass of water on kitchen counter" → show ONLY water glass on kitchen counter
 - If scene says "journal and pen on bed" → show ONLY journal and pen on bed
-- DO NOT add random skincare products, bottles, or items not mentioned in the scene
+- DO NOT add random skincare products, bottles, or items not mentioned
 - Each slide should feature ONE MAIN ITEM that matches the tip being given
-
-WRONG: Scene says "tart cherry juice" but image shows juice + skincare bottles + random products
-RIGHT: Scene says "tart cherry juice" and image shows ONLY the juice as the hero item
+</scene_constraint>
 """
 
-            prompt = f"""Generate a TikTok {slide_label} slide.
+            prompt = f"""<task>Generate a TikTok {slide_label} lifestyle slide (no persona).</task>
 
 {text_style_instruction}
 {visual_style_instruction}
 {variation_instruction}
-[STYLE_REFERENCE] - Reference slide for visual composition, mood, and content type.
-MATCH from reference:
-- Framing type (close-up, medium, wide)
-- Camera angle (straight, above, below, side)
-- Subject position in frame (center, left, right)
-- Overall lighting mood and color grading
 
-<scene_variety_rule>
-IMPORTANT: Create a DIFFERENT scene within the SAME content category.
+<images>
+<style_reference>
+Reference slide for visual composition, mood, and content type.
+Match: framing type, camera angle, subject position, lighting mood, color grading.
+</style_reference>
+</images>
 
+<scene_variety>
+Create a DIFFERENT scene within the SAME content category.
 Think like a content creator with 200 photos from a week-long photoshoot:
 - ALL photos share the same vibe and aesthetic
 - But each shows a DIFFERENT moment, location, or setting
-
-Match the CATEGORY (wellness, lifestyle, skincare routine, etc.)
-but vary the SPECIFIC location and setting details.
-
-Example: Reference shows "woman at frozen lake"
-- Generate: "woman at forest cabin porch" (same nordic vibe, DIFFERENT scene)
-- Not: exact copy of frozen lake scene
-</scene_variety_rule>
+Match the CATEGORY but vary the SPECIFIC location and setting details.
+</scene_variety>
 
 {scene_instruction}
 
-TEXT TO DISPLAY:
-{text_content}
+<content>
+<text>{text_content}</text>
+<position>{text_position_hint}</position>
+</content>
 
-LAYOUT: {text_position_hint}
+{text_placement_block}
 
-CRITICAL TEXT PLACEMENT RULES:
-- NEVER cover main objects/products with text
-- Text should be in empty/background areas only
-- If unsure, place text at TOP or BOTTOM edges of image
-- Main subject must be completely unobstructed
-
-MULTI-POSITION TEXT RULE:
-- If TEXT TO DISPLAY contains " | " (pipe separator), it means TWO separate texts
-- Format: "TOP_TEXT | BOTTOM_TEXT"
-- Place the FIRST part (before |) at the TOP of the image
-- Place the SECOND part (after |) at the BOTTOM of the image
-- NEVER place both texts in the same location - they must be in DIFFERENT positions
-
-IMPORTANT HUMAN BODY RULES:
+<body_rules>
 - PREFER showing objects/products instead of human body parts
-- If the scene REQUIRES human body parts (legs, arms, hands, feet), you MUST show the FULL BODY or at least the full upper/lower half - NEVER crop to show ONLY isolated limbs
-- Example: If showing "legs up the wall", include the torso and head in frame - NOT just floating legs
-- NEVER generate images with cropped/isolated body parts without body context
+- If scene REQUIRES body parts (legs, arms, hands), show FULL BODY or full upper/lower half
+- NEVER crop to show ONLY isolated limbs without body context
+</body_rules>
 
-CRITICAL LAYOUT REQUIREMENT:
-Even though the text may compare two things, generate a SINGLE lifestyle photo.
+<layout_constraint>
+Generate a SINGLE lifestyle photo even if text compares things:
 - NO star ratings, review scores, or rating graphics
 - NO side-by-side comparisons or split screens
 - NO grids, collages, or multi-panel layouts
 - NO before/after visual comparisons
-- Just ONE beautiful lifestyle scene with the text overlaid
-- If text says "X is bad, Y is good" - show ONLY the good option in a natural setting
+- If text says "X is bad, Y is good" - show ONLY the good option
+</layout_constraint>
 
-GENERATE AN AUTHENTIC LIFESTYLE SCENE - NOT a stock photo!
-Think "real person's messy-but-aesthetic life" not "studio product shot":
+<authenticity>
+Generate an AUTHENTIC LIFESTYLE SCENE - NOT a stock photo!
+Think "real person's messy-but-aesthetic life" not "studio product shot".
 
-STYLE: Candid, lifestyle photography with natural imperfections
+<style>
 - Real rooms with lived-in details (not perfectly staged)
 - Natural window lighting with soft shadows (NOT studio lights)
 - Slightly messy/casual vibes (a book left open, cozy blanket)
 - Warm, inviting atmosphere
+</style>
 
-GOOD examples (authentic lifestyle scenes):
+<good_examples>
 - Cozy sofa with morning sunlight, coffee on side table, curtains blowing
 - Kitchen counter with half-eaten breakfast, morning light, real dishes
 - Bathroom vanity with various products scattered naturally, towel draped
 - Cozy corner with blanket, book spine-down, warm lamp light
 - Desk with actual work clutter, plant, warm afternoon light through window
+</good_examples>
 
-BAD examples (DO NOT generate - too fake/stock):
+<bad_examples>
 - Close-up of a product on white/marble surface
 - Perfectly arranged "flat lay" product shots
 - Studio-lit product photography with no context
 - Generic stock photo aesthetics (too clean, too posed)
-- Bright uniform lighting with no shadows
 - Marble countertop with perfectly placed items
-- Images with phone UI elements (navigation bars, black frames, Share/Edit buttons)
-- Images with black/dark bars at top or bottom (letterboxing)
-- Images that don't fill the entire 9:16 frame edge-to-edge
 - Steam rising from cups/mugs (obvious AI giveaway)
 - Visible humidifier mist or candle smoke (looks fake)
+</bad_examples>
 
-AUTHENTICITY REQUIREMENTS:
-- Include subtle imperfections (soft focus areas, natural shadows)
-- Show real living spaces (not showroom-perfect)
-- Lighting should be natural/ambient (NOT studio lighting)
-- Context matters: products should be IN a scene, not the scene itself
-
+<requirement>
 The image should feel like you peeked into someone's real life.
 If it looks like a stock photo or Amazon listing, it will be REJECTED.
+</requirement>
+</authenticity>
+
 {quality_constraints}"""
 
             contents = [
