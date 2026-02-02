@@ -2239,6 +2239,7 @@ MANDATORY - the output person must be RECOGNIZABLE as the same individual:
 
 {skin_realism_block}
 {text_visual_match_block}
+{transformation_instruction}
 
 <scene>{scene_description}</scene>
 
