@@ -1589,11 +1589,27 @@ CRITICAL RULES:
     - Any product promotion that just MENTIONS a country → null
 
     DEFAULT TO null - 99% of content should be null. Only use when the ENTIRE slideshow is teaching a specific culture's beauty method/routine.
-14. transformation_role: Analyze the storyline to detect before/after transformation:
-    - "before" → slide shows the PROBLEM state (wrinkles, dull skin, issues)
-    - "after" → slide shows the RESULT/IMPROVED state (smooth skin, glowing, transformed)
-    - null → slide is NOT part of a transformation narrative (DEFAULT for most slides)
-    Only use "before"/"after" when the storyline clearly shows a transformation journey. Most slides should be null.
+14. transformation_role: CRITICAL - detect before/after transformation based on SLIDE TEXT:
+
+    SET transformation_role = "before" if slide text contains ANY of:
+    - The word "before" (e.g., "before", "before ➡️", "before using")
+    - Problem indicators: "wrinkles", "lines", "tired", "dull", "stressed"
+
+    SET transformation_role = "after" if slide text contains ANY of:
+    - The word "after" (e.g., "after", "after ✨", "after using")
+    - Result words: "currently", "now", "results", "months later", "weeks in", "few months in"
+    - Success indicators: "smooth", "glowing", "glass skin", "transformed"
+
+    SET transformation_role = null for:
+    - Hook slides (usually null unless text says "before")
+    - Product slides
+    - CTA slides
+    - Any slide NOT part of a before/after comparison
+
+    TEXT-BASED DETECTION IS CRITICAL:
+    - If text literally says "before" -> MUST be transformation_role: "before"
+    - If text literally says "after" -> MUST be transformation_role: "after"
+    - Do NOT set ALL slides to "after" - look at EACH slide text individually!
 """
 
     # Build content with all images
@@ -1780,7 +1796,35 @@ This creates DRAMATIC contrast with the "after" slides.
     # ===== REUSABLE XML BLOCKS =====
     # These are common sections used across all persona prompts
 
-    skin_realism_block = """
+    # CONDITIONAL skin_realism based on transformation_role
+    if transformation_role == "after":
+        # AFTER slides: Allow perfect glowing skin for transformation results
+        skin_realism_block = """
+<skin_quality role="transformation_after">
+⚠️ OVERRIDE: This is the TRANSFORMATION RESULT - show PERFECT skin!
+- Skin must be SMOOTH, GLOWING, RADIANT - the "after" transformation look
+- ZERO wrinkles, lines, or imperfections - they are SOLVED by the product
+- Glass skin effect: dewy, luminous, poreless, healthy glow
+- Think: "Best skin day ever" / "Post-facial perfection"
+- The improvement should be DRAMATIC and OBVIOUS
+DO NOT apply normal skin realism - this is the SUCCESS photo!
+</skin_quality>
+"""
+    elif transformation_role == "before":
+        # BEFORE slides: Emphasize visible problems
+        skin_realism_block = """
+<skin_quality role="transformation_before">
+⚠️ IMPORTANT: This is the "BEFORE" state - show THE PROBLEM visibly!
+- Show VISIBLE skin issues: lines, wrinkles, texture, dullness, bags
+- Skin should look TIRED, AGED, or PROBLEMATIC (not subtle)
+- Think: "Unflattering lighting at 6am" / "Why I need this product"
+- The problem should be IMMEDIATELY OBVIOUS to viewers
+- NO glowing, radiant, or healthy-looking skin
+</skin_quality>
+"""
+    else:
+        # Normal slides: Natural realistic skin
+        skin_realism_block = """
 <skin_realism>
 Apply to all faces:
 - Subtle natural pores, fine micro-bumps, gentle uneven smoothness

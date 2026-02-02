@@ -92,13 +92,41 @@ For a typical single job with 2 photo variations and 2 text variations:
 ### Purpose
 Verify batch processing of multiple TikTok URLs.
 
-### Test Data
+### Test Data for new links non-tip
 ```
 URLs (use 3-5 links):
 https://www.tiktok.com/@tomahawk_tbell/photo/7341025475910733099
 https://www.tiktok.com/@kayls_1989/photo/7444862923127737633
 https://www.tiktok.com/@555keeks/photo/7524451650350746910
+https://www.tiktok.com/@mikenacako/photo/7448989356456529158
+https://www.tiktok.com/@yasandlew/photo/7426326171660356897
+https://www.tiktok.com/@rorayoga/photo/7557045644532256031
+https://www.tiktok.com/@face.bbos/photo/7561005694661463318
+https://www.tiktok.com/@corabelleofficial/photo/7335918298514623790
+https://www.tiktok.com/@555keeks/photo/7556503647249599774
+https://www.tiktok.com/@rorayoga/photo/7571566671782104350
+https://www.tiktok.com/@larasfinds/photo/7594078221667192094
 ```
+
+### Test Data for new links tip-based or similar
+```
+URLs (use 3-5 links):
+https://www.tiktok.com/t/ZP8ymQkWm/
+https://www.tiktok.com/t/ZP8ymBPYF/
+https://www.tiktok.com/t/ZP8ymkeMY/
+https://www.tiktok.com/t/ZP8ymBnv2/
+https://www.tiktok.com/t/ZP8ymfpQH/
+https://www.tiktok.com/t/ZP8ym5sYv/
+https://www.tiktok.com/t/ZP8ymftJA/
+https://www.tiktok.com/t/ZP8ym5D8c/
+https://www.tiktok.com/t/ZP8ymrJr3/
+https://www.tiktok.com/t/ZP8ymmqXb/
+https://www.tiktok.com/t/ZP8ymmDKs/
+https://www.tiktok.com/t/ZP8ymfXkA/n
+https://www.tiktok.com/t/ZP8yma37W/
+https://www.tiktok.com/t/ZP8ymX23g/
+```
+
 
 ### Steps
 
