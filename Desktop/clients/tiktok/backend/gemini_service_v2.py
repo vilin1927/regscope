@@ -2546,7 +2546,7 @@ DO NOT:
             sections = split_config.get('sections', ['before', 'after'])
             is_transformation = split_config.get('is_transformation', True)
 
-            logger.info(f"SPLIT_SCREEN_DEBUG: Generating split-screen {sections[0]}/{sections[1]} layout")
+            logger.info(f"SPLIT_SCREEN_DEBUG: Generating split-screen {sections[0]}/{sections[1]} layout, has_persona_ref={bool(persona_reference_path)}")
 
             # Determine left/right or top/bottom based on orientation
             first_section = "LEFT" if orientation == "horizontal" else "TOP"
@@ -2555,12 +2555,50 @@ DO NOT:
             # Get transformation problem for skin display
             problem_display = transformation_problem or "wrinkles"
 
-            prompt = f"""<task>Generate a TikTok split-screen BEFORE/AFTER comparison image.</task>
+            # IMPORTANT: If no persona_reference_path, we need to CREATE a new diverse persona
+            # (Don't just copy from reference_image_path - that copies the original TikTok person!)
+            if not persona_reference_path and has_persona:
+                # Generate NEW diverse persona for split-screen
+                if USE_EXPANDED_PERSONAS:
+                    cultural_context = persona_info.get('cultural_context') if persona_info else None
+                    diverse_persona = generate_diverse_persona(
+                        target_audience=persona_info,
+                        version=version,
+                        cultural_context=cultural_context
+                    )
+                    logger.info(f"Generated diverse persona v{version} for SPLIT-SCREEN: {get_persona_summary(diverse_persona)}" +
+                               (f" (cultural_context={cultural_context})" if cultural_context else ""))
 
-{text_style_instruction}
-{visual_style_instruction}
+                    split_persona_instruction = f"""
+<persona_instruction>
+GENERATE A NEW PERSON FOR THE SPLIT-SCREEN - DO NOT COPY THE REFERENCE PERSON
 
-<images>
+{format_persona_prompt(diverse_persona)}
+
+This SAME generated person must appear in BOTH halves of the split-screen.
+Match from reference ONLY: composition style, lighting mood, setting vibe.
+</persona_instruction>"""
+                else:
+                    # Fallback: use basic demographics
+                    split_persona_instruction = f"""
+<persona_instruction>
+GENERATE A NEW PERSON - DO NOT COPY THE REFERENCE PERSON
+- Gender: {persona_info.get('gender', 'female') if persona_info else 'female'}
+- Age Range: {persona_info.get('age_range', '20s-30s') if persona_info else '20s-30s'}
+This SAME generated person must appear in BOTH halves of the split-screen.
+Match from reference ONLY: composition style, lighting mood.
+</persona_instruction>"""
+
+                persona_images_block = """<images>
+<style_reference>
+Reference for the split-screen layout style, composition, and text styling.
+DO NOT copy this person - generate the NEW person described above.
+</style_reference>
+</images>"""
+            else:
+                # Use existing persona reference (subsequent slides or body slides)
+                split_persona_instruction = ""
+                persona_images_block = """<images>
 <persona_reference>
 THE PERSON TO USE. Generate the EXACT SAME PERSON in BOTH halves of the split-screen.
 This is the person's identity - copy exactly.
@@ -2568,7 +2606,14 @@ This is the person's identity - copy exactly.
 <style_reference>
 Reference for the split-screen layout style, composition, and text styling.
 </style_reference>
-</images>
+</images>"""
+
+            prompt = f"""<task>Generate a TikTok split-screen BEFORE/AFTER comparison image.</task>
+
+{text_style_instruction}
+{visual_style_instruction}
+{split_persona_instruction}
+{persona_images_block}
 
 <split_screen_layout>
 Create ONE image divided into TWO distinct sections:
@@ -2617,19 +2662,32 @@ CRITICAL - Both sections MUST show the EXACT SAME PERSON:
 
 {quality_constraints}"""
 
-            contents = [
-                prompt,
-                "[PERSONA_REFERENCE]",
-                types.Part.from_bytes(
-                    data=_load_image_bytes(persona_reference_path) if persona_reference_path else _load_image_bytes(reference_image_path),
-                    mime_type=_get_image_mime_type(persona_reference_path) if persona_reference_path else _get_image_mime_type(reference_image_path)
-                ),
-                "[STYLE_REFERENCE]",
-                types.Part.from_bytes(
-                    data=_load_image_bytes(reference_image_path),
-                    mime_type=_get_image_mime_type(reference_image_path)
-                )
-            ]
+            # Build contents based on whether we have persona reference or generating new
+            if persona_reference_path:
+                # Use existing persona reference
+                contents = [
+                    prompt,
+                    "[PERSONA_REFERENCE]",
+                    types.Part.from_bytes(
+                        data=_load_image_bytes(persona_reference_path),
+                        mime_type=_get_image_mime_type(persona_reference_path)
+                    ),
+                    "[STYLE_REFERENCE]",
+                    types.Part.from_bytes(
+                        data=_load_image_bytes(reference_image_path),
+                        mime_type=_get_image_mime_type(reference_image_path)
+                    )
+                ]
+            else:
+                # Generating NEW persona - only use style reference (don't copy original person!)
+                contents = [
+                    prompt,
+                    "[STYLE_REFERENCE]",
+                    types.Part.from_bytes(
+                        data=_load_image_bytes(reference_image_path),
+                        mime_type=_get_image_mime_type(reference_image_path)
+                    )
+                ]
 
         # ===== NORMAL SINGLE-IMAGE SLIDES =====
         elif has_persona and persona_reference_path:
