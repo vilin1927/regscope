@@ -1159,10 +1159,14 @@ They should flow naturally in conversational text, not feel forced.
 
 ⚠️ IMPORTANT: Use the ACTUAL brand name, NOT brackets or placeholders like "[brand]"!
 
-CTA SLIDE (only if original has one):
-- Keep engagement style
-- Adapt question to new category
-- If original doesn't have CTA, don't add one
+⚠️ TEXT-ONLY SLIDES (EXCLUDE ENTIRELY):
+DO NOT include slides that are PURELY text on a simple/solid background with:
+- NO person visible
+- NO product visible
+- NO action or scene
+- Just text overlay on plain/gradient/simple background
+These "outro" or "CTA" slides (like "there she glows again", "follow for more") should be EXCLUDED from output.
+Only include slides that have actual CONTENT (person, product, action, scene).
 
 ═══════════════════════════════════════════════════════════════
 TASK 6: GENERATE SCENE & TEXT VARIATIONS (CRITICAL!)
@@ -1227,25 +1231,13 @@ FOR PRODUCT SLIDE (exactly 1 scene variation):
     ]
 }}
 
-FOR CTA SLIDE (exactly 1 scene variation):
-{{
-    "slide_index": 6,
-    "slide_type": "cta",
-    "scene_variations": [
-        {{
-            "scene_description": "Peaceful bedroom with morning sunlight",
-            "text_variations": ["generate exactly 1 text item for CTA"]
-        }}
-    ]
-}}
-
 VARIATION RULES (CRITICAL - FOLLOW EXACTLY!):
 ⚠️ THE COUNTS BELOW ARE MANDATORY - DO NOT DEVIATE!
 
 - Hook slides: EXACTLY {hook_photo_var} scene_variations, each with EXACTLY {hook_text_var} text_variations
 - Body slides: EXACTLY {body_photo_var} scene_variations, each with EXACTLY {body_text_var} text_variations
 - Product slides: EXACTLY 1 scene_variation with EXACTLY {product_text_var} text_variations
-- CTA slides: EXACTLY 1 scene_variation with EXACTLY 1 text_variation
+- Text-only slides: EXCLUDE ENTIRELY (do not include in output)
 
 If hook_text_var=1, generate exactly 1 text item (not 2, not 3 - exactly 1!)
 If body_text_var=1, generate exactly 1 text item per scene variation!
@@ -1409,11 +1401,10 @@ Return ONLY valid JSON:
     }},
 
     "structure": {{
-        "total_slides": "same as original if replacing, original+1 if adding",
+        "total_slides": "same as original if replacing, original+1 if adding (EXCLUDING text-only slides)",
         "hook_index": 0,
         "body_indices": [1, 2, 3, 5],
-        "product_index": "from product_placement.product_slide_index",
-        "cta_index": 6 or null
+        "product_index": "from product_placement.product_slide_index"
     }},
 
     "new_slides": [
@@ -1424,7 +1415,8 @@ Return ONLY valid JSON:
             "reference_image_index": 0,
             "has_persona": true,
             "shows_product_on_face": false,  // FALSE: original hook shows person but NO face tape patches visible on face
-            "transformation_role": "before | after | null",  // "before" = shows problem/issue state, "after" = shows improved/result state, null = not part of transformation
+            "transformation_role": "before",  // "before" = problem state, "after" = improved state, null = not transformation
+            "transformation_problem": "forehead_lines",  // REQUIRED when transformation_role is set! Options: under_eye, forehead_lines, smile_lines, crows_feet, acne, dull_skin, sagging, wrinkles
             "visual": {{
                 "subject": "woman's face, selfie style",
                 "framing": "close-up",
@@ -1448,6 +1440,8 @@ Return ONLY valid JSON:
             "reference_image_index": 1,
             "has_persona": false,
             "shows_product_on_face": false,  // false: original slide 1 does NOT show face tape on person
+            "transformation_role": null,  // null = not a before/after slide
+            "transformation_problem": null,  // null when transformation_role is null
             "visual": {{
                 "subject": "skincare product on nightstand",
                 "framing": "medium shot",
@@ -1471,6 +1465,8 @@ Return ONLY valid JSON:
             "reference_image_index": 2,
             "has_persona": true,
             "shows_product_on_face": true,  // TRUE: original slide 2 shows person WEARING face tape patches visibly ON their face!
+            "transformation_role": "after",  // This slide shows results = "after"
+            "transformation_problem": "forehead_lines",  // Match the problem from text
             "visual": {{
                 "subject": "woman with face tape patches on forehead and under eyes",
                 "framing": "close-up",
@@ -1493,6 +1489,8 @@ Return ONLY valid JSON:
             "reference_image_index": 3,
             "has_persona": true,
             "shows_product_on_face": false,  // FALSE: original slide 3 shows person but NO face tape visible on their face
+            "transformation_role": null,  // Not a before/after slide
+            "transformation_problem": null,
             "visual": {{
                 "subject": "woman drinking water",
                 "framing": "medium shot",
@@ -1515,6 +1513,8 @@ Return ONLY valid JSON:
             "reference_image_index": 4,
             "has_persona": false,
             "shows_product_on_face": false,  // FALSE: product slides show product PACKAGING, not worn on anyone's face
+            "transformation_role": null,  // Product slides are never before/after
+            "transformation_problem": null,
             "visual": {{
                 "subject": "user's product prominently displayed",
                 "framing": "medium shot",
@@ -1530,29 +1530,8 @@ Return ONLY valid JSON:
                     "text_variations": ["product text with brand + amazon - generate exactly {product_text_var} items here"]
                 }}
             ]
-        }},
-        {{
-            "slide_index": 5,
-            "slide_type": "cta",
-            "role_in_story": "Call to action - follow for more",
-            "reference_image_index": 5,
-            "has_persona": true,
-            "shows_product_on_face": false,  // FALSE: CTA slides typically show person waving/smiling, no face tape visible
-            "visual": {{
-                "subject": "woman smiling at camera",
-                "framing": "medium shot",
-                "angle": "straight on",
-                "position": "centered",
-                "background": "same as hook"
-            }},
-            "text_position_hint": "center of image",
-            "scene_variations": [
-                {{
-                    "scene_description": "Woman smiling and waving at camera. COMPOSITION: framing=medium, angle=straight, position=center, background=bedroom",
-                    "text_variations": ["Follow for more tips!"]
-                }}
-            ]
         }}
+        // NOTE: Text-only slides (like "there she glows again", "follow for more") are EXCLUDED from output
     ]
 }}
 
@@ -1563,20 +1542,26 @@ IMPORTANT - reference_image_index explained:
 
 CRITICAL RULES:
 1. SLIDE COUNT:
-   - If competitor_detection.found == true: new_slides array has {num_slides} slides (REPLACE competitor)
-   - If competitor_detection.found == false: new_slides array has {num_slides} + 1 slides (ADD product at end)
+   - EXCLUDE text-only slides (pure text on background, no person/product/action)
+   - If competitor_detection.found == true: new_slides array has remaining slides (REPLACE competitor)
+   - If competitor_detection.found == false: new_slides array has remaining slides + 1 (ADD product at end)
 2. Exactly ONE slide with slide_type="product"
-3. Hook slides: {hook_photo_var} scene_variations, each with {hook_text_var} text_variations
-4. Body slides: {body_photo_var} scene_variations, each with {body_text_var} text_variations
-5. Product slides: 1 scene_variation with {product_text_var} text_variations
-6. CTA slides: 1 scene_variation
+3. slide_type can ONLY be: "hook", "body", or "product" (NO "cta" type!)
+4. Hook slides: {hook_photo_var} scene_variations, each with {hook_text_var} text_variations
+5. Body slides: {body_photo_var} scene_variations, each with {body_text_var} text_variations
+6. Product slides: 1 scene_variation with {product_text_var} text_variations
 7. Each scene_variation MUST have a different scene_description (different take on same concept!)
 8. has_persona: set to true if ORIGINAL slide shows a person, false otherwise
 9. Include "visual" object for each slide with composition details
 10. Include "role_in_story" for each slide describing its narrative purpose
 11. scene_description MUST end with "COMPOSITION: framing=X, angle=Y, position=Z, background=W"
-12. shows_product_on_face: CRITICAL - LOOK AT EACH ORIGINAL SLIDE IMAGE! Set true for EVERY slide where the original shows a person with face tape/patches ON their face (forehead, under eyes). Set false if the slide shows product packaging only, or person WITHOUT tape on face. If original has tape in 3 slides, set true for all 3!
-13. persona.cultural_context: ALMOST ALWAYS null! Only set when content is SPECIFICALLY TEACHING a cultural beauty METHOD:
+12. PHYSICAL CONSTRAINTS for scene_description:
+    - POV (first-person) shots can only show ONE hand - never "hands" plural
+    - If scene needs two objects, use "hand holding X, Y visible on counter/surface"
+    - Never write physically impossible scenes (e.g., "hands holding two bottles" in POV)
+    - Selfie shots: one hand holds phone, only other hand can be in frame
+13. shows_product_on_face: CRITICAL - LOOK AT EACH ORIGINAL SLIDE IMAGE! Set true for EVERY slide where the original shows a person with face tape/patches ON their face (forehead, under eyes). Set false if the slide shows product packaging only, or person WITHOUT tape on face. If original has tape in 3 slides, set true for all 3!
+14. persona.cultural_context: ALMOST ALWAYS null! Only set when content is SPECIFICALLY TEACHING a cultural beauty METHOD:
     ✅ SET cultural_context ONLY for these patterns:
     - "Japanese skincare routine" / "J-beauty method" / "why Japanese women have glass skin" → "Japanese"
     - "Korean glass skin routine" / "K-beauty secrets" / "10-step Korean routine" → "Korean"
@@ -1589,7 +1574,7 @@ CRITICAL RULES:
     - Any product promotion that just MENTIONS a country → null
 
     DEFAULT TO null - 99% of content should be null. Only use when the ENTIRE slideshow is teaching a specific culture's beauty method/routine.
-14. transformation_role: CRITICAL - detect before/after transformation based on SLIDE TEXT:
+15. transformation_role: CRITICAL - detect before/after transformation based on SLIDE TEXT:
 
     SET transformation_role = "before" if slide text contains ANY of:
     - The word "before" (e.g., "before", "before ➡️", "before using")
@@ -1601,15 +1586,42 @@ CRITICAL RULES:
     - Success indicators: "smooth", "glowing", "glass skin", "transformed"
 
     SET transformation_role = null for:
-    - Hook slides (usually null unless text says "before")
     - Product slides
-    - CTA slides
     - Any slide NOT part of a before/after comparison
+
+    ⚠️ HOOK SLIDES CAN BE "before" STATE:
+    - If hook text describes a PROBLEM → transformation_role = "before"
+    - Examples: "I had terrible smile lines", "My forehead wrinkles were so bad", "I looked so tired"
+    - Hook showing the problem creates DRAMATIC opening for transformation story
 
     TEXT-BASED DETECTION IS CRITICAL:
     - If text literally says "before" -> MUST be transformation_role: "before"
     - If text literally says "after" -> MUST be transformation_role: "after"
     - Do NOT set ALL slides to "after" - look at EACH slide text individually!
+
+16. transformation_problem: Detect the SPECIFIC skin problem from slide text:
+
+    SET transformation_problem based on keywords in text:
+    - "under eye", "eye bags", "dark circles", "eye lines", "crow", "around my eyes" → "under_eye"
+    - "forehead", "11 lines", "eleven lines", "frown lines", "brow" → "forehead_lines"
+    - "smile lines", "laugh lines", "nasolabial", "mouth lines" → "smile_lines"
+    - "crow's feet", "crows feet", "eye wrinkles", "corner of eyes" → "crows_feet"
+    - "acne", "pimples", "breakout", "blemish", "spots" → "acne"
+    - "dull", "tired", "sallow", "lifeless", "glow" → "dull_skin"
+    - "sagging", "jowls", "loose skin", "droopy", "lift" → "sagging"
+    - "wrinkles", "lines", "aging" (generic) → "wrinkles"
+
+    SET transformation_problem = null for:
+    - Slides without transformation_role
+    - Product slides
+    - Lifestyle/filler slides
+
+    ⚠️ CRITICAL OUTPUT REQUIREMENT:
+    - EVERY slide MUST include "transformation_problem" field in output
+    - If transformation_role is "before" or "after" → transformation_problem MUST be one of: under_eye, forehead_lines, smile_lines, crows_feet, acne, dull_skin, sagging, wrinkles
+    - If transformation_role is null → transformation_problem = null
+    - Use the SAME transformation_problem for ALL slides in a before/after sequence!
+    - Example: text says "eye lines" → ALL transformation slides get transformation_problem: "under_eye"
 """
 
     # Build content with all images
@@ -1662,15 +1674,21 @@ CRITICAL RULES:
             raise GeminiServiceError('Missing new_slides in analysis')
 
         # Validate slide count based on product_placement action
-        # - "replace": same number of slides as original
-        # - "add": original + 1 (product slide added at end)
+        # - "replace": same number of slides as original (or fewer if CTA excluded)
+        # - "add": original + 1 (product slide added at end), or fewer if CTA excluded
+        # Note: CTA slides may be excluded per our rules, so allow fewer slides
         product_placement = analysis.get('product_placement', {})
         placement_action = product_placement.get('action', 'add')
-        expected_slides = num_slides if placement_action == 'replace' else num_slides + 1
+        max_expected_slides = num_slides if placement_action == 'replace' else num_slides + 1
+        min_expected_slides = max(2, max_expected_slides - 2)  # Allow up to 2 slides excluded (CTA, etc.)
 
-        if len(analysis['new_slides']) != expected_slides:
-            log.error(f"Slide count mismatch: expected {expected_slides} (action={placement_action}), got {len(analysis['new_slides'])}")
-            raise GeminiServiceError(f"Expected {expected_slides} slides (action={placement_action}), got {len(analysis['new_slides'])}")
+        actual_slides = len(analysis['new_slides'])
+        if actual_slides < min_expected_slides or actual_slides > max_expected_slides:
+            log.error(f"Slide count out of range: expected {min_expected_slides}-{max_expected_slides} (action={placement_action}), got {actual_slides}")
+            raise GeminiServiceError(f"Expected {min_expected_slides}-{max_expected_slides} slides (action={placement_action}), got {actual_slides}")
+
+        if actual_slides < max_expected_slides:
+            log.info(f"Slide count adjusted: {actual_slides} slides (max was {max_expected_slides}, likely CTA excluded)")
 
         # Validate exactly one product slide
         product_slides = [s for s in analysis['new_slides'] if s.get('slide_type') == 'product']
@@ -1714,7 +1732,8 @@ def _generate_single_image(
     clean_image_mode: bool = False,
     product_description: str = "",
     shows_product_on_face: bool = False,
-    transformation_role: Optional[str] = None  # "before", "after", or None
+    transformation_role: Optional[str] = None,  # "before", "after", or None
+    transformation_problem: Optional[str] = None  # "under_eye", "forehead_lines", "smile_lines", etc.
 ) -> str:
     """
     Generate a single image with clear image labeling.
@@ -1731,56 +1750,254 @@ def _generate_single_image(
     Text style is passed explicitly via text_style dict for accurate font matching.
     """
 
-    # Build transformation instruction based on transformation_role
+    # Build transformation instruction based on transformation_role AND transformation_problem
+    # Problem-specific before/after visuals for dramatic contrast
+
+    # Auto-detect problem from text if not provided
+    def detect_problem_from_text(text: str) -> str:
+        """Detect skin problem type from text content."""
+        if not text:
+            return "wrinkles"
+        text_lower = text.lower()
+
+        # Check for specific problem keywords
+        if any(kw in text_lower for kw in ["under eye", "eye bags", "dark circles", "eye lines", "around my eyes", "crow"]):
+            return "under_eye"
+        if any(kw in text_lower for kw in ["forehead", "11 lines", "eleven lines", "frown lines", "brow"]):
+            return "forehead_lines"
+        if any(kw in text_lower for kw in ["smile lines", "laugh lines", "nasolabial", "mouth lines"]):
+            return "smile_lines"
+        if any(kw in text_lower for kw in ["crow's feet", "crows feet", "eye wrinkles", "corner of eyes"]):
+            return "crows_feet"
+        if any(kw in text_lower for kw in ["acne", "pimples", "breakout", "blemish", "spots"]):
+            return "acne"
+        if any(kw in text_lower for kw in ["dull", "tired", "sallow", "lifeless"]):
+            return "dull_skin"
+        if any(kw in text_lower for kw in ["sagging", "jowls", "loose skin", "droopy", "lift"]):
+            return "sagging"
+
+        return "wrinkles"  # Default fallback
+
+    # If transformation_problem not provided, detect from text
+    if not transformation_problem and transformation_role:
+        transformation_problem = detect_problem_from_text(text_content + " " + scene_description)
+        logger.info(f"Auto-detected transformation_problem: {transformation_problem} from text")
+
+    PROBLEM_VISUALS = {
+        "under_eye": {
+            "before": """
+PROBLEM INTENSITY: 70% - Must be IMMEDIATELY visible!
+- Under-eye area: DEEP DARK circles (purple/blue/brown tint), PUFFY bags, HOLLOW sunken appearance
+- Shadows under eyes are DARK and PROMINENT - like someone who hasn't slept in days
+- Skin under eyes looks THIN, CREPEY, DEHYDRATED with visible texture
+- Expression: Tired, slightly concerned, exhausted look
+- LIGHTING: Slightly harsh/unflattering to emphasize the darkness and texture
+- Think: "6am selfie after a sleepless night" - this is WHY they need the product""",
+            "after": """
+RESULT: 100% improvement - DRAMATIC transformation!
+- Under-eye area: BRIGHT, LUMINOUS, no dark circles whatsoever, smooth and PLUMP
+- Eye area looks WELL-RESTED, YOUTHFUL, REFRESHED - like 8 hours of perfect sleep
+- NO shadows, NO puffiness, NO bags - completely smooth
+- Expression: Happy, confident, glowing
+- LIGHTING: Soft, flattering, golden hour quality
+- Think: "Best photo they've ever taken" - product WORKED"""
+        },
+        "forehead_lines": {
+            "before": """
+PROBLEM INTENSITY: 70% - Must be IMMEDIATELY visible!
+- Forehead: DEEP HORIZONTAL LINES clearly etched across forehead
+- Visible "11 LINES" (frown lines) between brows - prominent vertical creases
+- Forehead skin looks TENSE, AGED, WORRIED with rough uneven texture
+- Expression: Slightly furrowed brow, concerned or stressed look
+- LIGHTING: Direct/overhead to cast shadows in the lines and make them deeper
+- Think: "Zoom meeting screenshot that made you cringe" - this is WHY they need the product""",
+            "after": """
+RESULT: 100% improvement - DRAMATIC transformation!
+- Forehead: COMPLETELY SMOOTH like glass, no lines whatsoever
+- NO "11 lines" - frown area is relaxed, smooth, line-free
+- Skin texture is FLAWLESS, even, poreless
+- Expression: Relaxed, happy, confident
+- LIGHTING: Soft, diffused, flattering
+- Think: "Botox results without Botox" - product WORKED"""
+        },
+        "smile_lines": {
+            "before": """
+PROBLEM INTENSITY: 70% - Must be IMMEDIATELY visible!
+- Smile lines (nasolabial folds): DEEP VISIBLE CREASES from nose to mouth corners
+- Lines are PROMINENT even when face is relaxed - not just when smiling
+- Creates an AGED, TIRED, SAGGING appearance around lower face
+- Skin around mouth area looks LOOSE, less firm
+- Expression: Neutral or slightly sad - not smiling (to show lines at rest)
+- LIGHTING: Side lighting to emphasize the depth of the folds
+- Think: "Photo that made you feel old" - this is WHY they need the product""",
+            "after": """
+RESULT: 100% improvement - DRAMATIC transformation!
+- Smile lines: DRAMATICALLY SOFTENED, barely visible even when smiling
+- Face looks LIFTED, YOUTHFUL, TIGHT around mouth and cheeks
+- Skin looks FIRM, TONED, bouncy
+- Can smile naturally WITHOUT deep creases appearing
+- Expression: Happy, confident, smiling
+- LIGHTING: Soft, flattering, front-facing
+- Think: "10 years younger" - product WORKED"""
+        },
+        "crows_feet": {
+            "before": """
+PROBLEM INTENSITY: 70% - Must be IMMEDIATELY visible!
+- Crow's feet: VISIBLE DEEP LINES radiating from outer eye corners
+- Lines extend toward TEMPLES and are noticeable at rest
+- Eye area looks AGED, WEATHERED, sun-damaged
+- Fine lines form a FAN pattern from eye corners
+- Expression: Neutral or slight squint to show the lines
+- LIGHTING: Direct light to emphasize texture and lines
+- Think: "Why do I look so old in photos" - this is WHY they need the product""",
+            "after": """
+RESULT: 100% improvement - DRAMATIC transformation!
+- Crow's feet: SMOOTH eye corners, NO radiating lines
+- Eye area looks YOUTHFUL, FRESH even when smiling or squinting
+- Skin around eyes is TIGHT, SMOOTH, elastic
+- NO fine lines at temples - completely smooth transition
+- Expression: Happy, eyes bright and youthful
+- LIGHTING: Soft, golden, flattering
+- Think: "Eyes of a 25-year-old" - product WORKED"""
+        },
+        "acne": {
+            "before": """
+PROBLEM INTENSITY: 70% - Must be IMMEDIATELY visible!
+- Skin: VISIBLE RED PIMPLES, BUMPY uneven texture, INFLAMED areas
+- Active breakouts across cheeks, chin, or forehead - multiple spots visible
+- Skin looks TROUBLED, ANGRY, UNEVEN with visible texture
+- Some visible scarring or discoloration from past breakouts
+- Expression: Self-conscious, avoiding direct eye contact
+- LIGHTING: Clear enough to show the texture and redness
+- Think: "Didn't want to leave the house" - this is WHY they need the product""",
+            "after": """
+RESULT: 100% improvement - DRAMATIC transformation!
+- Skin: CLEAR, SMOOTH, no active breakouts whatsoever
+- Even skin tone, NO redness, NO inflammation
+- Skin looks HEALTHY, CALM, BALANCED, poreless
+- Scars significantly faded, overall CLARITY and brightness
+- Expression: Confident, happy, proud of skin
+- LIGHTING: Soft, natural, showing off clear skin
+- Think: "Finally confident without makeup" - product WORKED"""
+        },
+        "dull_skin": {
+            "before": """
+PROBLEM INTENSITY: 70% - Must be IMMEDIATELY visible!
+- Skin: DULL, LIFELESS, SALLOW yellowish/greyish complexion
+- ZERO natural radiance - skin absorbs light instead of reflecting it
+- Looks TIRED, GREY, DEHYDRATED, almost ashy
+- UNEVEN tone, LACKLUSTER, flat appearance with no depth
+- Expression: Tired, low energy, washed out
+- LIGHTING: Flat lighting that emphasizes the dullness
+- Think: "Skin looks dead even with makeup" - this is WHY they need the product""",
+            "after": """
+RESULT: 100% improvement - DRAMATIC transformation!
+- Skin: RADIANT, GLOWING, LUMINOUS complexion that REFLECTS light
+- Healthy natural RADIANCE and DEWINESS - lit from within
+- Looks ENERGIZED, FRESH, HYDRATED, alive
+- EVEN tone, beautiful LIT-FROM-WITHIN glow
+- Expression: Vibrant, energetic, happy
+- LIGHTING: Soft with visible skin radiance
+- Think: "Glass skin without filters" - product WORKED"""
+        },
+        "sagging": {
+            "before": """
+PROBLEM INTENSITY: 70% - Must be IMMEDIATELY visible!
+- Skin: LOOSE, visibly SAGGING along jawline and cheeks
+- JOWLS visible, UNDEFINED soft jawline with no sharp angles
+- Face looks DROOPY, lacking FIRMNESS, gravity pulling down
+- LOSS of facial contour - everything looks like it's sliding down
+- Expression: Neutral, slightly tired, gravity-affected
+- LIGHTING: Side angle to show the lack of definition
+- Think: "When did my face start melting" - this is WHY they need the product""",
+            "after": """
+RESULT: 100% improvement - DRAMATIC transformation!
+- Skin: LIFTED, FIRM jawline, DEFINED sharp contours
+- NO jowls, SCULPTED facial definition like a facelift
+- Face looks LIFTED, TIGHT, TONED, defying gravity
+- YOUTHFUL facial structure with clear angles
+- Expression: Confident, lifted, proud
+- LIGHTING: Slightly angled to show the definition
+- Think: "Non-surgical facelift results" - product WORKED"""
+        },
+        "wrinkles": {
+            "before": """
+PROBLEM INTENSITY: 70% - Must be IMMEDIATELY visible!
+- Skin: MULTIPLE VISIBLE fine lines and wrinkles throughout face
+- Forehead, eye area, mouth area - ALL show signs of aging
+- Skin texture is UNEVEN, CREASED, rough to the eye
+- Overall AGED, WEATHERED appearance - looks older than actual age
+- Expression: Concerned, aware of the aging
+- LIGHTING: Clear enough to show all the texture and lines
+- Think: "Photo that made you want to try something" - this is WHY they need the product""",
+            "after": """
+RESULT: 100% improvement - DRAMATIC transformation!
+- Skin: SMOOTH, wrinkles DRAMATICALLY reduced - barely any lines visible
+- YOUTHFUL, PLUMP, HYDRATED bouncy appearance
+- Skin texture is EVEN, REFINED, poreless
+- Overall REJUVENATED, YOUNGER look - years taken off
+- Expression: Happy, confident, glowing
+- LIGHTING: Soft, golden, flattering
+- Think: "Turned back the clock" - product WORKED"""
+        }
+    }
+
+    # Get problem-specific visuals or use generic wrinkles as fallback
+    problem_key = transformation_problem if transformation_problem in PROBLEM_VISUALS else "wrinkles"
+    problem_visuals = PROBLEM_VISUALS.get(problem_key, PROBLEM_VISUALS["wrinkles"])
+
     if transformation_role == 'after':
-        transformation_instruction = """
-<transformation role="after">
+        transformation_instruction = f"""
+<transformation role="after" problem="{problem_key}">
 This is an "AFTER" transformation slide - show DRAMATIC, VISIBLE improvement.
 The difference from "before" should be INSTANTLY NOTICEABLE at a glance.
 
-<skin>
-- Skin looks 10 years younger - smooth, plump, hydrated
-- Forehead: ZERO visible lines (was wrinkled before)
-- Under eyes: Bright, no dark circles, no puffiness
-- Overall: Radiant GLOW, dewy "glass skin" effect
-- Healthy rosy undertones, even skin tone
-- Pores minimized, skin looks airbrushed but natural
-</skin>
+<target_improvement>
+{problem_visuals["after"]}
+</target_improvement>
 
-<appearance>
-- Person looks well-rested, energized, happy
-- Better posture, confident expression
-- Brighter lighting to enhance the "glow up"
-- Think "best photo they've ever taken"
-</appearance>
+<general_appearance>
+- Person looks well-rested, energized, HAPPY
+- Better posture, CONFIDENT expression, maybe slight smile
+- BRIGHTER, SOFTER lighting to enhance the "glow up"
+- Think "best photo they've ever taken" / "post-facial selfie"
+</general_appearance>
 
-<constraint>DO NOT show ANY skin problems - this is the SUCCESS/RESULT slide.</constraint>
+<contrast_requirement>
+⚠️ CRITICAL: This must look DRAMATICALLY DIFFERENT from "before" slides!
+- Viewer should see the transformation INSTANTLY at a glance
+- Side-by-side comparison would show OBVIOUS improvement
+- This is the "success story" - make it GLOW
+</contrast_requirement>
+
+<constraint>DO NOT show ANY of the original problems - this is the SUCCESS/RESULT slide. ZERO wrinkles, lines, or issues visible.</constraint>
 </transformation>
 """
     elif transformation_role == 'before':
-        transformation_instruction = """
-<transformation role="before">
-This is a "BEFORE" transformation slide - show VISIBLE problems.
+        transformation_instruction = f"""
+<transformation role="before" problem="{problem_key}">
+This is a "BEFORE" transformation slide - show VISIBLE, OBVIOUS problems.
 This creates DRAMATIC contrast with the "after" slides.
 
-<skin>
-- Visible fine lines and wrinkles on forehead
-- Crow's feet around eyes clearly visible
-- Under-eye bags, dark circles, puffiness
-- Dull, tired-looking skin - lacks radiance
-- Uneven skin tone, some redness
-- Visible pores, dehydrated appearance
-- Skin looks stressed, lackluster
-</skin>
+<target_problems>
+{problem_visuals["before"]}
+</target_problems>
 
-<appearance>
-- Person looks tired, stressed, or worn out
-- Slightly less flattering lighting
-- Expression shows concern or tiredness
-- Think "before discovering the solution"
-</appearance>
+<general_appearance>
+- Person looks TIRED, STRESSED, or CONCERNED about their skin
+- UNFLATTERING lighting that emphasizes texture and problems
+- Expression shows awareness/concern about the problem
+- Think "unflattering photo that made you want to try something new"
+</general_appearance>
 
-<constraint>The problems should be clearly visible but still look realistic/natural.</constraint>
+<contrast_requirement>
+⚠️ CRITICAL: This must look DRAMATICALLY DIFFERENT from "after" slides!
+- Viewer should INSTANTLY see what the problem is
+- The issues should be OBVIOUS, not subtle
+- This is "why they needed the product" - make it CLEAR
+</contrast_requirement>
+
+<constraint>Make problems OBVIOUS at first glance - viewer should INSTANTLY see what's wrong. Think "the photo that made you buy the product".</constraint>
 </transformation>
 """
     else:
@@ -1801,25 +2018,44 @@ This creates DRAMATIC contrast with the "after" slides.
         # AFTER slides: Allow perfect glowing skin for transformation results
         skin_realism_block = """
 <skin_quality role="transformation_after">
-⚠️ OVERRIDE: This is the TRANSFORMATION RESULT - show PERFECT skin!
-- Skin must be SMOOTH, GLOWING, RADIANT - the "after" transformation look
-- ZERO wrinkles, lines, or imperfections - they are SOLVED by the product
-- Glass skin effect: dewy, luminous, poreless, healthy glow
-- Think: "Best skin day ever" / "Post-facial perfection"
-- The improvement should be DRAMATIC and OBVIOUS
-DO NOT apply normal skin realism - this is the SUCCESS photo!
+⚠️ OVERRIDE: This is the TRANSFORMATION RESULT - show PERFECT GLASS SKIN!
+
+REQUIRED skin appearance:
+- PORELESS, SMOOTH, FLAWLESS texture - like airbrushed perfection
+- GLOWING, LUMINOUS, RADIANT - skin REFLECTS light beautifully
+- ZERO wrinkles, lines, dark circles, or ANY imperfections
+- DEWY, healthy, hydrated - "just got a facial" look
+- Even skin tone, no redness, no texture
+
+LIGHTING: Soft, flattering, golden-hour quality
+EXPRESSION: Happy, confident, proud of skin
+
+Think: "Glass skin filter IRL" / "Skincare ad model" / "Best skin day ever"
+This is the SUCCESS PHOTO - the product WORKED. Make it OBVIOUS!
+
+DO NOT apply normal skin realism - this is the PERFECT RESULT!
 </skin_quality>
 """
     elif transformation_role == "before":
         # BEFORE slides: Emphasize visible problems
         skin_realism_block = """
 <skin_quality role="transformation_before">
-⚠️ IMPORTANT: This is the "BEFORE" state - show THE PROBLEM visibly!
-- Show VISIBLE skin issues: lines, wrinkles, texture, dullness, bags
-- Skin should look TIRED, AGED, or PROBLEMATIC (not subtle)
-- Think: "Unflattering lighting at 6am" / "Why I need this product"
-- The problem should be IMMEDIATELY OBVIOUS to viewers
-- NO glowing, radiant, or healthy-looking skin
+⚠️ CRITICAL: This is the "BEFORE" state - show THE PROBLEM at 70% intensity!
+
+REQUIRED skin appearance:
+- VISIBLE skin issues: lines, wrinkles, texture, dullness, bags - NOT subtle!
+- Skin should look TIRED, AGED, PROBLEMATIC, TEXTURED
+- Problems should be IMMEDIATELY OBVIOUS at first glance
+- NO healthy glow, NO radiance, NO dewiness
+- Slightly uneven tone, visible texture, clear problems
+
+LIGHTING: Slightly harsh or unflattering to emphasize texture/problems
+EXPRESSION: Tired, concerned, or neutral - NOT happy/glowing
+
+Think: "6am bathroom lighting selfie" / "Photo that made you buy skincare"
+This is WHY THEY NEED THE PRODUCT - make the problem CLEAR!
+
+DO NOT make skin look good - this is the PROBLEM STATE!
 </skin_quality>
 """
     else:
@@ -1841,11 +2077,16 @@ Apply to all faces:
     text_visual_match_block = """
 <text_visual_match>
 READ THE TEXT CAREFULLY and match the visual to what it describes:
-- SKIN: If text mentions skin problems (wrinkles, forehead lines, acne, dark circles) → show those problems visibly
-- BODY TYPE: If text mentions "slim", "tiny waist", "thin", "lean" → generate SLIM body type
-- BODY TYPE: If text mentions "curvy", "thick", "plus-size" → generate that body type
-- GLASS SKIN: If text mentions "glass skin", "glowing skin", "clear skin" → show radiant, dewy, luminous skin
-The image should ILLUSTRATE the text content.
+
+- SKIN CONDITIONS: If text mentions ANY skin conditions or problems → show them visibly
+- SKIN QUALITY: If text mentions ANY skin appearance descriptors → reflect that quality (glowing, dull, clear, textured, etc.)
+- BODY TYPE: If text mentions ANY body type descriptors → generate that body type
+- HAIR: If text mentions ANY hair characteristics → match them (length, texture, style, etc.)
+- AGE: If text implies ANY age indicators → reflect that appropriately
+- PHYSICAL FEATURES: If text describes ANY other physical attributes → illustrate them
+
+The image should ILLUSTRATE what the text is talking about.
+Don't interpret - show EXACTLY what the words describe.
 </text_visual_match>
 """
 
@@ -1879,66 +2120,49 @@ Leave clear space in appropriate areas for text placement.
 Focus on creating a beautiful, clean visual composition WITHOUT any text."""
     # Build text style instruction from analysis
     elif text_style:
-        font_style = text_style.get('font_style', 'modern-clean')
-        style_description = _get_style_description(font_style)
         background_box = text_style.get('background_box', 'none')
 
-        # Build enhanced box instructions if box/pill style detected
+        # Build box override based on whether box/pill style is detected
+        box_override = ""
         if background_box and ('box' in background_box.lower() or 'pill' in background_box.lower()):
-            box_instruction = """
-BOX STYLE SPECIFICATIONS (MATCH EXACTLY):
-
-VISUAL REFERENCE: Think Instagram/TikTok caption bubbles - clean, rounded, tight fit around text.
-
-CORE RULES:
-- Background: Pure white (#FFFFFF) rounded rectangle that ENVELOPS the text
-- Corner radius: Soft rounded corners (~10-15% of box height) - pill/capsule shape
-- Padding: ~15-20px around text on all sides - box hugs the text, not oversized
-- Text color: Pure black (#000000) on the white background
-- Box width: ONLY as wide as the text line needs + padding (NOT full image width!)
-
-LINE-SPECIFIC LAYOUT:
-- For 1 line: Single white pill/capsule shape tightly around the text, centered
-- For 2 lines: Each line gets its OWN separate box/pill, stacked vertically with ~8-10px gap
-- For 3+ lines: Same as 2 lines - each line gets its own box, creates "stack of pills" effect
-
-AVOID:
-- One giant box containing all lines
-- Boxes that extend to image edges
-- Oversized boxes with too much padding
-- Boxes that overlap each other
+            box_override = """
+<text_background_override>
+DETECTED: Text has background box/pill in reference
+- Use white (#FFFFFF) rounded rectangle behind text
+- Box should tightly hug text with ~15-20px padding
+- Each line gets its OWN separate box (stack of pills effect)
+- DO NOT make one giant box for all lines
+</text_background_override>
 """
         else:
-            box_instruction = f"- Background: {background_box}"
+            # Explicit NO BOX instruction when reference has no background
+            box_override = """
+<text_background_override>
+⛔ NO BACKGROUND BOX - Reference has NO text background!
+- Text must have NO background box, NO pill, NO rectangle behind it
+- Use ONLY: font color + outline/stroke for contrast
+- If text needs visibility, use thicker outline stroke - NOT a box
+- ZERO semi-transparent backgrounds, ZERO solid backgrounds
+- This is CRITICAL - adding a box will ruin the style match
+</text_background_override>
+"""
 
-        text_style_instruction = f"""TEXT STYLE REQUIREMENTS (MATCH EXACTLY):
-
-TYPOGRAPHY APPEARANCE:
-- Style: {font_style}
-  (This means: {style_description})
-- Weight: {text_style.get('font_weight', 'bold')} strokes
-- Letter spacing: {text_style.get('letter_spacing', 'normal')}
-- Color: {text_style.get('font_color', 'white')}
-
-TEXT EFFECTS:
-- Shadow: {text_style.get('shadow', 'none')}
-- Outline: {text_style.get('outline', 'none')}
-{box_instruction}
-
-OVERALL VIBE: {text_style.get('visual_vibe', 'clean minimal')}
-Position: {text_style.get('position_style', 'varies by slide')}
-
-TEXT SIZE (CRITICAL - FOLLOW EXACTLY):
+        text_style_instruction = f"""<text_style>
+<primary_rule>
+COPY the EXACT text style from [STYLE_REFERENCE] image - font, color, size, effects, position.
+DO NOT add backgrounds/boxes/effects unless the reference clearly has them.
+</primary_rule>
+{box_override}
+<text_size>
 - Text must be SMALL - approximately 3-5% of image height
 - Maximum 2 lines of text total
 - Each line maximum 6 words
-- NEVER generate large/bold/dominant text that takes over the image
 - The IMAGE is the focus, text is a subtle accent only
 - Think "small Instagram caption" not "poster headline"
 - If in doubt, make text SMALLER
-- NEVER duplicate/repeat the same text line twice in the image
-
-The text appearance is CRITICAL for authenticity - match this exact visual style!
+- NEVER duplicate/repeat the same text line twice
+</text_size>
+</text_style>
 """
     else:
         text_style_instruction = "Use clean, bold, white sans-serif text with subtle shadow."
@@ -1949,39 +2173,27 @@ The text appearance is CRITICAL for authenticity - match this exact visual style
         if has_persona:
             # SOFTER version for persona slides - match lighting/colors but NOT the person
             visual_style_instruction = f"""
-VISUAL STYLE (lighting and colors only):
-
-Match these visual elements from the reference:
-- Color Temperature: {visual_style.get('color_temperature', 'neutral')}
-- Lighting Style: {visual_style.get('lighting_style', 'natural-soft')}
-- Saturation: {visual_style.get('saturation', 'natural')}
-- Overall Aesthetic: {visual_style.get('overall_aesthetic', 'lifestyle')}
-
-⚠️ IMPORTANT: Match the LIGHTING and COLOR GRADING only.
-DO NOT match the person's appearance - generate a DIFFERENT person.
-The reference is for mood/lighting/colors - NOT for copying the person's face or features.
+<visual_style type="persona">
+<match_from_reference>
+Copy the lighting and color grading from [STYLE_REFERENCE]:
+- Color temperature, lighting style, saturation, overall aesthetic
+</match_from_reference>
+<do_not_copy>
+- DO NOT copy the person's appearance - generate a DIFFERENT person
+- Reference is for mood/lighting/colors ONLY, not the face or features
+</do_not_copy>
+</visual_style>
 """
         else:
             # Full matching for non-persona slides
             visual_style_instruction = f"""
-VISUAL STYLE REQUIREMENTS (MATCH THE ORIGINAL'S LOOK):
-
-⚠️ CRITICAL: Match the color grading and lighting of the reference image EXACTLY!
-
-COLOR & LIGHTING:
-- Color Temperature: {visual_style.get('color_temperature', 'neutral')}
-  {"(Use warm golden/orange tones throughout)" if visual_style.get('color_temperature') == 'warm' else "(Use cool blue/teal tones throughout)" if visual_style.get('color_temperature') == 'cool' else "(Keep colors balanced, no strong color cast)"}
-- Color Palette: {visual_style.get('color_palette', 'natural colors')}
-- Lighting Style: {visual_style.get('lighting_style', 'natural-soft')}
-- Saturation: {visual_style.get('saturation', 'natural')}
-  {"(Colors should be muted/faded, not vibrant)" if visual_style.get('saturation') == 'muted' else "(Colors should be punchy and vibrant)" if visual_style.get('saturation') == 'vibrant' else "(Keep natural, true-to-life colors)"}
-
-EDITING STYLE:
-- Filter/Grade: {visual_style.get('filter_style', 'clean and sharp')}
-- Overall Aesthetic: {visual_style.get('overall_aesthetic', 'lifestyle')}
-
-The generated image MUST look like it belongs in the same photo series as the reference.
-Match the color grading, lighting mood, and overall visual feel!
+<visual_style type="scene">
+<match_from_reference>
+Copy the EXACT visual style from [STYLE_REFERENCE]:
+- Color grading, lighting, saturation, filter/editing style
+- The generated image should look like it belongs in the same photo series
+</match_from_reference>
+</visual_style>
 """
     else:
         visual_style_instruction = ""
@@ -2270,6 +2482,7 @@ MANDATORY - the output person must be RECOGNIZABLE as the same individual:
 - Hairstyle slightly (but SAME color)
 - Expression
 - Background (appropriate for new scene)
+- Head angle and selfie position (not always centered - can be tilted, angled, off-center)
 </can_change>
 </persona>
 
@@ -2814,6 +3027,18 @@ def generate_all_images(
     all_tasks = []
     variations_structure = {}  # Track variations by slide key
 
+    # Find the best style reference index (first hook or body with persona) for product slides
+    def get_best_style_reference():
+        """Find the best slide to use as style reference (hook or first body with persona)"""
+        for s in new_slides:
+            if s.get('slide_type') == 'hook':
+                return s.get('reference_image_index', 0)
+            if s.get('slide_type') == 'body' and s.get('has_persona', False):
+                return s.get('reference_image_index', 0)
+        return 0  # Fallback to first slide
+
+    best_style_ref = get_best_style_reference()
+
     for slide in new_slides:
         idx = slide['slide_index']
         ref_idx = slide.get('reference_image_index') if slide.get('reference_image_index') is not None else idx
@@ -2823,6 +3048,10 @@ def generate_all_images(
         # Skip CTA slides - don't generate or upload
         if slide_type == 'cta':
             continue
+
+        # For product slides, use the best style reference (hook/body) instead of potentially using a text-only slide
+        if slide_type == 'product':
+            ref_idx = best_style_ref
 
         # NEW: Get scene_variations from analysis (each scene_variation = different tip/concept)
         scene_variations = slide.get('scene_variations', [])
@@ -2906,7 +3135,8 @@ def generate_all_images(
                     'product_image_path': product_img,
                     'has_persona': has_persona,
                     'shows_product_on_face': slide.get('shows_product_on_face', False),  # Per-slide face tape detection
-                    'transformation_role': slide.get('transformation_role')  # "before", "after", or None
+                    'transformation_role': slide.get('transformation_role'),  # "before", "after", or None
+                    'transformation_problem': slide.get('transformation_problem')  # "under_eye", "forehead_lines", etc.
                 }
                 all_tasks.append(task)
 
@@ -3013,7 +3243,8 @@ def generate_all_images(
                     clean_image_mode,  # Generate without text for PIL rendering
                     product_description,  # For real product grounding in scenes
                     task.get('shows_product_on_face', False),  # Per-slide face tape flag
-                    task.get('transformation_role')  # "before", "after", or None for transformation slides
+                    task.get('transformation_role'),  # "before", "after", or None for transformation slides
+                    task.get('transformation_problem')  # "under_eye", "forehead_lines", etc. for targeted visuals
                 )
             finally:
                 rate_limiter.release()
@@ -3405,6 +3636,16 @@ def submit_to_queue(
     visual_style = analysis.get('visual_style', {})
     persona_info = analysis.get('persona', {})  # Demographics for new persona creation
 
+    # Find best style reference (first hook or body with persona) for product slides
+    best_style_ref = 0
+    for s in new_slides:
+        if s.get('slide_type') == 'hook':
+            best_style_ref = s.get('reference_image_index', 0)
+            break
+        if s.get('slide_type') == 'body' and s.get('has_persona', False):
+            best_style_ref = s.get('reference_image_index', 0)
+            break
+
     # Get product-in-use reference if AI flagged this product should be shown on face
     product_on_face_config = analysis.get('product_on_face', {})
     product_in_use_reference = _get_product_in_use_reference(product_on_face_config) or ''
@@ -3423,6 +3664,10 @@ def submit_to_queue(
         slide_type = slide['slide_type']
         has_persona = slide.get('has_persona', False)
         shows_product_on_face = slide.get('shows_product_on_face', False)  # Per-slide face tape
+
+        # For product slides, use best style reference (hook/body) instead of potentially text-only slide
+        if slide_type == 'product':
+            ref_idx = best_style_ref
 
         # Skip CTA slides
         if slide_type == 'cta':
@@ -3529,6 +3774,7 @@ def submit_to_queue(
                     product_description=product_description,
                     shows_product_on_face=shows_product_on_face,  # Per-slide face tape flag
                     transformation_role=slide.get('transformation_role', ''),  # "before", "after", or ""
+                    transformation_problem=slide.get('transformation_problem', ''),  # "under_eye", "forehead_lines", etc.
                     version=photo_ver,
                     output_path=output_path,
                     output_dir=output_dir

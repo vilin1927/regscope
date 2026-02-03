@@ -288,12 +288,17 @@ def format_persona_prompt(persona: Dict) -> str:
     Returns:
         Formatted string for image generation prompt
     """
+    age_range = persona.get('age_range', '20s-30s')
+    age_instruction = f"⚠️ CRITICAL: Person MUST appear to be in their {age_range} - NOT older, NOT younger!"
+
     prompt = f"""
 GENERATE THIS SPECIFIC PERSON:
 
+{age_instruction}
+
 Demographics (from target audience - do not change):
 - Gender: {persona.get('gender', 'female')}
-- Age: {persona.get('age_range', '20s-30s')}
+- Age: {age_range} (STRICT - must look this age!)
 - Style vibe: {persona.get('style', 'casual modern')}
 
 Physical Appearance (create THIS specific look):
