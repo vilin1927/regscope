@@ -417,46 +417,84 @@ Just the single brand + product name, nothing else. Pick something visually reco
         return ""
 
 
-# Products that should be replaced with real brands
-BRANDABLE_PRODUCTS = [
-    # Drinks
-    ('tart cherry juice', 'tart cherry juice'),
-    ('cherry juice', 'tart cherry juice'),
-    ('chamomile tea', 'chamomile tea'),
-    ('herbal tea', 'herbal tea'),
-    ('golden milk', 'golden milk turmeric drink'),
-    ('matcha', 'matcha powder'),
+def _smart_detect_brandable_product(scene_description: str) -> str:
+    """
+    Use Gemini to intelligently detect if scene contains a product that would
+    benefit from a real brand name. No hardcoded list - AI decides.
 
-    # Sleep products
-    ('weighted blanket', 'weighted blanket'),
-    ('silk pillowcase', 'silk pillowcase'),
-    ('sleep mask', 'sleep mask'),
-    ('eye mask', 'sleep eye mask'),
-    ('white noise machine', 'white noise machine'),
-    ('sunrise alarm', 'sunrise alarm clock'),
-    ('sound machine', 'sleep sound machine'),
+    Args:
+        scene_description: Scene description to analyze
 
-    # Wellness
-    ('magnesium spray', 'magnesium spray'),
-    ('magnesium powder', 'magnesium supplement powder'),
-    ('diffuser', 'aromatherapy diffuser'),
-    ('essential oil', 'lavender essential oil'),
-    ('humidifier', 'bedroom humidifier'),
+    Returns:
+        The generic product name if found (e.g., "tart cherry juice"), or empty string
+    """
+    cache_key = f"detect_{hash(scene_description)}"
 
-    # Other
-    ('blue light glasses', 'blue light blocking glasses'),
-    ('journal', 'wellness journal'),
-    ('yoga mat', 'yoga mat'),
-    ('foam roller', 'foam roller'),
-    ('ice roller', 'face ice roller'),
-]
+    with _grounding_cache_lock:
+        if cache_key in _grounding_cache:
+            return _grounding_cache[cache_key]
+
+    try:
+        client = _get_client(timeout=15)
+
+        prompt = f"""Analyze this TikTok scene description and determine if it contains a PRODUCT that would look more realistic with a specific brand name.
+
+Scene: "{scene_description}"
+
+LOOK FOR products like:
+- Drinks (juice, tea, coffee, smoothie, water bottle)
+- Skincare/beauty (serum, moisturizer, face mask, roller)
+- Wellness (supplements, vitamins, essential oils, diffuser)
+- Home goods (blanket, pillow, candle, journal)
+- Electronics (phone, headphones, alarm clock)
+- Fitness (yoga mat, weights, foam roller)
+
+DO NOT flag:
+- Generic furniture (bed, couch, table)
+- Room elements (wall, window, mirror)
+- Body parts or clothing
+- The USER'S PRODUCT (that's provided separately)
+
+If you find a brandable product, return ONLY the generic product name.
+If no brandable product found, return exactly: NONE
+
+Examples:
+- "woman holding glass of green juice" → "green juice"
+- "hand holding serum bottle over bedding" → "serum"
+- "cozy bedroom with soft lighting" → NONE
+- "person drinking iced coffee at desk" → "iced coffee"
+
+Your response (product name or NONE):"""
+
+        response = client.models.generate_content(
+            model=GROUNDING_MODEL,
+            contents=prompt,
+            config=types.GenerateContentConfig(temperature=0.1)
+        )
+
+        result = response.text.strip().lower()
+
+        # Cache result
+        with _grounding_cache_lock:
+            _grounding_cache[cache_key] = result if result != "none" else ""
+
+        if result and result != "none":
+            logger.info(f"Smart detection found brandable product: '{result}' in scene")
+            return result
+
+        return ""
+
+    except Exception as e:
+        logger.warning(f"Smart product detection failed: {e}")
+        return ""
 
 
 def _enhance_scene_with_real_brand(scene_description: str) -> str:
     """
-    Detect if scene mentions a brandable product and replace with real brand.
+    Smart detection + grounding: Detect if scene has a product that would benefit
+    from a real brand, then find that brand via Google Search.
 
-    Only enhances if a specific product is mentioned - doesn't add random products.
+    Uses AI to detect products (no hardcoded list), then grounds with real brands.
 
     Args:
         scene_description: Original scene description
@@ -464,30 +502,27 @@ def _enhance_scene_with_real_brand(scene_description: str) -> str:
     Returns:
         Enhanced scene with real brand name, or original if no product detected
     """
-    scene_lower = scene_description.lower()
+    # Step 1: Smart detection - does scene have a brandable product?
+    generic_product = _smart_detect_brandable_product(scene_description)
 
-    # Check if scene mentions any brandable product
-    for product_phrase, search_term in BRANDABLE_PRODUCTS:
-        if product_phrase in scene_lower:
-            # Found a brandable product - get real brand
-            real_brand = _get_specific_brand_for_product(search_term)
+    if not generic_product:
+        return scene_description
 
-            if real_brand:
-                # Replace generic with branded version in the scene
-                # Make it natural - just mention the brand should be visible
-                enhanced = f"""{scene_description}
+    # Step 2: Ground with real brand name
+    real_brand = _get_specific_brand_for_product(generic_product)
 
-SPECIFIC PRODUCT: Show {real_brand} (this exact brand should be recognizable in the image).
-Only show this ONE product as the hero item - no other random products cluttering the scene."""
+    if not real_brand:
+        logger.debug(f"Grounding failed for '{generic_product}', using original scene")
+        return scene_description
 
-                logger.info(f"Enhanced scene with brand: {product_phrase} -> {real_brand}")
-                return enhanced
+    # Step 3: Enhance scene with specific brand
+    enhanced = f"""{scene_description}
 
-            # If grounding failed, still return original
-            break
+PRODUCT REALISM: The scene mentions {generic_product}. Show it as {real_brand} - make the product look authentic and recognizable (correct packaging shape, colors, label style).
+Keep this as the ONE featured product - no random clutter."""
 
-    # No brandable product found or grounding failed - return original
-    return scene_description
+    logger.info(f"Enhanced scene: '{generic_product}' → '{real_brand}'")
+    return enhanced
 
 
 def _load_image_bytes(image_path: str) -> bytes:
