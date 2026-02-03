@@ -3105,6 +3105,27 @@ Think: different photo from the same week-long photoshoot.
             else:
                 enhanced_scene = scene_description
 
+            # IMPORTANT: Detect and replace "product display" scenes
+            # AI-generated product displays look fake - replace with simpler lifestyle scenes
+            scene_lower = enhanced_scene.lower()
+            is_product_display_scene = any(kw in scene_lower for kw in [
+                'skincare bottle', 'skincare product', 'product display', 'shelfie',
+                'shelves displaying', 'shelf with', 'bottles on', 'products on shelf',
+                'bathroom shelf', 'skincare collection', 'beauty products', 'makeup bag'
+            ])
+
+            if is_product_display_scene:
+                logger.warning(f"SCENE_SANITIZE: Replacing product display scene to avoid fake AI products")
+                # Replace with simple lifestyle alternatives based on context
+                if 'bathroom' in scene_lower or 'spa' in scene_lower:
+                    enhanced_scene = "Cozy bathroom corner with soft natural lighting, fluffy white towel, and a single candle. COMPOSITION: framing=medium, angle=straight, position=center, background=bathroom"
+                elif 'bedroom' in scene_lower:
+                    enhanced_scene = "Cozy bedside scene with soft lamp lighting, book on nightstand, and warm blanket texture. COMPOSITION: framing=medium, angle=above, position=center, background=bedroom"
+                elif 'makeup' in scene_lower or 'beauty' in scene_lower:
+                    enhanced_scene = "Minimal vanity mirror with soft warm lighting and clean aesthetic. COMPOSITION: framing=medium, angle=straight, position=center, background=soft-focus"
+                else:
+                    enhanced_scene = "Cozy lifestyle scene with soft natural lighting and warm aesthetic vibe. COMPOSITION: framing=medium, angle=straight, position=center, background=lifestyle"
+
             # Each photo variation now has its own unique scene from analysis
             # Just generate the exact scene described
             scene_instruction = f"""
