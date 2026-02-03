@@ -1124,53 +1124,58 @@ Set shows_product_on_face = false if:
 If 3 original slides show face tape, then 3 output slides should have shows_product_on_face = true.
 Match the original exactly - if they wore tape in slides 2, 3, 4 then we show tape in slides 2, 3, 4.
 
-═══════════════════════════════════════════════════════════════
-TASK 5c: LAYOUT DETECTION (SINGLE vs SPLIT-SCREEN) ⚠️ CRITICAL
-═══════════════════════════════════════════════════════════════
+<layout_detection priority="critical">
+<task_name>TASK 5c: LAYOUT DETECTION (SINGLE vs SPLIT-SCREEN)</task_name>
 
-⚠️ CAREFULLY ANALYZE EACH SLIDE FOR SPLIT-SCREEN COMPOSITION!
+<instruction>
+For EACH slide, detect the LAYOUT TYPE from the original image.
+Split-screen before/after comparisons are COMMON in skincare TikToks - detect them!
+</instruction>
 
-For EACH slide, detect the LAYOUT TYPE from the original image:
+<layout_types>
+<type name="single">One unified image/scene (most common)</type>
+<type name="split_screen">Image shows TWO DISTINCT sections side-by-side</type>
+</layout_types>
 
-LAYOUT TYPES:
-1. "single" - One unified image/scene (most common)
-2. "split_screen" - Image shows TWO DISTINCT sections
+<detection_checklist>
+Ask these questions for EACH slide. If ANY are TRUE, set layout_type="split_screen":
+- Is the SAME PERSON shown TWICE in the image (side-by-side)?
+- Is there a VISIBLE divider line (white line, gradient, sharp boundary)?
+- Does one side show PROBLEM state (bad skin, dull) and other RESULT state (glowing, smooth)?
+- Is there a CLEAR visual contrast between left/right (or top/bottom) halves?
+- Are there labels like "before", "after", "day 1", "week 4" in the image?
+</detection_checklist>
 
-🔍 SPLIT-SCREEN DETECTION CHECKLIST:
-Ask these questions for EACH slide:
-□ Is the SAME PERSON shown TWICE in the image (side-by-side)?
-□ Is there a VISIBLE divider line (white line, gradient, sharp boundary)?
-□ Does one side show PROBLEM state (bad skin, lines, dull) and other side RESULT state (glowing, smooth)?
-□ Is there a CLEAR visual contrast between left/right (or top/bottom) halves?
-□ Are there labels like "before", "after", "day 1", "week 4" in the image?
-
-If ANY of these are TRUE → set layout_type: "split_screen"
-
-VISUAL CUES that indicate split_screen:
+<visual_cues_for_split_screen>
 - Two identical face compositions side-by-side (even without divider line)
 - Stark contrast in skin quality between halves (tired vs. glowing)
 - Same outfit/pose shown twice with different skin states
 - Mirror-image-like composition showing transformation
+</visual_cues_for_split_screen>
 
-If split_screen detected:
-- orientation: "horizontal" (left|right side by side) or "vertical" (top|bottom)
+<split_config_format>
+When split_screen detected, set split_config:
+- orientation: "horizontal" (left|right) or "vertical" (top|bottom)
 - sections: ["before", "after"] for transformation
-- is_transformation: true if it shows skin improvement
+- is_transformation: true if showing skin improvement
+</split_config_format>
 
-SPLIT-SCREEN EXAMPLES (return layout_type: "split_screen"):
-✅ Hook showing woman: left=tired dull skin, right=glowing radiant skin
-✅ Image with visible white line dividing two face shots
-✅ Before/after showing same person with different skin texture
-✅ Day 1 vs Day 30 comparison in single image
+<examples_split_screen_yes>
+- Hook showing woman: left=tired dull skin, right=glowing radiant skin
+- Image with visible white line dividing two face shots
+- Before/after showing same person with different skin texture
+- Day 1 vs Day 30 comparison in single image
+</examples_split_screen_yes>
 
-NON-SPLIT-SCREEN EXAMPLES (return layout_type: "single"):
-❌ Single selfie showing one state only
-❌ Product shot without comparison
-❌ Lifestyle scene with one person, one state
+<examples_split_screen_no>
+- Single selfie showing one state only
+- Product shot without comparison
+- Lifestyle scene with one person, one state
+</examples_split_screen_no>
+</layout_detection>
 
-═══════════════════════════════════════════════════════════════
-TASK 5: MIMIC THE ORIGINAL SLIDESHOW CONTENT
-═══════════════════════════════════════════════════════════════
+<mimic_original_content>
+<task_name>TASK 5: MIMIC THE ORIGINAL SLIDESHOW CONTENT</task_name>
 
 CRITICAL: Your job is to MIMIC and RECREATE what's in the original slides!
 Analyze each slide carefully and create SIMILAR content that matches:
