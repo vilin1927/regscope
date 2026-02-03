@@ -1125,34 +1125,48 @@ If 3 original slides show face tape, then 3 output slides should have shows_prod
 Match the original exactly - if they wore tape in slides 2, 3, 4 then we show tape in slides 2, 3, 4.
 
 ═══════════════════════════════════════════════════════════════
-TASK 5c: LAYOUT DETECTION (SINGLE vs SPLIT-SCREEN)
+TASK 5c: LAYOUT DETECTION (SINGLE vs SPLIT-SCREEN) ⚠️ CRITICAL
 ═══════════════════════════════════════════════════════════════
+
+⚠️ CAREFULLY ANALYZE EACH SLIDE FOR SPLIT-SCREEN COMPOSITION!
 
 For EACH slide, detect the LAYOUT TYPE from the original image:
 
 LAYOUT TYPES:
-1. "single" - One unified image/scene (DEFAULT - most common)
-2. "split_screen" - Image divided into 2 DISTINCT sections side-by-side
+1. "single" - One unified image/scene (most common)
+2. "split_screen" - Image shows TWO DISTINCT sections
 
-SPLIT-SCREEN DETECTION:
-Look for these visual cues that indicate split_screen layout:
-- Clear DIVIDER (line, gradient, or visual separation) between two halves
-- Same person shown TWICE (left side and right side)
-- BEFORE/AFTER comparison (problem state vs. result state)
-- Different skin quality or condition on each side
-- Labels like "before", "after", "day 1", "day 30" etc.
+🔍 SPLIT-SCREEN DETECTION CHECKLIST:
+Ask these questions for EACH slide:
+□ Is the SAME PERSON shown TWICE in the image (side-by-side)?
+□ Is there a VISIBLE divider line (white line, gradient, sharp boundary)?
+□ Does one side show PROBLEM state (bad skin, lines, dull) and other side RESULT state (glowing, smooth)?
+□ Is there a CLEAR visual contrast between left/right (or top/bottom) halves?
+□ Are there labels like "before", "after", "day 1", "week 4" in the image?
 
-If split_screen detected, identify:
-- orientation: "horizontal" (left|right) or "vertical" (top|bottom)
-- sections: ["before", "after"] for transformation, or ["left", "right"] for general comparison
-- is_transformation: true if it's a before/after skin improvement comparison
+If ANY of these are TRUE → set layout_type: "split_screen"
 
-EXAMPLE:
-Original hook shows woman's face split in half:
-- Left side: skin with visible wrinkles, dull, problem state
-- Right side: same woman, glowing smooth skin, result state
-→ layout_type: "split_screen"
-→ split_config: {{ orientation: "horizontal", sections: ["before", "after"], is_transformation: true }}
+VISUAL CUES that indicate split_screen:
+- Two identical face compositions side-by-side (even without divider line)
+- Stark contrast in skin quality between halves (tired vs. glowing)
+- Same outfit/pose shown twice with different skin states
+- Mirror-image-like composition showing transformation
+
+If split_screen detected:
+- orientation: "horizontal" (left|right side by side) or "vertical" (top|bottom)
+- sections: ["before", "after"] for transformation
+- is_transformation: true if it shows skin improvement
+
+SPLIT-SCREEN EXAMPLES (return layout_type: "split_screen"):
+✅ Hook showing woman: left=tired dull skin, right=glowing radiant skin
+✅ Image with visible white line dividing two face shots
+✅ Before/after showing same person with different skin texture
+✅ Day 1 vs Day 30 comparison in single image
+
+NON-SPLIT-SCREEN EXAMPLES (return layout_type: "single"):
+❌ Single selfie showing one state only
+❌ Product shot without comparison
+❌ Lifestyle scene with one person, one state
 
 ═══════════════════════════════════════════════════════════════
 TASK 5: MIMIC THE ORIGINAL SLIDESHOW CONTENT
@@ -1527,8 +1541,8 @@ Return ONLY valid JSON:
             "shows_product_on_face": false,  // FALSE: original hook shows person but NO face tape patches visible on face
             "transformation_role": "before",  // "before" = problem state, "after" = improved state, null = not transformation
             "transformation_problem": "forehead_lines",  // REQUIRED when transformation_role is set! Options: under_eye, forehead_lines, smile_lines, crows_feet, acne, dull_skin, sagging, wrinkles
-            "layout_type": "single",  // "single" = normal single image, "split_screen" = side-by-side before/after
-            "split_config": null,  // Only set if layout_type is "split_screen": {{ orientation: "horizontal"|"vertical", sections: ["before", "after"], is_transformation: true|false }}
+            "layout_type": "single",  // IMPORTANT: "single" = normal single image, "split_screen" = side-by-side comparison (DETECT THIS!)
+            "split_config": null,  // If layout_type is "split_screen", set: {{ "orientation": "horizontal", "sections": ["before", "after"], "is_transformation": true }}
             "visual": {{
                 "subject": "woman's face, selfie style",
                 "framing": "close-up",
@@ -4326,7 +4340,26 @@ def run_pipeline_queued(
         for slide in analysis.get('new_slides', []):
             idx = slide['slide_index']
             slide_type = slide['slide_type']
-            text_variations = slide.get('text_variations', [slide.get('text_content', '')])
+
+            # Extract text_variations from scene_variations (new structure)
+            # Structure: slide['scene_variations'][i]['text_variations']
+            scene_variations = slide.get('scene_variations', [])
+            if scene_variations and isinstance(scene_variations, list):
+                # Collect all text variations from all scene variations
+                text_variations = []
+                for sv in scene_variations:
+                    if isinstance(sv, dict):
+                        tvs = sv.get('text_variations', [])
+                        if isinstance(tvs, list):
+                            text_variations.extend(tvs)
+                        elif tvs:  # Single string
+                            text_variations.append(tvs)
+                # Fallback to old structure if no texts found
+                if not text_variations:
+                    text_variations = slide.get('text_variations', [slide.get('text_content', '')])
+            else:
+                # Legacy: try direct text_variations or text_content
+                text_variations = slide.get('text_variations', [slide.get('text_content', '')])
 
             if slide_type == 'hook':
                 slide_key = 'hook'
