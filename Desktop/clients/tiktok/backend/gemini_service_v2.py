@@ -2090,7 +2090,36 @@ Don't interpret - show EXACTLY what the words describe.
 </text_visual_match>
 """
 
-    text_placement_block = """
+    # Detect if text_position_hint indicates MULTIPLE positions (e.g., "top and bottom")
+    # Only then should we instruct Gemini to split text across positions
+    is_multi_position = text_position_hint and any(
+        indicator in text_position_hint.lower()
+        for indicator in [' and ', 'multiple', 'both']
+    )
+
+    # Build text_placement_block - only include position-splitting for multi-position hints
+    if is_multi_position:
+        text_placement_block = """
+<text_placement>
+<rules>
+- NEVER cover face or person with text
+- NEVER cover main objects/products with text
+- Text should be in empty/background areas only
+</rules>
+
+<multi_position_text>
+⚠️ TEXT POSITION HINT SAYS MULTIPLE POSITIONS - SPLIT THE TEXT!
+If text contains multiple lines (newlines):
+- Place FIRST line at TOP of image
+- Place LAST line at BOTTOM of image
+- NEVER place all text in the same location
+- NEVER duplicate - each line appears ONCE in its position
+</multi_position_text>
+</text_placement>
+"""
+    else:
+        # Single position - treat newlines as line breaks, NOT position splitting
+        text_placement_block = """
 <text_placement>
 <rules>
 - NEVER cover face or person with text
@@ -2099,12 +2128,12 @@ Don't interpret - show EXACTLY what the words describe.
 - If unsure, place text at TOP or BOTTOM edges of image
 </rules>
 
-<multi_line>
-If text contains multiple lines (was " | " separator):
-- Place FIRST line at TOP of image
-- Place LAST line at BOTTOM of image
-- NEVER place all text in the same location
-</multi_line>
+<single_position>
+Place ALL text lines together in ONE location (the position hint).
+If text has multiple lines, stack them vertically in the SAME area.
+Do NOT split text across different parts of the image.
+Do NOT duplicate any text - each line appears exactly ONCE.
+</single_position>
 </text_placement>
 """
 
@@ -2283,7 +2312,8 @@ NEVER violate these rules:
 - Place text in empty/background areas
 - NEVER cover the product
 - If unsure, use TOP or BOTTOM edges
-- " | " separator means two texts: TOP_TEXT | BOTTOM_TEXT - place in DIFFERENT positions
+- If text has multiple lines, keep them together in ONE area
+- NEVER duplicate text - each line appears exactly ONCE
 </text_placement>
 
 <hard_constraints>
