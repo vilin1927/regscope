@@ -2637,14 +2637,25 @@ CRITICAL - Both sections MUST show the EXACT SAME PERSON:
 - Same face shape, features, bone structure
 - Same hair color and style
 - Same skin tone (different QUALITY, not different person!)
-- Same framing, camera angle, head position
 - Similar background (can shift slightly)
 </consistency>
+
+<composition_matching>
+CRITICAL - IDENTICAL COMPOSITION IN BOTH HALVES:
+- Person must be CENTERED in BOTH sections (not off to the side!)
+- Same framing: if close-up on left, close-up on right
+- Same camera angle: if straight-on on left, straight-on on right
+- Same body positioning: if facing camera on left, facing camera on right
+- Same head tilt/position: MIRROR the pose exactly
+- Person fills the SAME amount of frame in both sections
+- DO NOT have person centered in one half and off-center in the other!
+</composition_matching>
 
 <visual_separation>
 - Clear visual distinction between the two sections
 - Subtle divider line OR gradient transition between sections
 - Each section should be clearly "before" vs "after" at a glance
+- The ONLY difference should be skin quality/lighting, NOT positioning
 </visual_separation>
 </split_screen_layout>
 
@@ -2698,9 +2709,18 @@ CRITICAL - Both sections MUST show the EXACT SAME PERSON:
             show_face_tape = shows_product_on_face
 
             # Get face tape reference path for product-on-face slides
+            # IMPORTANT: Use USER'S PRODUCT IMAGE, not hardcoded reference!
             face_tape_ref_path = None
             if show_face_tape:
-                face_tape_ref_path = PRODUCT_IN_USE_REFERENCES.get('face_tape')
+                # Prefer user's product image for accurate patch appearance
+                if product_image_path and os.path.exists(product_image_path):
+                    face_tape_ref_path = product_image_path
+                    logger.info(f"FACE_TAPE: Using user's product image: {product_image_path}")
+                else:
+                    # Fallback to hardcoded reference only if no product image
+                    face_tape_ref_path = PRODUCT_IN_USE_REFERENCES.get('face_tape')
+                    logger.warning(f"FACE_TAPE: No product image, falling back to hardcoded reference")
+
                 # Safety: if reference doesn't exist, disable face tape
                 if not face_tape_ref_path or not os.path.exists(face_tape_ref_path):
                     logger.warning(f"Face tape reference not found, disabling face tape for this slide")
@@ -2724,7 +2744,10 @@ CRITICAL - Both sections MUST show the EXACT SAME PERSON:
 THE PERSON TO USE (and composition reference).
 Generate the EXACT SAME PERSON from this image.
 </persona_reference>
-<face_tape_product>Reference for the exact patch design to apply.</face_tape_product>
+<face_tape_product>
+THE USER'S ACTUAL PRODUCT - match this EXACTLY when showing patches on the face.
+Copy the exact: color, shape, size, texture, and any text/branding visible on the patches.
+</face_tape_product>
 </images>
 
 <persona>
@@ -2737,31 +2760,29 @@ Generate the EXACT SAME PERSON from this image.
 </persona>
 
 <face_tape_application>
-The person should be wearing LumiDew face tape patches that look EXACTLY like [FACE_TAPE_PRODUCT].
+The person should be wearing face tape patches that look EXACTLY like [FACE_TAPE_PRODUCT].
 
 <patch_design>
-CRITICAL - Match the reference EXACTLY:
-- Color: Purple/lavender shade (#9B8BC3 approximately) - NOT pink, NOT clear, NOT white
-- Pattern: "LumiDew" text repeated diagonally across the patch surface (cursive script)
-- Shape: Oval/pill-shaped patches (rounded rectangle, approximately 3:1 aspect ratio)
-- Size: Small patches proportional to face (NOT oversized or cartoonish)
-- Texture: Matte/satin finish, NOT shiny or reflective
-- Text should be SUBTLE white/light colored on the purple background
+CRITICAL - Study [FACE_TAPE_PRODUCT] and match it PRECISELY:
+- Copy the EXACT color from the product image (whatever color the patches are)
+- Copy the EXACT shape from the product image (oval, rectangular, etc.)
+- Copy ANY branding, text, or patterns visible on the patches
+- Match the size proportionally to what's shown in the product image
+- Match the texture (matte, glossy, transparent, etc.)
 
 DO NOT:
-- Generate plain colored patches without the LumiDew text pattern
-- Use wrong color (no pink, no clear/transparent, no white, no neon)
-- Make patches too large, thick, or cartoonish
-- Simplify the design to just solid color
-- Add patches that look like acne patches (small round dots)
+- Invent a different design than what's shown in [FACE_TAPE_PRODUCT]
+- Change the color to something not in the product image
+- Simplify or omit branding/text patterns from the product
+- Make patches look like generic acne patches if the product is different
 </patch_design>
 
 <placement>
-Place patches naturally as wrinkle treatment:
+Place patches naturally as skincare treatment:
 - Forehead: 1 horizontal patch across forehead lines (centered)
-- Under-eyes: 1-2 small oval patches under each eye (crow's feet/fine line area)
-- The patches should look like they're WORN for skincare, not medical/acne treatment
-- Match the casual, lifestyle aesthetic of the reference image
+- Under-eyes: 1-2 small patches under each eye (crow's feet area)
+- The patches should look like they're WORN for skincare
+- Match the casual, lifestyle aesthetic
 </placement>
 </face_tape_application>
 
@@ -2965,9 +2986,18 @@ Match from reference ONLY: lighting mood, camera angle, setting vibe.
             show_face_tape = shows_product_on_face
 
             # Get face tape reference path for product-on-face slides
+            # IMPORTANT: Use USER'S PRODUCT IMAGE, not hardcoded reference!
             face_tape_ref_path = None
             if show_face_tape:
-                face_tape_ref_path = PRODUCT_IN_USE_REFERENCES.get('face_tape')
+                # Prefer user's product image for accurate patch appearance
+                if product_image_path and os.path.exists(product_image_path):
+                    face_tape_ref_path = product_image_path
+                    logger.info(f"FACE_TAPE: Using user's product image: {product_image_path}")
+                else:
+                    # Fallback to hardcoded reference only if no product image
+                    face_tape_ref_path = PRODUCT_IN_USE_REFERENCES.get('face_tape')
+                    logger.warning(f"FACE_TAPE: No product image, falling back to hardcoded reference")
+
                 # Safety: if reference doesn't exist, disable face tape
                 if not face_tape_ref_path or not os.path.exists(face_tape_ref_path):
                     logger.warning(f"Face tape reference not found, disabling face tape for this slide")
@@ -2982,31 +3012,29 @@ Match from reference ONLY: lighting mood, camera angle, setting vibe.
             if show_face_tape:
                 face_tape_instruction = """
 <face_tape_application>
-The person should be wearing LumiDew face tape patches that look EXACTLY like [FACE_TAPE_PRODUCT].
+The person should be wearing face tape patches that look EXACTLY like [FACE_TAPE_PRODUCT].
 
 <patch_design>
-CRITICAL - Match the reference EXACTLY:
-- Color: Purple/lavender shade (#9B8BC3 approximately) - NOT pink, NOT clear, NOT white
-- Pattern: "LumiDew" text repeated diagonally across the patch surface (cursive script)
-- Shape: Oval/pill-shaped patches (rounded rectangle, approximately 3:1 aspect ratio)
-- Size: Small patches proportional to face (NOT oversized or cartoonish)
-- Texture: Matte/satin finish, NOT shiny or reflective
-- Text should be SUBTLE white/light colored on the purple background
+CRITICAL - Study [FACE_TAPE_PRODUCT] and match it PRECISELY:
+- Copy the EXACT color from the product image (whatever color the patches are)
+- Copy the EXACT shape from the product image (oval, rectangular, etc.)
+- Copy ANY branding, text, or patterns visible on the patches
+- Match the size proportionally to what's shown in the product image
+- Match the texture (matte, glossy, transparent, etc.)
 
 DO NOT:
-- Generate plain colored patches without the LumiDew text pattern
-- Use wrong color (no pink, no clear/transparent, no white, no neon)
-- Make patches too large, thick, or cartoonish
-- Simplify the design to just solid color
-- Add patches that look like acne patches (small round dots)
+- Invent a different design than what's shown in [FACE_TAPE_PRODUCT]
+- Change the color to something not in the product image
+- Simplify or omit branding/text patterns from the product
+- Make patches look like generic acne patches if the product is different
 </patch_design>
 
 <placement>
-Place patches naturally as wrinkle treatment:
+Place patches naturally as skincare treatment:
 - Forehead: 1 horizontal patch across forehead lines (centered)
-- Under-eyes: 1-2 small oval patches under each eye (crow's feet/fine line area)
-- The patches should look like they're WORN for skincare, not medical/acne treatment
-- Match the casual, lifestyle aesthetic of the reference image
+- Under-eyes: 1-2 small patches under each eye (crow's feet area)
+- The patches should look like they're WORN for skincare
+- Match the casual, lifestyle aesthetic
 </placement>
 </face_tape_application>"""
 
@@ -3181,6 +3209,41 @@ If it looks like a stock photo or Amazon listing, it will be REJECTED.
                     mime_type=_get_image_mime_type(reference_image_path)
                 )
             ]
+
+            # If scene mentions skincare/product displays, include user's product image as reference
+            scene_lower = enhanced_scene.lower()
+            scene_mentions_products = any(kw in scene_lower for kw in [
+                'skincare', 'product', 'bottle', 'serum', 'cream', 'lotion', 'patch',
+                'face tape', 'beauty', 'makeup', 'cosmetic', 'shelf display', 'shelfie'
+            ])
+
+            if scene_mentions_products and product_image_path and os.path.exists(product_image_path):
+                logger.info(f"PRODUCT_REF: Scene mentions products, including user's product image as reference")
+                # Add product image reference to prompt - append to existing prompt
+                product_instruction = """
+
+<product_reference>
+[PRODUCT_IMAGE] shows the USER'S ACTUAL PRODUCT.
+If showing ANY skincare products in this scene, they MUST match this product's appearance:
+- Same packaging color/design as [PRODUCT_IMAGE]
+- Same brand style and aesthetic
+- Same product type/format (patches, bottles, etc.)
+DO NOT generate random or different skincare products - use THIS product only.
+If [PRODUCT_IMAGE] shows face patches, any patches in scene must look IDENTICAL.
+</product_reference>
+"""
+                # Append product instruction to prompt
+                prompt = prompt + product_instruction
+                contents[0] = prompt
+
+                # Add product image to contents
+                contents.extend([
+                    "[PRODUCT_IMAGE]",
+                    types.Part.from_bytes(
+                        data=_load_image_bytes(product_image_path),
+                        mime_type=_get_image_mime_type(product_image_path)
+                    )
+                ])
 
     # Retry logic with validation and safety fallback
     last_error = None
