@@ -1319,8 +1319,33 @@ The " | " separator tells the image generator to place:
 - First part at TOP position
 - Second part at BOTTOM position
 
-If text_position_hint says "top and bottom" or "multiple positions" → USE THE SEPARATOR!
-If text is only in ONE position → write normal text without separator.
+⚠️ CRITICAL: WHEN TO USE " | " SEPARATOR ⚠️
+═══════════════════════════════════════════════════════════════
+ONLY use " | " separator when text_position_hint contains:
+- "top and bottom"
+- "multiple"
+- "both"
+- " and " (indicating two positions)
+
+🚫 DO NOT use " | " separator when text_position_hint is:
+- "center" → NO separator! Write: "my text here"
+- "bottom" → NO separator! Write: "my text here"
+- "top" → NO separator! Write: "my text here"
+- "center left" → NO separator! Write: "my text here"
+- "bottom right" → NO separator! Write: "my text here"
+- ANY single-word position → NO separator!
+
+❌ WRONG (separator for single position):
+text_position_hint: "center"
+text: "stopped sweet drinks 🥤 | sugar bombs" ← WRONG! No separator for "center"!
+
+✅ CORRECT (no separator for single position):
+text_position_hint: "center"
+text: "stopped sweet drinks - sugar bombs 🥤" ← Correct! Single block of text
+
+✅ CORRECT (separator for multiple positions):
+text_position_hint: "top and bottom"
+text: "my tip 💫 | watch til the end" ← Correct! Use separator for multi-position
 
 ═══════════════════════════════════════════════════════════════
 MIMIC THE ORIGINAL CONTENT (ABSOLUTELY CRITICAL!)
