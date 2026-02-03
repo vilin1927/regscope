@@ -235,7 +235,9 @@ class BatchProcessor:
                 product_description=task.product_description,
                 shows_product_on_face=task.shows_product_on_face,  # Per-slide face tape flag
                 transformation_role=task.transformation_role or None,  # "before", "after", or None
-                transformation_problem=task.transformation_problem or None  # "under_eye", "forehead_lines", etc.
+                transformation_problem=task.transformation_problem or None,  # "under_eye", "forehead_lines", etc.
+                layout_type=task.layout_type or "single",  # "single" or "split_screen"
+                split_config=task.split_config or None  # Split-screen configuration
             )
 
             return result_path

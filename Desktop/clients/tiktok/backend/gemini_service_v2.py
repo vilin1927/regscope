@@ -307,18 +307,20 @@ _grounding_cache = {}
 _grounding_cache_lock = threading.Lock()
 
 
-def _get_real_products_for_scene(category: str, scene_type: str = "lifestyle") -> str:
+def _get_real_products_for_scene(category: str, scene_type: str = "lifestyle", variation_id: str = "") -> str:
     """
     Use Google Search grounding to find real product names for a scene.
 
     Args:
         category: Product category (e.g., "skincare", "sleep", "wellness")
         scene_type: Type of scene (e.g., "bathroom", "bedroom", "morning routine")
+        variation_id: Optional unique ID to get different results for different slides (e.g., "slide_0", "slide_1")
 
     Returns:
         String with real product names to include in scene generation
     """
-    cache_key = f"{category}_{scene_type}"
+    # Include variation_id in cache key to allow unique results per slide when needed
+    cache_key = f"{category}_{scene_type}_{variation_id}" if variation_id else f"{category}_{scene_type}"
 
     with _grounding_cache_lock:
         if cache_key in _grounding_cache:
@@ -327,6 +329,9 @@ def _get_real_products_for_scene(category: str, scene_type: str = "lifestyle") -
 
     try:
         client = _get_client(timeout=30)  # Quick timeout for grounding
+
+        # Add variety instruction when variation_id is provided
+        variety_instruction = f"\n- Pick DIFFERENT products than typical suggestions (variation #{variation_id})" if variation_id else ""
 
         query = f"""For viral TikTok content about {category}, list 5-8 SPECIFIC real product names
 that would naturally appear in a {scene_type} scene.
@@ -337,7 +342,7 @@ Return ONLY a comma-separated list of real brand + product names like:
 Focus on products that are:
 - Actually popular on TikTok in 2024
 - Recognizable brands (not generic)
-- Would naturally be in this type of scene
+- Would naturally be in this type of scene{variety_instruction}
 
 Just the product names, nothing else."""
 
@@ -365,17 +370,19 @@ Just the product names, nothing else."""
         return ""
 
 
-def _get_specific_brand_for_product(generic_product: str) -> str:
+def _get_specific_brand_for_product(generic_product: str, variation_id: str = "") -> str:
     """
     Get a SINGLE specific real brand name for a generic product.
 
     Args:
         generic_product: Generic product like "tart cherry juice", "weighted blanket"
+        variation_id: Optional unique ID to get different brand for different slides
 
     Returns:
         Specific brand name like "Cheribundi tart cherry juice" or empty if failed
     """
-    cache_key = f"brand_{generic_product.lower().strip()}"
+    # Include variation_id in cache key to allow unique brands per slide when needed
+    cache_key = f"brand_{generic_product.lower().strip()}_{variation_id}" if variation_id else f"brand_{generic_product.lower().strip()}"
 
     with _grounding_cache_lock:
         if cache_key in _grounding_cache:
@@ -1118,6 +1125,36 @@ If 3 original slides show face tape, then 3 output slides should have shows_prod
 Match the original exactly - if they wore tape in slides 2, 3, 4 then we show tape in slides 2, 3, 4.
 
 ═══════════════════════════════════════════════════════════════
+TASK 5c: LAYOUT DETECTION (SINGLE vs SPLIT-SCREEN)
+═══════════════════════════════════════════════════════════════
+
+For EACH slide, detect the LAYOUT TYPE from the original image:
+
+LAYOUT TYPES:
+1. "single" - One unified image/scene (DEFAULT - most common)
+2. "split_screen" - Image divided into 2 DISTINCT sections side-by-side
+
+SPLIT-SCREEN DETECTION:
+Look for these visual cues that indicate split_screen layout:
+- Clear DIVIDER (line, gradient, or visual separation) between two halves
+- Same person shown TWICE (left side and right side)
+- BEFORE/AFTER comparison (problem state vs. result state)
+- Different skin quality or condition on each side
+- Labels like "before", "after", "day 1", "day 30" etc.
+
+If split_screen detected, identify:
+- orientation: "horizontal" (left|right) or "vertical" (top|bottom)
+- sections: ["before", "after"] for transformation, or ["left", "right"] for general comparison
+- is_transformation: true if it's a before/after skin improvement comparison
+
+EXAMPLE:
+Original hook shows woman's face split in half:
+- Left side: skin with visible wrinkles, dull, problem state
+- Right side: same woman, glowing smooth skin, result state
+→ layout_type: "split_screen"
+→ split_config: {{ orientation: "horizontal", sections: ["before", "after"], is_transformation: true }}
+
+═══════════════════════════════════════════════════════════════
 TASK 5: MIMIC THE ORIGINAL SLIDESHOW CONTENT
 ═══════════════════════════════════════════════════════════════
 
@@ -1490,6 +1527,8 @@ Return ONLY valid JSON:
             "shows_product_on_face": false,  // FALSE: original hook shows person but NO face tape patches visible on face
             "transformation_role": "before",  // "before" = problem state, "after" = improved state, null = not transformation
             "transformation_problem": "forehead_lines",  // REQUIRED when transformation_role is set! Options: under_eye, forehead_lines, smile_lines, crows_feet, acne, dull_skin, sagging, wrinkles
+            "layout_type": "single",  // "single" = normal single image, "split_screen" = side-by-side before/after
+            "split_config": null,  // Only set if layout_type is "split_screen": {{ orientation: "horizontal"|"vertical", sections: ["before", "after"], is_transformation: true|false }}
             "visual": {{
                 "subject": "woman's face, selfie style",
                 "framing": "close-up",
@@ -1806,7 +1845,9 @@ def _generate_single_image(
     product_description: str = "",
     shows_product_on_face: bool = False,
     transformation_role: Optional[str] = None,  # "before", "after", or None
-    transformation_problem: Optional[str] = None  # "under_eye", "forehead_lines", "smile_lines", etc.
+    transformation_problem: Optional[str] = None,  # "under_eye", "forehead_lines", "smile_lines", etc.
+    layout_type: str = "single",  # "single" or "split_screen"
+    split_config: Optional[dict] = None  # {"orientation": "horizontal", "sections": ["before", "after"], "is_transformation": true}
 ) -> str:
     """
     Generate a single image with clear image labeling.
@@ -2132,18 +2173,42 @@ DO NOT make skin look good - this is the PROBLEM STATE!
 </skin_quality>
 """
     else:
-        # Normal slides: Natural realistic skin
+        # Normal slides: Natural realistic skin - STRONGER instructions to avoid AI-perfect look
         skin_realism_block = """
 <skin_realism>
-Apply to all faces:
-- Subtle natural pores, fine micro-bumps, gentle uneven smoothness
-- Tasteful micro-imperfections: tiny blemishes, faint redness, subtle under-eye texture, slight natural tone variation
-- Soft realistic specular highlights with mild oiliness in T-zone (avoid plastic shine)
-- Natural baby hairs and minimal stray strands around hairline
-- Very subtle natural asymmetry without changing identity
-- Soft camera realism: light grain, mild shadow noise, natural micro-contrast, no over-sharpening
+CRITICAL - Generate AUTHENTIC, NOT AI-PERFECT faces. This is NON-NEGOTIABLE.
 
-<avoid>Perfect poreless skin, overly smooth texture, plastic/waxy appearance, symmetrical "AI perfect" faces, over-brightened or glowing skin</avoid>
+<required_skin_texture>
+- VISIBLE natural pores (especially on nose, cheeks, forehead) - NOT poreless!
+- Subtle skin texture variation (NOT perfectly smooth)
+- Natural slight imperfections (tiny moles, freckles, minor blemishes okay)
+- Realistic under-eye area (slight natural darkness, texture - NOT airbrushed)
+- Soft T-zone oiliness/shine (natural, not plastic)
+- Natural baby hairs at hairline
+- Asymmetry that exists in real faces (nobody is perfectly symmetrical)
+</required_skin_texture>
+
+<photography_realism>
+- Light grain typical of iPhone/phone cameras
+- Natural shadow gradients (NOT perfect studio lighting)
+- Slight depth-of-field blur on non-focal areas
+- Realistic catch lights in eyes (round, natural)
+- Colors should feel real, NOT oversaturated or filtered
+</photography_realism>
+
+<strictly_avoid>
+- Poreless "glass skin" look (this screams AI!)
+- Over-smoothed/airbrushed appearance
+- Perfectly symmetrical features
+- Plastic/waxy skin texture
+- Overly bright/glowing skin
+- "Instagram filter" perfection
+- Perfect even skin tone with no variation
+- Unnaturally smooth forehead
+</strictly_avoid>
+
+Think: "iPhone selfie from a real person" NOT "AI beauty filter app"
+The image should pass as a REAL PERSON'S PHOTO, not AI-generated content.
 </skin_realism>
 """
 
@@ -2365,8 +2430,13 @@ NEVER violate these rules:
     if slide_type == 'product':
         # PRODUCT SLIDE: EDIT the product image - add text only, DO NOT regenerate
         logger.info(f"PRODUCT_SLIDE_DEBUG: slide_type=product, product_image_path={product_image_path}, has_product_image={product_image_path is not None}")
-        if not product_image_path:
-            logger.warning("PRODUCT_SLIDE_WARNING: No product image provided for product slide! Will use reference image instead.")
+
+        # CRITICAL FIX: Validate and fallback to reference_image if product image is missing
+        actual_product_path = product_image_path
+        if not product_image_path or not os.path.exists(product_image_path):
+            logger.warning(f"PRODUCT_SLIDE_WARNING: No valid product image at '{product_image_path}', using reference image as fallback")
+            actual_product_path = reference_image_path
+
         prompt = f"""<task>EDIT this product image by adding text overlay ONLY.</task>
 
 <images>
@@ -2406,8 +2476,8 @@ DO NOT:
             prompt,
             "[PRODUCT_PHOTO]",
             types.Part.from_bytes(
-                data=_load_image_bytes(product_image_path),
-                mime_type=_get_image_mime_type(product_image_path)
+                data=_load_image_bytes(actual_product_path),  # Use validated path with fallback
+                mime_type=_get_image_mime_type(actual_product_path)
             ),
             "[STYLE_REFERENCE]",
             types.Part.from_bytes(
@@ -2415,7 +2485,7 @@ DO NOT:
                 mime_type=_get_image_mime_type(reference_image_path)
             )
         ]
-    
+
     elif slide_type == 'cta':
         # CTA SLIDE: Usually text-focused, simple background
         prompt = f"""<task>Generate a TikTok CTA (call-to-action) slide.</task>
@@ -2451,7 +2521,99 @@ DO NOT:
         # No need for variation instructions - scene_description already differs per photo_var
         variation_instruction = ""
 
-        if has_persona and persona_reference_path:
+        # ===== SPLIT-SCREEN LAYOUT (Before/After) =====
+        if layout_type == "split_screen" and split_config:
+            orientation = split_config.get('orientation', 'horizontal')
+            sections = split_config.get('sections', ['before', 'after'])
+            is_transformation = split_config.get('is_transformation', True)
+
+            logger.info(f"SPLIT_SCREEN_DEBUG: Generating split-screen {sections[0]}/{sections[1]} layout")
+
+            # Determine left/right or top/bottom based on orientation
+            first_section = "LEFT" if orientation == "horizontal" else "TOP"
+            second_section = "RIGHT" if orientation == "horizontal" else "BOTTOM"
+
+            # Get transformation problem for skin display
+            problem_display = transformation_problem or "wrinkles"
+
+            prompt = f"""<task>Generate a TikTok split-screen BEFORE/AFTER comparison image.</task>
+
+{text_style_instruction}
+{visual_style_instruction}
+
+<images>
+<persona_reference>
+THE PERSON TO USE. Generate the EXACT SAME PERSON in BOTH halves of the split-screen.
+This is the person's identity - copy exactly.
+</persona_reference>
+<style_reference>
+Reference for the split-screen layout style, composition, and text styling.
+</style_reference>
+</images>
+
+<split_screen_layout>
+Create ONE image divided into TWO distinct sections:
+
+<{orientation}_split>
+{first_section} SECTION ({sections[0].upper()}):
+{"- Show the PROBLEM state - visible " + problem_display + " at 70% intensity" if sections[0] == "before" else "- Show the RESULT state - perfect glowing skin, problem SOLVED"}
+{"- Skin should look TIRED, TEXTURED, with visible issues" if sections[0] == "before" else "- Skin should look RADIANT, SMOOTH, PORELESS"}
+{"- Slightly harsh or unflattering lighting to emphasize problems" if sections[0] == "before" else "- Soft, flattering golden-hour lighting"}
+{"- Expression: tired, concerned, or neutral" if sections[0] == "before" else "- Expression: happy, confident, proud"}
+
+{second_section} SECTION ({sections[1].upper()}):
+{"- Show the PROBLEM state - visible " + problem_display + " at 70% intensity" if sections[1] == "before" else "- Show the RESULT state - perfect glowing skin, problem SOLVED"}
+{"- Skin should look TIRED, TEXTURED, with visible issues" if sections[1] == "before" else "- Skin should look RADIANT, SMOOTH, PORELESS"}
+{"- Slightly harsh or unflattering lighting to emphasize problems" if sections[1] == "before" else "- Soft, flattering golden-hour lighting"}
+{"- Expression: tired, concerned, or neutral" if sections[1] == "before" else "- Expression: happy, confident, proud"}
+</{orientation}_split>
+
+<consistency>
+CRITICAL - Both sections MUST show the EXACT SAME PERSON:
+- Same face shape, features, bone structure
+- Same hair color and style
+- Same skin tone (different QUALITY, not different person!)
+- Same framing, camera angle, head position
+- Similar background (can shift slightly)
+</consistency>
+
+<visual_separation>
+- Clear visual distinction between the two sections
+- Subtle divider line OR gradient transition between sections
+- Each section should be clearly "before" vs "after" at a glance
+</visual_separation>
+</split_screen_layout>
+
+<content>
+<text>{text_content}</text>
+<position>{text_position_hint}</position>
+</content>
+
+<text_placement>
+- Place text in empty/background areas
+- NEVER cover face in either section
+- Text can span across both sections if positioned at top or bottom
+- If using labels like "before/after", place them WITHIN each section
+</text_placement>
+
+{quality_constraints}"""
+
+            contents = [
+                prompt,
+                "[PERSONA_REFERENCE]",
+                types.Part.from_bytes(
+                    data=_load_image_bytes(persona_reference_path) if persona_reference_path else _load_image_bytes(reference_image_path),
+                    mime_type=_get_image_mime_type(persona_reference_path) if persona_reference_path else _get_image_mime_type(reference_image_path)
+                ),
+                "[STYLE_REFERENCE]",
+                types.Part.from_bytes(
+                    data=_load_image_bytes(reference_image_path),
+                    mime_type=_get_image_mime_type(reference_image_path)
+                )
+            ]
+
+        # ===== NORMAL SINGLE-IMAGE SLIDES =====
+        elif has_persona and persona_reference_path:
             # With persona - need consistency
             # Check if we should show face tape on this persona (per-slide detection)
             # RE-ENABLED: Show LumiDew patches on persona faces when shows_product_on_face=True
@@ -2498,20 +2660,31 @@ Generate the EXACT SAME PERSON from this image.
 </persona>
 
 <face_tape_application>
-The person should be wearing face tape patches that look EXACTLY like [FACE_TAPE_PRODUCT].
+The person should be wearing LumiDew face tape patches that look EXACTLY like [FACE_TAPE_PRODUCT].
 
 <patch_design>
-- Use the EXACT same purple/lavender color as shown in reference
-- Use the EXACT same "LumiDew" text pattern (repeated diagonal text as shown)
-- Use the EXACT same oval/pill shape as the reference patches
-- DO NOT simplify or modify the patch design - copy it exactly
-- DO NOT generate a simplified version with just "LumiDew" once - use the full repeated text pattern
+CRITICAL - Match the reference EXACTLY:
+- Color: Purple/lavender shade (#9B8BC3 approximately) - NOT pink, NOT clear, NOT white
+- Pattern: "LumiDew" text repeated diagonally across the patch surface (cursive script)
+- Shape: Oval/pill-shaped patches (rounded rectangle, approximately 3:1 aspect ratio)
+- Size: Small patches proportional to face (NOT oversized or cartoonish)
+- Texture: Matte/satin finish, NOT shiny or reflective
+- Text should be SUBTLE white/light colored on the purple background
+
+DO NOT:
+- Generate plain colored patches without the LumiDew text pattern
+- Use wrong color (no pink, no clear/transparent, no white, no neon)
+- Make patches too large, thick, or cartoonish
+- Simplify the design to just solid color
+- Add patches that look like acne patches (small round dots)
 </patch_design>
 
 <placement>
-Apply 1-3 patches on the face:
-- One on the forehead
-- Optionally one or two under eyes (AI decides based on natural look)
+Place patches naturally as wrinkle treatment:
+- Forehead: 1 horizontal patch across forehead lines (centered)
+- Under-eyes: 1-2 small oval patches under each eye (crow's feet/fine line area)
+- The patches should look like they're WORN for skincare, not medical/acne treatment
+- Match the casual, lifestyle aesthetic of the reference image
 </placement>
 </face_tape_application>
 
@@ -2732,20 +2905,31 @@ Match from reference ONLY: lighting mood, camera angle, setting vibe.
             if show_face_tape:
                 face_tape_instruction = """
 <face_tape_application>
-The person should be wearing face tape patches that look EXACTLY like [FACE_TAPE_PRODUCT].
+The person should be wearing LumiDew face tape patches that look EXACTLY like [FACE_TAPE_PRODUCT].
 
 <patch_design>
-- Use the EXACT same purple/lavender color as shown in reference
-- Use the EXACT same "LumiDew" text pattern (repeated diagonal text as shown)
-- Use the EXACT same oval/pill shape as the reference patches
-- DO NOT simplify or modify the patch design - copy it exactly
-- DO NOT generate a simplified version with just "LumiDew" once - use the full repeated text pattern
+CRITICAL - Match the reference EXACTLY:
+- Color: Purple/lavender shade (#9B8BC3 approximately) - NOT pink, NOT clear, NOT white
+- Pattern: "LumiDew" text repeated diagonally across the patch surface (cursive script)
+- Shape: Oval/pill-shaped patches (rounded rectangle, approximately 3:1 aspect ratio)
+- Size: Small patches proportional to face (NOT oversized or cartoonish)
+- Texture: Matte/satin finish, NOT shiny or reflective
+- Text should be SUBTLE white/light colored on the purple background
+
+DO NOT:
+- Generate plain colored patches without the LumiDew text pattern
+- Use wrong color (no pink, no clear/transparent, no white, no neon)
+- Make patches too large, thick, or cartoonish
+- Simplify the design to just solid color
+- Add patches that look like acne patches (small round dots)
 </patch_design>
 
 <placement>
-Apply 1-3 patches on the face:
-- One on the forehead
-- Optionally one or two under eyes (AI decides based on natural look)
+Place patches naturally as wrinkle treatment:
+- Forehead: 1 horizontal patch across forehead lines (centered)
+- Under-eyes: 1-2 small oval patches under each eye (crow's feet/fine line area)
+- The patches should look like they're WORN for skincare, not medical/acne treatment
+- Match the casual, lifestyle aesthetic of the reference image
 </placement>
 </face_tape_application>"""
 
@@ -3239,7 +3423,9 @@ def generate_all_images(
                     'has_persona': has_persona,
                     'shows_product_on_face': slide.get('shows_product_on_face', False),  # Per-slide face tape detection
                     'transformation_role': slide.get('transformation_role'),  # "before", "after", or None
-                    'transformation_problem': slide.get('transformation_problem')  # "under_eye", "forehead_lines", etc.
+                    'transformation_problem': slide.get('transformation_problem'),  # "under_eye", "forehead_lines", etc.
+                    'layout_type': slide.get('layout_type', 'single'),  # "single" or "split_screen"
+                    'split_config': slide.get('split_config')  # Split-screen configuration
                 }
                 all_tasks.append(task)
 
@@ -3347,7 +3533,9 @@ def generate_all_images(
                     product_description,  # For real product grounding in scenes
                     task.get('shows_product_on_face', False),  # Per-slide face tape flag
                     task.get('transformation_role'),  # "before", "after", or None for transformation slides
-                    task.get('transformation_problem')  # "under_eye", "forehead_lines", etc. for targeted visuals
+                    task.get('transformation_problem'),  # "under_eye", "forehead_lines", etc. for targeted visuals
+                    task.get('layout_type', 'single'),  # "single" or "split_screen"
+                    task.get('split_config')  # Split-screen configuration
                 )
             finally:
                 rate_limiter.release()
@@ -3878,6 +4066,8 @@ def submit_to_queue(
                     shows_product_on_face=shows_product_on_face,  # Per-slide face tape flag
                     transformation_role=slide.get('transformation_role', ''),  # "before", "after", or ""
                     transformation_problem=slide.get('transformation_problem', ''),  # "under_eye", "forehead_lines", etc.
+                    layout_type=slide.get('layout_type', 'single'),  # "single" or "split_screen"
+                    split_config=slide.get('split_config') or {},  # Split-screen configuration
                     version=photo_ver,
                     output_path=output_path,
                     output_dir=output_dir

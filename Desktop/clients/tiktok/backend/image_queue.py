@@ -61,6 +61,8 @@ class ImageTask:
     shows_product_on_face: bool = False  # Per-slide flag: original slide shows face tape/patches
     transformation_role: str = ""  # "before", "after", or "" - for transformation slides
     transformation_problem: str = ""  # "under_eye", "forehead_lines", etc. - specific problem type
+    layout_type: str = "single"  # "single" or "split_screen"
+    split_config: Dict[str, Any] = field(default_factory=dict)  # {"orientation": "horizontal", "sections": ["before", "after"], "is_transformation": true}
     version: int = 1               # For variation diversity
 
     # Output
@@ -79,10 +81,11 @@ class ImageTask:
     def to_dict(self) -> dict:
         """Convert to dictionary for Redis storage."""
         data = asdict(self)
-        # Convert text_style, visual_style, and persona_info dicts to JSON strings
+        # Convert text_style, visual_style, persona_info, and split_config dicts to JSON strings
         data['text_style'] = json.dumps(data['text_style'])
         data['visual_style'] = json.dumps(data['visual_style'])
         data['persona_info'] = json.dumps(data['persona_info'])
+        data['split_config'] = json.dumps(data['split_config'])
         # Convert booleans to strings and None to empty strings (Redis doesn't accept booleans or None)
         for key, value in data.items():
             if value is None:
@@ -112,6 +115,12 @@ class ImageTask:
                 data['persona_info'] = json.loads(data['persona_info'])
             except (json.JSONDecodeError, TypeError):
                 data['persona_info'] = {}
+        # Convert split_config JSON string back to dict
+        if isinstance(data.get('split_config'), str):
+            try:
+                data['split_config'] = json.loads(data['split_config'])
+            except (json.JSONDecodeError, TypeError):
+                data['split_config'] = {}
         # Convert boolean strings
         if isinstance(data.get('has_persona'), str):
             data['has_persona'] = data['has_persona'].lower() == 'true'
