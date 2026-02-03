@@ -60,6 +60,7 @@ class ImageTask:
     product_description: str = ""
     shows_product_on_face: bool = False  # Per-slide flag: original slide shows face tape/patches
     transformation_role: str = ""  # "before", "after", or "" - for transformation slides
+    transformation_problem: str = ""  # "under_eye", "forehead_lines", etc. - specific problem type
     version: int = 1               # For variation diversity
 
     # Output

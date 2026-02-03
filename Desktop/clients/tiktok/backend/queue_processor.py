@@ -234,7 +234,8 @@ class BatchProcessor:
                 clean_image_mode=task.clean_image_mode,
                 product_description=task.product_description,
                 shows_product_on_face=task.shows_product_on_face,  # Per-slide face tape flag
-                transformation_role=task.transformation_role or None  # "before", "after", or None
+                transformation_role=task.transformation_role or None,  # "before", "after", or None
+                transformation_problem=task.transformation_problem or None  # "under_eye", "forehead_lines", etc.
             )
 
             return result_path
