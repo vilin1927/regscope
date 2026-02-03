@@ -1287,14 +1287,27 @@ MULTI-POSITION TEXT RULE (CRITICAL!)
 
 If the original slide has text in MULTIPLE positions (top AND bottom, etc.):
 - DO NOT write the SAME text for both positions
-- SPLIT the message into TWO DIFFERENT parts using " | " separator
+- SPLIT the message into TWO DISTINCTLY DIFFERENT parts using " | " separator
 - Format: "top text | bottom text"
 
-EXAMPLE - Original has text at top and bottom:
-- WRONG: "skincare hack that actually works ⚡" (will be duplicated)
-- CORRECT: "skincare hack ⚡ | that actually works"
+⚠️ THE TWO PARTS MUST BE COMPLETELY DIFFERENT:
+- TOP text = HOOK/attention grabber (short, punchy)
+- BOTTOM text = VALUE/benefit/payoff (different words!)
+- NEVER start both parts with the same word or phrase
+- NEVER repeat concepts across the two parts
 
-EXAMPLE - Hook with top and bottom text:
+❌ BAD EXAMPLES (repetitive/awkward):
+- "minerals help to my water💧 | minerals help stop cravings" ← Both start with "minerals help"
+- "my morning routine tip | my morning glow secret" ← Both start with "my morning"
+- "add this to your diet | adding this changed my skin" ← Same concept repeated
+
+✅ GOOD EXAMPLES (distinct parts):
+- "morning routine tip 💫 | watch til the end"
+- "my secret hack ✨ | this changed everything"
+- "skincare game changer 🧴 | finally clear skin"
+- "try this today | you won't regret it"
+- "one simple trick | the results speak"
+
 {{
     "text_variations": [
         "morning routine tip 💫 | watch til the end",
