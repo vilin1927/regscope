@@ -1,0 +1,69 @@
+# Environment variables (NEVER commit!)
+.env
+*.env
+.env.*
+!.env.example
+
+# Credentials
+credentials/
+*.json
+!package.json
+!package-lock.json
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+.venv/
+*.egg-info/
+dist/
+build/
+
+# Node
+node_modules/
+npm-debug.log
+
+# Logs
+logs/
+*.log
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Temp files
+temp/
+tmp/
+*.tmp
+
+# OS files
+.DS_Store
+.DS_Store?
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Test artifacts
+test_images/
+test_slideshows/
+*.jpg
+*.jpeg
+*.png
+*.gif
+*.webp
+!frontend/**/*.png
+!frontend/**/*.jpg
+!docs/**/*.png
+
+# Misc
+*.pickle
+*.pkl
