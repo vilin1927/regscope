@@ -145,12 +145,11 @@ https://www.tiktok.com/t/ABC123/
                                 <label class="block text-gray-400 text-xs mb-1">Product Photo</label>
                                 <div
                                     class="border border-dashed border-gray-500 rounded p-2 text-center cursor-pointer hover:border-purple-500 transition-colors"
-                                    @click="$refs['fileInput' + index].click()"
+                                    @click="document.getElementById('fileInput' + index).click()"
                                     :class="{ 'border-green-500 bg-green-900/20': link.productPhoto }"
                                 >
                                     <input
                                         type="file"
-                                        :x-ref="'fileInput' + index"
                                         @change="handleFileSelect($event, index)"
                                         accept="image/*"
                                         class="hidden"
