@@ -30,6 +30,7 @@ from batch_routes import batch_bp
 from admin_routes import admin_bp
 from video_routes import video_bp
 from preset_routes import preset_bp
+from tiktok_copy_routes import tiktok_copy_bp
 from video_generator import create_videos_for_variations, VideoGeneratorError
 from database import create_job, update_job_status
 
@@ -53,6 +54,9 @@ app.register_blueprint(video_bp)
 
 # Register preset blueprint
 app.register_blueprint(preset_bp)
+
+# Register TikTok Copy blueprint
+app.register_blueprint(tiktok_copy_bp)
 
 # Frontend directory (relative to backend)
 FRONTEND_DIR = os.path.join(os.path.dirname(__file__), '..', 'frontend')
@@ -88,6 +92,13 @@ def serve_index():
 def serve_admin():
     """Serve admin dashboard"""
     return send_from_directory(FRONTEND_DIR, 'admin.html')
+
+
+@app.route('/tiktok-copy')
+@app.route('/tiktok-copy.html')
+def serve_tiktok_copy():
+    """Serve TikTok Copy tool page"""
+    return send_from_directory(FRONTEND_DIR, 'tiktok-copy.html')
 
 
 @app.route('/api/health', methods=['GET'])

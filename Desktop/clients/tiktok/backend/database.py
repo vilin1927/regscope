@@ -891,5 +891,204 @@ def delete_batch_cascade(batch_id: str) -> Dict[str, int]:
         }
 
 
+# ============ TikTok Copy Operations ============
+
+def create_tiktok_copy_batch(replace_slide: int = None, product_photo_path: str = None) -> str:
+    """Create a TikTok copy batch and return its ID."""
+    batch_id = str(uuid.uuid4())
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS tiktok_copy_batches (
+                id TEXT PRIMARY KEY,
+                status TEXT DEFAULT 'pending',
+                total_jobs INTEGER DEFAULT 0,
+                completed_jobs INTEGER DEFAULT 0,
+                failed_jobs INTEGER DEFAULT 0,
+                replace_slide INTEGER,
+                product_photo_path TEXT,
+                drive_folder_url TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                completed_at TIMESTAMP
+            )
+        ''')
+        cursor.execute('''
+            INSERT INTO tiktok_copy_batches (id, replace_slide, product_photo_path)
+            VALUES (?, ?, ?)
+        ''', (batch_id, replace_slide, product_photo_path))
+    return batch_id
+
+
+def create_tiktok_copy_job(batch_id: str, tiktok_url: str) -> str:
+    """Create a TikTok copy job and return its ID."""
+    job_id = str(uuid.uuid4())
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS tiktok_copy_jobs (
+                id TEXT PRIMARY KEY,
+                batch_id TEXT NOT NULL,
+                tiktok_url TEXT NOT NULL,
+                status TEXT DEFAULT 'pending',
+                drive_url TEXT,
+                error_message TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                started_at TIMESTAMP,
+                completed_at TIMESTAMP,
+                FOREIGN KEY (batch_id) REFERENCES tiktok_copy_batches(id)
+            )
+        ''')
+        cursor.execute('''
+            INSERT INTO tiktok_copy_jobs (id, batch_id, tiktok_url)
+            VALUES (?, ?, ?)
+        ''', (job_id, batch_id, tiktok_url))
+        # Update total count
+        cursor.execute('''
+            UPDATE tiktok_copy_batches SET total_jobs = total_jobs + 1 WHERE id = ?
+        ''', (batch_id,))
+    return job_id
+
+
+def get_tiktok_copy_batch(batch_id: str) -> Optional[Dict[str, Any]]:
+    """Get TikTok copy batch by ID."""
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute('SELECT * FROM tiktok_copy_batches WHERE id = ?', (batch_id,))
+        row = cursor.fetchone()
+        return dict(row) if row else None
+
+
+def get_tiktok_copy_jobs(batch_id: str) -> List[Dict[str, Any]]:
+    """Get all jobs for a TikTok copy batch."""
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute('''
+            SELECT * FROM tiktok_copy_jobs WHERE batch_id = ? ORDER BY created_at
+        ''', (batch_id,))
+        return [dict(row) for row in cursor.fetchall()]
+
+
+def get_tiktok_copy_job(job_id: str) -> Optional[Dict[str, Any]]:
+    """Get a single TikTok copy job by ID."""
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute('SELECT * FROM tiktok_copy_jobs WHERE id = ?', (job_id,))
+        row = cursor.fetchone()
+        return dict(row) if row else None
+
+
+def update_tiktok_copy_job(
+    job_id: str,
+    status: str,
+    drive_url: str = None,
+    error_message: str = None
+):
+    """Update TikTok copy job status."""
+    with get_db() as conn:
+        cursor = conn.cursor()
+        updates = ['status = ?']
+        params = [status]
+
+        if status == 'processing':
+            updates.append('started_at = ?')
+            params.append(datetime.utcnow().isoformat())
+        elif status in ('completed', 'failed'):
+            updates.append('completed_at = ?')
+            params.append(datetime.utcnow().isoformat())
+
+        if drive_url:
+            updates.append('drive_url = ?')
+            params.append(drive_url)
+
+        if error_message:
+            updates.append('error_message = ?')
+            params.append(error_message)
+
+        params.append(job_id)
+        cursor.execute(f'''
+            UPDATE tiktok_copy_jobs SET {', '.join(updates)} WHERE id = ?
+        ''', params)
+
+        # Update batch counts
+        cursor.execute('SELECT batch_id FROM tiktok_copy_jobs WHERE id = ?', (job_id,))
+        row = cursor.fetchone()
+        if row:
+            batch_id = row['batch_id']
+            if status == 'completed':
+                cursor.execute('''
+                    UPDATE tiktok_copy_batches SET completed_jobs = completed_jobs + 1 WHERE id = ?
+                ''', (batch_id,))
+            elif status == 'failed':
+                cursor.execute('''
+                    UPDATE tiktok_copy_batches SET failed_jobs = failed_jobs + 1 WHERE id = ?
+                ''', (batch_id,))
+
+
+def update_tiktok_copy_batch(
+    batch_id: str,
+    status: str = None,
+    drive_folder_url: str = None
+):
+    """Update TikTok copy batch status."""
+    with get_db() as conn:
+        cursor = conn.cursor()
+        updates = []
+        params = []
+
+        if status:
+            updates.append('status = ?')
+            params.append(status)
+            if status in ('completed', 'failed'):
+                updates.append('completed_at = ?')
+                params.append(datetime.utcnow().isoformat())
+
+        if drive_folder_url:
+            updates.append('drive_folder_url = ?')
+            params.append(drive_folder_url)
+
+        if updates:
+            params.append(batch_id)
+            cursor.execute(f'''
+                UPDATE tiktok_copy_batches SET {', '.join(updates)} WHERE id = ?
+            ''', params)
+
+
+def init_tiktok_copy_tables():
+    """Initialize TikTok copy tables."""
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS tiktok_copy_batches (
+                id TEXT PRIMARY KEY,
+                status TEXT DEFAULT 'pending',
+                total_jobs INTEGER DEFAULT 0,
+                completed_jobs INTEGER DEFAULT 0,
+                failed_jobs INTEGER DEFAULT 0,
+                replace_slide INTEGER,
+                product_photo_path TEXT,
+                drive_folder_url TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                completed_at TIMESTAMP
+            )
+        ''')
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS tiktok_copy_jobs (
+                id TEXT PRIMARY KEY,
+                batch_id TEXT NOT NULL,
+                tiktok_url TEXT NOT NULL,
+                status TEXT DEFAULT 'pending',
+                drive_url TEXT,
+                error_message TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                started_at TIMESTAMP,
+                completed_at TIMESTAMP,
+                FOREIGN KEY (batch_id) REFERENCES tiktok_copy_batches(id)
+            )
+        ''')
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_tiktok_copy_jobs_batch ON tiktok_copy_jobs(batch_id)')
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_tiktok_copy_jobs_status ON tiktok_copy_jobs(status)')
+
+
 # Initialize database on import
 init_db()
+init_tiktok_copy_tables()

@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TikTok Copy Tool</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <style>
+        [x-cloak] { display: none !important; }
+    </style>
+</head>
+<body class="bg-gray-900 min-h-screen">
+    <div class="container mx-auto px-4 py-8 max-w-2xl" x-data="tiktokCopyTool()">
+        <!-- Header -->
+        <div class="text-center mb-8">
+            <a href="index.html" class="absolute top-4 left-4 text-gray-500 hover:text-gray-300 text-sm transition-colors">
+                &larr; Back to Generator
+            </a>
+            <h1 class="text-3xl font-bold text-white mb-2">TikTok Copy Tool</h1>
+            <p class="text-gray-400">Convert TikTok slideshows to MP4 videos</p>
+        </div>
+
+        <!-- Main Form -->
+        <form @submit.prevent="submitForm" class="bg-gray-800 rounded-xl p-6 shadow-xl mb-6">
+            <!-- TikTok Links -->
+            <div class="mb-6">
+                <label class="block text-gray-300 text-sm font-medium mb-2">
+                    <span class="text-xl mr-2">&#128203;</span>
+                    Paste TikTok Links
+                </label>
+                <textarea
+                    x-model="links"
+                    placeholder="https://www.tiktok.com/@user/photo/123456
+https://www.tiktok.com/t/ABC123/
+(one link per line)"
+                    rows="5"
+                    class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 resize-none font-mono text-sm"
+                    required
+                ></textarea>
+                <p class="text-gray-500 text-xs mt-1" x-show="validLinkCount > 0">
+                    <span class="text-green-400" x-text="validLinkCount"></span> valid link(s) detected
+                </p>
+            </div>
+
+            <!-- Slide Replacement Section (Optional) -->
+            <div class="mb-6 p-4 bg-gray-700/50 rounded-lg">
+                <label class="flex items-center cursor-pointer mb-4">
+                    <input
+                        type="checkbox"
+                        x-model="enableReplacement"
+                        class="w-5 h-5 rounded bg-gray-600 border-gray-500 text-purple-500 focus:ring-purple-500 focus:ring-offset-gray-800"
+                    >
+                    <span class="ml-3 text-gray-300 font-medium">
+                        <span class="text-xl mr-1">&#128260;</span>
+                        Replace a slide with my product photo
+                    </span>
+                </label>
+
+                <div x-show="enableReplacement" x-transition class="space-y-4">
+                    <!-- Product Photo Upload -->
+                    <div>
+                        <label class="block text-gray-400 text-sm mb-2">
+                            <span class="mr-1">&#128247;</span>
+                            Upload Product Photo
+                        </label>
+                        <div
+                            class="border-2 border-dashed border-gray-600 rounded-lg p-4 text-center hover:border-purple-500 transition-colors cursor-pointer"
+                            @click="$refs.fileInput.click()"
+                            @dragover.prevent="dragOver = true"
+                            @dragleave.prevent="dragOver = false"
+                            @drop.prevent="handleDrop($event)"
+                            :class="{ 'border-purple-500 bg-purple-500/10': dragOver }"
+                        >
+                            <input
+                                type="file"
+                                x-ref="fileInput"
+                                @change="handleFileSelect($event)"
+                                accept="image/*"
+                                class="hidden"
+                            >
+                            <div x-show="!productPhoto" class="text-gray-400 py-2">
+                                <svg class="mx-auto h-8 w-8 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                                </svg>
+                                <p class="text-sm">Click to upload or drag and drop</p>
+                            </div>
+                            <div x-show="productPhoto" class="relative">
+                                <img :src="previewImage" class="h-24 mx-auto rounded-lg object-cover">
+                                <button
+                                    type="button"
+                                    @click.stop="clearPhoto()"
+                                    class="absolute top-0 right-1/2 translate-x-12 -translate-y-2 bg-red-500 text-white rounded-full w-6 h-6 text-sm flex items-center justify-center"
+                                >&times;</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Slide Number -->
+                    <div>
+                        <label class="block text-gray-400 text-sm mb-2">
+                            Which slide to replace?
+                        </label>
+                        <input
+                            type="number"
+                            x-model.number="replaceSlide"
+                            min="1"
+                            placeholder="e.g., 2"
+                            class="w-32 px-4 py-2 bg-gray-600 border border-gray-500 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-purple-500"
+                        >
+                        <p class="text-gray-500 text-xs mt-1">Enter slide number (e.g., 2 = replace 2nd slide)</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Submit Button -->
+            <button
+                type="submit"
+                :disabled="isSubmitting || validLinkCount === 0"
+                class="w-full py-4 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-600 disabled:cursor-not-allowed rounded-lg font-bold text-white text-lg transition-colors flex items-center justify-center"
+            >
+                <span x-show="!isSubmitting">
+                    <span class="mr-2">&#127916;</span>
+                    Convert to Video
+                </span>
+                <span x-show="isSubmitting" class="flex items-center">
+                    <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Submitting...
+                </span>
+            </button>
+
+            <!-- Error Message -->
+            <div x-show="errorMessage" x-transition class="mt-4 p-3 bg-red-900/50 border border-red-700 rounded-lg text-red-300 text-sm">
+                <span x-text="errorMessage"></span>
+            </div>
+        </form>
+
+        <!-- Progress Section -->
+        <div x-show="batchId" x-transition class="bg-gray-800 rounded-xl p-6 shadow-xl">
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="text-lg font-semibold text-white">Progress</h2>
+                <span
+                    class="px-3 py-1 rounded-full text-sm font-medium"
+                    :class="{
+                        'bg-yellow-900/50 text-yellow-300': batchStatus === 'pending' || batchStatus === 'processing',
+                        'bg-green-900/50 text-green-300': batchStatus === 'completed',
+                        'bg-red-900/50 text-red-300': batchStatus === 'failed'
+                    }"
+                    x-text="batchStatus"
+                ></span>
+            </div>
+
+            <!-- Drive Folder Link -->
+            <div x-show="driveFolderUrl" class="mb-4 p-3 bg-purple-900/30 rounded-lg">
+                <a :href="driveFolderUrl" target="_blank" class="text-purple-400 hover:text-purple-300 flex items-center">
+                    <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M12.01 1.485c-2.082 0-3.754.02-3.743.047.01.02 1.708 3.001 3.774 6.62l3.76 6.574h3.76c2.071 0 3.75-.02 3.74-.047-.02-.02-1.73-3.001-3.8-6.62l-3.77-6.574zm-8.25 6.62c-2.06 0-3.74.02-3.73.047.01.02 1.72 3.001 3.8 6.62l3.77 6.574 3.76-.02 3.77-.047-3.8-6.62c-2.09-3.638-3.81-6.598-3.82-6.574-.01.02-1.72.02-3.75.02zm3.73 13.68l-3.76 6.62c-2.07 3.638-3.77 6.598-3.78 6.574-.01-.02-.01-3.001-.01-6.62v-6.574l3.78-.02 3.77-.047z"/>
+                    </svg>
+                    Open in Google Drive
+                </a>
+            </div>
+
+            <!-- Jobs List -->
+            <div class="space-y-2">
+                <template x-for="job in jobs" :key="job.id">
+                    <div class="flex items-center justify-between p-3 bg-gray-700/50 rounded-lg">
+                        <div class="flex-1 min-w-0">
+                            <p class="text-gray-300 text-sm truncate" x-text="job.url"></p>
+                        </div>
+                        <div class="ml-3 flex items-center space-x-2">
+                            <!-- Status Badge -->
+                            <span
+                                class="px-2 py-1 rounded text-xs font-medium whitespace-nowrap"
+                                :class="{
+                                    'bg-gray-600 text-gray-300': job.status === 'pending',
+                                    'bg-yellow-900/50 text-yellow-300': job.status === 'processing',
+                                    'bg-green-900/50 text-green-300': job.status === 'completed',
+                                    'bg-red-900/50 text-red-300': job.status === 'failed'
+                                }"
+                            >
+                                <span x-show="job.status === 'pending'">&#9208; Pending</span>
+                                <span x-show="job.status === 'processing'">&#9203; Processing...</span>
+                                <span x-show="job.status === 'completed'">&#9989; Done</span>
+                                <span x-show="job.status === 'failed'">&#10060; Failed</span>
+                            </span>
+                            <!-- Drive Link (when completed) -->
+                            <a
+                                x-show="job.drive_url"
+                                :href="job.drive_url"
+                                target="_blank"
+                                class="text-purple-400 hover:text-purple-300 text-sm"
+                            >
+                                Open
+                            </a>
+                        </div>
+                    </div>
+                </template>
+            </div>
+
+            <!-- Error details -->
+            <template x-for="job in jobs.filter(j => j.error)" :key="job.id + '_error'">
+                <div class="mt-2 p-2 bg-red-900/30 rounded text-red-400 text-xs">
+                    <span class="font-medium" x-text="job.url.substring(0, 30) + '...'"></span>:
+                    <span x-text="job.error"></span>
+                </div>
+            </template>
+
+            <!-- Auto-refresh indicator -->
+            <div x-show="isPolling" class="mt-4 text-center text-gray-500 text-xs">
+                Auto-refreshing every 3 seconds...
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function tiktokCopyTool() {
+            return {
+                // Form data
+                links: '',
+                enableReplacement: false,
+                productPhoto: null,
+                previewImage: null,
+                replaceSlide: null,
+                dragOver: false,
+
+                // State
+                isSubmitting: false,
+                errorMessage: '',
+
+                // Progress tracking
+                batchId: null,
+                batchStatus: null,
+                driveFolderUrl: null,
+                jobs: [],
+                isPolling: false,
+                pollInterval: null,
+
+                // Computed
+                get validLinkCount() {
+                    if (!this.links.trim()) return 0;
+                    const lines = this.links.trim().split('\n');
+                    const tiktokPattern = /https?:\/\/(www\.|vm\.)?tiktok\.com\//;
+                    return lines.filter(line => tiktokPattern.test(line.trim())).length;
+                },
+
+                // File handling
+                handleFileSelect(event) {
+                    const file = event.target.files[0];
+                    if (file) this.setProductPhoto(file);
+                },
+
+                handleDrop(event) {
+                    this.dragOver = false;
+                    const file = event.dataTransfer.files[0];
+                    if (file && file.type.startsWith('image/')) {
+                        this.setProductPhoto(file);
+                    }
+                },
+
+                setProductPhoto(file) {
+                    this.productPhoto = file;
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        this.previewImage = e.target.result;
+                    };
+                    reader.readAsDataURL(file);
+                },
+
+                clearPhoto() {
+                    this.productPhoto = null;
+                    this.previewImage = null;
+                    this.$refs.fileInput.value = '';
+                },
+
+                // Form submission
+                async submitForm() {
+                    this.errorMessage = '';
+
+                    // Validation
+                    if (this.validLinkCount === 0) {
+                        this.errorMessage = 'Please enter at least one valid TikTok link';
+                        return;
+                    }
+
+                    if (this.enableReplacement && !this.productPhoto) {
+                        this.errorMessage = 'Please upload a product photo for slide replacement';
+                        return;
+                    }
+
+                    if (this.enableReplacement && (!this.replaceSlide || this.replaceSlide < 1)) {
+                        this.errorMessage = 'Please enter a valid slide number (1 or higher)';
+                        return;
+                    }
+
+                    this.isSubmitting = true;
+
+                    try {
+                        const formData = new FormData();
+                        formData.append('links', this.links);
+
+                        if (this.enableReplacement && this.productPhoto) {
+                            formData.append('product_photo', this.productPhoto);
+                            formData.append('replace_slide', this.replaceSlide);
+                        }
+
+                        const response = await fetch('/api/tiktok-copy/convert', {
+                            method: 'POST',
+                            body: formData
+                        });
+
+                        const data = await response.json();
+
+                        if (!response.ok) {
+                            throw new Error(data.error || 'Submission failed');
+                        }
+
+                        // Success - start polling
+                        this.batchId = data.batch_id;
+                        this.jobs = data.jobs;
+                        this.batchStatus = 'pending';
+                        this.startPolling();
+
+                        // Clear form
+                        this.links = '';
+                        this.enableReplacement = false;
+                        this.clearPhoto();
+                        this.replaceSlide = null;
+
+                    } catch (error) {
+                        this.errorMessage = error.message;
+                    } finally {
+                        this.isSubmitting = false;
+                    }
+                },
+
+                // Polling for status updates
+                startPolling() {
+                    if (this.pollInterval) {
+                        clearInterval(this.pollInterval);
+                    }
+
+                    this.isPolling = true;
+                    this.pollStatus();
+
+                    this.pollInterval = setInterval(() => {
+                        this.pollStatus();
+                    }, 3000);
+                },
+
+                async pollStatus() {
+                    if (!this.batchId) return;
+
+                    try {
+                        const response = await fetch(`/api/tiktok-copy/status/${this.batchId}`);
+                        const data = await response.json();
+
+                        if (response.ok) {
+                            this.batchStatus = data.status;
+                            this.driveFolderUrl = data.drive_folder_url;
+                            this.jobs = data.jobs;
+
+                            // Stop polling when complete or failed
+                            if (data.status === 'completed' || data.status === 'failed') {
+                                this.stopPolling();
+                            }
+                        }
+                    } catch (error) {
+                        console.error('Polling error:', error);
+                    }
+                },
+
+                stopPolling() {
+                    if (this.pollInterval) {
+                        clearInterval(this.pollInterval);
+                        this.pollInterval = null;
+                    }
+                    this.isPolling = false;
+                }
+            };
+        }
+    </script>
+</body>
+</html>

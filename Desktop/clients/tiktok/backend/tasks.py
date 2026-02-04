@@ -495,3 +495,244 @@ def retry_failed_links(self, batch_id: str):
     except Exception as e:
         logger.error(f"[Batch {batch_id[:8]}] Retry failed: {e}", exc_info=True)
         return {'status': 'error', 'message': str(e)}
+
+
+# =============================================================================
+# TikTok Copy Tool Tasks
+# =============================================================================
+
+from database import (
+    get_tiktok_copy_batch, get_tiktok_copy_jobs,
+    update_tiktok_copy_job, update_tiktok_copy_batch
+)
+from tiktok_copy_service import process_tiktok_copy, TikTokCopyError
+
+
+@celery_app.task(bind=True, max_retries=0)
+def process_tiktok_copy_batch(self, batch_id: str):
+    """
+    Orchestrate processing of all jobs in a TikTok copy batch.
+    Creates a Google Drive folder and dispatches job processing tasks.
+
+    Args:
+        batch_id: UUID of the batch to process
+    """
+    logger.info(f"[TikTokCopy {batch_id[:8]}] Starting batch processing")
+
+    try:
+        # Get batch info
+        batch = get_tiktok_copy_batch(batch_id)
+        if not batch:
+            logger.error(f"[TikTokCopy {batch_id[:8]}] Batch not found")
+            return {'status': 'error', 'message': 'Batch not found'}
+
+        # Get jobs for this batch
+        jobs = get_tiktok_copy_jobs(batch_id)
+        if not jobs:
+            logger.warning(f"[TikTokCopy {batch_id[:8]}] No jobs found")
+            update_tiktok_copy_batch(batch_id, status='completed')
+            return {'status': 'completed', 'message': 'No jobs to process'}
+
+        # Create main Google Drive folder for batch
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        folder_name = f"TikTok_Copy_{timestamp}"
+
+        try:
+            drive_folder_id = create_folder(folder_name)
+            set_folder_public(drive_folder_id)
+            drive_folder_url = get_folder_link(drive_folder_id)
+            update_tiktok_copy_batch(batch_id, drive_folder_url=drive_folder_url)
+            logger.info(f"[TikTokCopy {batch_id[:8]}] Created Drive folder: {drive_folder_url}")
+        except GoogleDriveError as e:
+            logger.error(f"[TikTokCopy {batch_id[:8]}] Failed to create Drive folder: {e}")
+            update_tiktok_copy_batch(batch_id, status='failed')
+            return {'status': 'error', 'message': str(e)}
+
+        # Get replacement settings from batch
+        replace_slide = batch.get('replace_slide')
+        product_photo_path = batch.get('product_photo_path')
+
+        logger.info(f"[TikTokCopy {batch_id[:8]}] Dispatching {len(jobs)} job tasks")
+
+        # Dispatch job processing tasks
+        job_tasks = []
+        for job in jobs:
+            task = process_tiktok_copy_job.s(
+                job['id'],
+                drive_folder_id,
+                replace_slide,
+                product_photo_path
+            )
+            job_tasks.append(task)
+
+        # Execute all job tasks as a group, then call finalize
+        workflow = group(job_tasks) | finalize_tiktok_copy_batch.s(batch_id)
+        workflow.apply_async()
+
+        return {
+            'status': 'dispatched',
+            'batch_id': batch_id,
+            'jobs_count': len(jobs),
+            'drive_folder_url': drive_folder_url
+        }
+
+    except Exception as e:
+        logger.error(f"[TikTokCopy {batch_id[:8]}] Batch processing failed: {e}", exc_info=True)
+        update_tiktok_copy_batch(batch_id, status='failed')
+        return {'status': 'error', 'message': str(e)}
+
+
+@celery_app.task(bind=True, max_retries=2, default_retry_delay=30)
+def process_tiktok_copy_job(
+    self,
+    job_id: str,
+    parent_drive_folder_id: str,
+    replace_slide: int = None,
+    product_photo_path: str = None
+):
+    """
+    Process a single TikTok copy job: scrape, convert to video, upload to Drive.
+
+    Args:
+        job_id: UUID of the job to process
+        parent_drive_folder_id: Google Drive folder ID for the batch
+        replace_slide: Optional slide number to replace (1-indexed)
+        product_photo_path: Optional path to replacement product photo
+
+    Returns:
+        dict with processing result
+    """
+    from database import get_tiktok_copy_job
+
+    logger.info(f"[TikTokCopy Job {job_id[:8]}] Starting job processing")
+
+    try:
+        # Get job info from database
+        job = get_tiktok_copy_job(job_id)
+        if not job:
+            logger.error(f"[TikTokCopy Job {job_id[:8]}] Job not found")
+            return {'status': 'error', 'job_id': job_id, 'message': 'Job not found'}
+
+        tiktok_url = job['tiktok_url']
+
+        # Update status to processing
+        update_tiktok_copy_job(job_id, 'processing')
+
+        # Create temporary working directory
+        work_dir = tempfile.mkdtemp(prefix=f"tiktok_copy_{job_id[:8]}_")
+        scrape_dir = os.path.join(work_dir, 'scraped')
+        output_dir = os.path.join(work_dir, 'output')
+        os.makedirs(scrape_dir, exist_ok=True)
+        os.makedirs(output_dir, exist_ok=True)
+
+        try:
+            # Step 1: Scrape TikTok slideshow
+            logger.info(f"[TikTokCopy Job {job_id[:8]}] Scraping: {tiktok_url[:50]}...")
+            scrape_result = scrape_tiktok_slideshow(tiktok_url, scrape_dir, request_id=job_id[:8])
+            logger.info(f"[TikTokCopy Job {job_id[:8]}] Scraped {len(scrape_result['images'])} slides")
+
+            # Step 2: Generate video with FFmpeg
+            video_filename = f"video_{job_id[:8]}.mp4"
+            video_path = process_tiktok_copy(
+                scraped_data=scrape_result,
+                output_dir=output_dir,
+                video_filename=video_filename,
+                replace_slide_number=replace_slide,
+                product_photo_path=product_photo_path,
+                request_id=job_id[:8]
+            )
+            logger.info(f"[TikTokCopy Job {job_id[:8]}] Video created: {video_path}")
+
+            # Step 3: Upload video to Google Drive
+            file_id = upload_file(video_path, parent_drive_folder_id, video_filename)
+            video_drive_url = f"https://drive.google.com/file/d/{file_id}/view"
+            logger.info(f"[TikTokCopy Job {job_id[:8]}] Uploaded to Drive: {video_drive_url}")
+
+            # Update job status to completed
+            update_tiktok_copy_job(job_id, 'completed', drive_url=video_drive_url)
+
+            return {
+                'status': 'completed',
+                'job_id': job_id,
+                'drive_url': video_drive_url
+            }
+
+        finally:
+            # Cleanup temporary directory
+            try:
+                shutil.rmtree(work_dir)
+            except Exception as e:
+                logger.warning(f"[TikTokCopy Job {job_id[:8]}] Failed to cleanup {work_dir}: {e}")
+
+    except TikTokScraperError as e:
+        error_msg = str(e)
+        logger.error(f"[TikTokCopy Job {job_id[:8]}] Scraping failed: {e}")
+
+        # Retry on rate limit
+        if '429' in error_msg or 'rate' in error_msg.lower():
+            try:
+                logger.info(f"[TikTokCopy Job {job_id[:8]}] Retrying due to rate limit...")
+                raise self.retry(exc=e, countdown=60)
+            except MaxRetriesExceededError:
+                pass
+
+        update_tiktok_copy_job(job_id, 'failed', error_message=f"Scrape error: {e}")
+        return {'status': 'error', 'job_id': job_id, 'message': str(e)}
+
+    except TikTokCopyError as e:
+        logger.error(f"[TikTokCopy Job {job_id[:8]}] Video generation failed: {e}")
+        update_tiktok_copy_job(job_id, 'failed', error_message=f"Video error: {e}")
+        return {'status': 'error', 'job_id': job_id, 'message': str(e)}
+
+    except GoogleDriveError as e:
+        logger.error(f"[TikTokCopy Job {job_id[:8]}] Drive upload failed: {e}")
+        update_tiktok_copy_job(job_id, 'failed', error_message=f"Upload error: {e}")
+        return {'status': 'error', 'job_id': job_id, 'message': str(e)}
+
+    except Exception as e:
+        logger.error(f"[TikTokCopy Job {job_id[:8]}] Unexpected error: {e}", exc_info=True)
+        update_tiktok_copy_job(job_id, 'failed', error_message=str(e))
+        return {'status': 'error', 'job_id': job_id, 'message': str(e)}
+
+
+@celery_app.task(bind=True)
+def finalize_tiktok_copy_batch(self, job_results: list, batch_id: str):
+    """
+    Called after all TikTok copy jobs complete. Updates batch status.
+
+    Args:
+        job_results: List of results from process_tiktok_copy_job tasks
+        batch_id: UUID of the batch
+    """
+    logger.info(f"[TikTokCopy {batch_id[:8]}] Finalizing batch")
+
+    try:
+        # Count results
+        completed = sum(1 for r in job_results if r and r.get('status') == 'completed')
+        failed = sum(1 for r in job_results if r and r.get('status') == 'error')
+        total = len(job_results)
+
+        logger.info(f"[TikTokCopy {batch_id[:8]}] Results: {completed}/{total} completed, {failed} failed")
+
+        # Determine final status
+        if failed == total:
+            final_status = 'failed'
+        elif completed == total:
+            final_status = 'completed'
+        else:
+            final_status = 'completed'  # Partial success
+
+        update_tiktok_copy_batch(batch_id, status=final_status)
+
+        return {
+            'batch_id': batch_id,
+            'status': final_status,
+            'total': total,
+            'completed': completed,
+            'failed': failed
+        }
+
+    except Exception as e:
+        logger.error(f"[TikTokCopy {batch_id[:8]}] Finalization failed: {e}", exc_info=True)
+        update_tiktok_copy_batch(batch_id, status='failed')
+        return {'status': 'error', 'message': str(e)}
