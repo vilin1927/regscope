@@ -70,90 +70,146 @@ def extract_links(text: str) -> list[str]:
 @tiktok_copy_bp.route('/convert', methods=['POST'])
 def convert_tiktok():
     """
-    Submit TikTok links for conversion to video.
+    Submit TikTok links for conversion to video with per-link settings.
 
     Request (multipart/form-data):
-        links: Text with TikTok URLs (one per line)
-        replace_slide: Optional slide number to replace (1-indexed)
-        product_photo: Optional file upload
+        links_config: JSON array of link configurations:
+            [
+                {"url": "https://tiktok.com/...", "replace_slide": null, "photo_index": null},
+                {"url": "https://tiktok.com/...", "replace_slide": 2, "photo_index": 0},
+                ...
+            ]
+        product_photo_0: File upload for first link with replacement
+        product_photo_1: File upload for second link with replacement
+        ...
 
     Response:
         {
             "batch_id": "xxx",
-            "jobs": [{"id": "...", "url": "...", "status": "pending"}, ...]
+            "jobs": [{"id": "...", "url": "...", "status": "pending", "replace_slide": 2}, ...]
         }
     """
+    import json
+
     logger.info("Received convert request")
 
-    # Parse links from form data
-    links_text = request.form.get('links', '')
-    links = extract_links(links_text)
+    # Parse links configuration from form data
+    links_config_str = request.form.get('links_config', '')
 
-    if not links:
+    if not links_config_str:
+        return jsonify({
+            'error': 'No links configuration provided',
+            'hint': 'Submit links_config JSON array'
+        }), 400
+
+    try:
+        links_config = json.loads(links_config_str)
+    except json.JSONDecodeError as e:
+        return jsonify({
+            'error': 'Invalid JSON in links_config',
+            'hint': str(e)
+        }), 400
+
+    if not links_config or not isinstance(links_config, list):
+        return jsonify({
+            'error': 'No links provided',
+            'hint': 'links_config must be a non-empty array'
+        }), 400
+
+    # Validate all URLs first
+    valid_configs = []
+    for idx, cfg in enumerate(links_config):
+        url = cfg.get('url', '').strip()
+        if not url:
+            continue
+        if not validate_tiktok_url(url):
+            return jsonify({
+                'error': f'Invalid TikTok URL at index {idx}',
+                'url': url
+            }), 400
+        valid_configs.append(cfg)
+
+    if not valid_configs:
         return jsonify({
             'error': 'No valid TikTok links provided',
-            'hint': 'Paste TikTok links, one per line'
+            'hint': 'Check your URLs are valid TikTok slideshow links'
         }), 400
 
-    logger.info(f"Valid links: {len(links)}")
+    logger.info(f"Valid links: {len(valid_configs)}")
 
-    # Parse optional replacement settings
-    replace_slide = None
-    replace_slide_str = request.form.get('replace_slide', '')
-    if replace_slide_str:
-        try:
-            replace_slide = int(replace_slide_str)
-            if replace_slide < 1:
-                return jsonify({
-                    'error': 'Invalid slide number',
-                    'hint': 'Slide number must be a positive integer'
-                }), 400
-        except ValueError:
-            return jsonify({
-                'error': 'Invalid slide number',
-                'hint': 'Slide number must be a positive integer'
-            }), 400
+    # Save uploaded photos with index mapping
+    photo_paths = {}
+    for key in request.files:
+        if key.startswith('product_photo_'):
+            try:
+                idx = int(key.split('_')[-1])
+            except ValueError:
+                continue
 
-    # Handle product photo upload
-    product_photo_path = None
-    if 'product_photo' in request.files:
-        file = request.files['product_photo']
-        if file and file.filename:
-            # Secure the filename
-            filename = secure_filename(file.filename)
-            # Add unique prefix
-            unique_filename = f"{uuid.uuid4().hex[:8]}_{filename}"
+            file = request.files[key]
+            if file and file.filename:
+                filename = secure_filename(file.filename)
+                unique_filename = f"{uuid.uuid4().hex[:8]}_{filename}"
+                os.makedirs(UPLOAD_DIR, exist_ok=True)
+                photo_path = os.path.join(UPLOAD_DIR, unique_filename)
+                file.save(photo_path)
+                photo_paths[idx] = photo_path
+                logger.info(f"Saved product photo {idx}: {photo_path}")
 
-            # Create upload directory
-            os.makedirs(UPLOAD_DIR, exist_ok=True)
-            product_photo_path = os.path.join(UPLOAD_DIR, unique_filename)
-
-            # Save file
-            file.save(product_photo_path)
-            logger.info(f"Product photo saved: {product_photo_path}")
-
-    # Validate: if replace_slide is set, need product photo
-    if replace_slide and not product_photo_path:
-        return jsonify({
-            'error': 'Product photo required for slide replacement',
-            'hint': 'Upload a product photo when replacing a slide'
-        }), 400
-
-    # Create batch in database
-    batch_id = create_tiktok_copy_batch(
-        replace_slide=replace_slide,
-        product_photo_path=product_photo_path
-    )
+    # Create batch in database (no global settings anymore)
+    batch_id = create_tiktok_copy_batch()
     logger.info(f"Created batch: {batch_id}")
 
-    # Create jobs for each link
+    # Create jobs with per-link settings
     jobs = []
-    for url in links:
-        job_id = create_tiktok_copy_job(batch_id, url)
+    for cfg in valid_configs:
+        url = cfg.get('url', '').strip()
+        replace_slide = cfg.get('replace_slide')
+        photo_index = cfg.get('photo_index')
+
+        # Validate replace_slide
+        if replace_slide is not None:
+            try:
+                replace_slide = int(replace_slide)
+                if replace_slide < 1:
+                    return jsonify({
+                        'error': 'Invalid slide number',
+                        'hint': 'Slide number must be a positive integer',
+                        'url': url
+                    }), 400
+            except (ValueError, TypeError):
+                return jsonify({
+                    'error': 'Invalid slide number',
+                    'hint': 'Slide number must be a positive integer',
+                    'url': url
+                }), 400
+
+        # Get photo path for this job
+        product_photo_path = None
+        if photo_index is not None and photo_index in photo_paths:
+            product_photo_path = photo_paths[photo_index]
+
+        # Validate: if replace_slide is set, need product photo
+        if replace_slide and not product_photo_path:
+            return jsonify({
+                'error': 'Product photo required for slide replacement',
+                'hint': 'Upload a product photo for this link',
+                'url': url
+            }), 400
+
+        # Create job with per-link settings
+        job_id = create_tiktok_copy_job(
+            batch_id=batch_id,
+            tiktok_url=url,
+            replace_slide=replace_slide,
+            product_photo_path=product_photo_path
+        )
         jobs.append({
             'id': job_id,
             'url': url,
-            'status': 'pending'
+            'status': 'pending',
+            'replace_slide': replace_slide,
+            'has_photo': bool(product_photo_path)
         })
 
     # Update batch total
@@ -174,8 +230,7 @@ def convert_tiktok():
     return jsonify({
         'batch_id': batch_id,
         'jobs': jobs,
-        'replace_slide': replace_slide,
-        'product_photo': bool(product_photo_path)
+        'total_photos': len(photo_paths)
     })
 
 
@@ -223,12 +278,12 @@ def get_status(batch_id: str):
         'completed_jobs': completed,
         'failed_jobs': failed,
         'drive_folder_url': batch.get('drive_folder_url'),
-        'replace_slide': batch.get('replace_slide'),
         'jobs': [
             {
                 'id': j['id'],
                 'url': j['tiktok_url'],
                 'status': j['status'],
+                'replace_slide': j.get('replace_slide'),
                 'drive_url': j.get('drive_url'),
                 'error': j.get('error_message')
             }

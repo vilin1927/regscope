@@ -12,7 +12,10 @@ from flask import Blueprint, request, jsonify
 from dotenv import load_dotenv, set_key, find_dotenv
 
 from logging_config import get_logger
-from database import list_video_jobs, get_video_jobs_count
+from database import (
+    list_video_jobs, get_video_jobs_count,
+    list_tiktok_copy_batches, get_tiktok_copy_batches_count
+)
 
 logger = get_logger('admin')
 
@@ -307,4 +310,52 @@ def list_video_jobs_api():
 
     except Exception as e:
         logger.error(f"Failed to list video jobs: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@admin_bp.route('/tiktok-copy-jobs', methods=['GET'])
+@require_auth
+def list_tiktok_copy_jobs_api():
+    """
+    List TikTok Copy batches with their jobs for admin panel.
+
+    Query params:
+    - limit: Max batches to return (default 50)
+    - offset: Pagination offset (default 0)
+
+    Response:
+    {
+        "batches": [
+            {
+                "id": "xxx",
+                "status": "completed",
+                "total_jobs": 3,
+                "completed_jobs": 2,
+                "failed_jobs": 1,
+                "drive_folder_url": "...",
+                "created_at": "...",
+                "jobs": [
+                    {"id": "...", "tiktok_url": "...", "status": "completed", ...}
+                ]
+            }
+        ],
+        "total": 10
+    }
+    """
+    try:
+        limit = request.args.get('limit', 50, type=int)
+        offset = request.args.get('offset', 0, type=int)
+
+        batches = list_tiktok_copy_batches(limit=limit, offset=offset)
+        total = get_tiktok_copy_batches_count()
+
+        return jsonify({
+            'batches': batches,
+            'total': total,
+            'limit': limit,
+            'offset': offset
+        })
+
+    except Exception as e:
+        logger.error(f"Failed to list TikTok Copy batches: {e}")
         return jsonify({'error': str(e)}), 500

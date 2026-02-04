@@ -548,20 +548,14 @@ def process_tiktok_copy_batch(self, batch_id: str):
             update_tiktok_copy_batch(batch_id, status='failed')
             return {'status': 'error', 'message': str(e)}
 
-        # Get replacement settings from batch
-        replace_slide = batch.get('replace_slide')
-        product_photo_path = batch.get('product_photo_path')
-
         logger.info(f"[TikTokCopy {batch_id[:8]}] Dispatching {len(jobs)} job tasks")
 
-        # Dispatch job processing tasks
+        # Dispatch job processing tasks (per-job settings are read from database)
         job_tasks = []
         for job in jobs:
             task = process_tiktok_copy_job.s(
                 job['id'],
-                drive_folder_id,
-                replace_slide,
-                product_photo_path
+                drive_folder_id
             )
             job_tasks.append(task)
 
@@ -586,18 +580,17 @@ def process_tiktok_copy_batch(self, batch_id: str):
 def process_tiktok_copy_job(
     self,
     job_id: str,
-    parent_drive_folder_id: str,
-    replace_slide: int = None,
-    product_photo_path: str = None
+    parent_drive_folder_id: str
 ):
     """
     Process a single TikTok copy job: scrape, convert to video, upload to Drive.
 
+    Per-job replacement settings (replace_slide, product_photo_path) are read
+    from the database, allowing each job in a batch to have different settings.
+
     Args:
         job_id: UUID of the job to process
         parent_drive_folder_id: Google Drive folder ID for the batch
-        replace_slide: Optional slide number to replace (1-indexed)
-        product_photo_path: Optional path to replacement product photo
 
     Returns:
         dict with processing result
@@ -607,13 +600,18 @@ def process_tiktok_copy_job(
     logger.info(f"[TikTokCopy Job {job_id[:8]}] Starting job processing")
 
     try:
-        # Get job info from database
+        # Get job info from database (includes per-job replacement settings)
         job = get_tiktok_copy_job(job_id)
         if not job:
             logger.error(f"[TikTokCopy Job {job_id[:8]}] Job not found")
             return {'status': 'error', 'job_id': job_id, 'message': 'Job not found'}
 
         tiktok_url = job['tiktok_url']
+        replace_slide = job.get('replace_slide')
+        product_photo_path = job.get('product_photo_path')
+
+        if replace_slide:
+            logger.info(f"[TikTokCopy Job {job_id[:8]}] Will replace slide {replace_slide}")
 
         # Update status to processing
         update_tiktok_copy_job(job_id, 'processing')

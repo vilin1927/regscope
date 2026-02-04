@@ -919,8 +919,20 @@ def create_tiktok_copy_batch(replace_slide: int = None, product_photo_path: str 
     return batch_id
 
 
-def create_tiktok_copy_job(batch_id: str, tiktok_url: str) -> str:
-    """Create a TikTok copy job and return its ID."""
+def create_tiktok_copy_job(
+    batch_id: str,
+    tiktok_url: str,
+    replace_slide: int = None,
+    product_photo_path: str = None
+) -> str:
+    """Create a TikTok copy job and return its ID.
+
+    Args:
+        batch_id: Parent batch ID
+        tiktok_url: TikTok URL to process
+        replace_slide: Optional slide number to replace (per-job setting)
+        product_photo_path: Optional product photo path (per-job setting)
+    """
     job_id = str(uuid.uuid4())
     with get_db() as conn:
         cursor = conn.cursor()
@@ -930,6 +942,8 @@ def create_tiktok_copy_job(batch_id: str, tiktok_url: str) -> str:
                 batch_id TEXT NOT NULL,
                 tiktok_url TEXT NOT NULL,
                 status TEXT DEFAULT 'pending',
+                replace_slide INTEGER,
+                product_photo_path TEXT,
                 drive_url TEXT,
                 error_message TEXT,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -939,9 +953,9 @@ def create_tiktok_copy_job(batch_id: str, tiktok_url: str) -> str:
             )
         ''')
         cursor.execute('''
-            INSERT INTO tiktok_copy_jobs (id, batch_id, tiktok_url)
-            VALUES (?, ?, ?)
-        ''', (job_id, batch_id, tiktok_url))
+            INSERT INTO tiktok_copy_jobs (id, batch_id, tiktok_url, replace_slide, product_photo_path)
+            VALUES (?, ?, ?, ?, ?)
+        ''', (job_id, batch_id, tiktok_url, replace_slide, product_photo_path))
         # Update total count
         cursor.execute('''
             UPDATE tiktok_copy_batches SET total_jobs = total_jobs + 1 WHERE id = ?
@@ -1077,6 +1091,8 @@ def init_tiktok_copy_tables():
                 batch_id TEXT NOT NULL,
                 tiktok_url TEXT NOT NULL,
                 status TEXT DEFAULT 'pending',
+                replace_slide INTEGER,
+                product_photo_path TEXT,
                 drive_url TEXT,
                 error_message TEXT,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -1087,6 +1103,51 @@ def init_tiktok_copy_tables():
         ''')
         cursor.execute('CREATE INDEX IF NOT EXISTS idx_tiktok_copy_jobs_batch ON tiktok_copy_jobs(batch_id)')
         cursor.execute('CREATE INDEX IF NOT EXISTS idx_tiktok_copy_jobs_status ON tiktok_copy_jobs(status)')
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_tiktok_copy_batches_status ON tiktok_copy_batches(status)')
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_tiktok_copy_batches_created ON tiktok_copy_batches(created_at)')
+
+        # Migration: Add new columns to existing tables if they don't exist
+        try:
+            cursor.execute('ALTER TABLE tiktok_copy_jobs ADD COLUMN replace_slide INTEGER')
+        except sqlite3.OperationalError:
+            pass  # Column already exists
+        try:
+            cursor.execute('ALTER TABLE tiktok_copy_jobs ADD COLUMN product_photo_path TEXT')
+        except sqlite3.OperationalError:
+            pass  # Column already exists
+
+
+def list_tiktok_copy_batches(limit: int = 50, offset: int = 0) -> List[Dict[str, Any]]:
+    """List TikTok Copy batches with job counts for admin monitoring."""
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute('''
+            SELECT * FROM tiktok_copy_batches
+            ORDER BY created_at DESC
+            LIMIT ? OFFSET ?
+        ''', (limit, offset))
+        batches = [dict(row) for row in cursor.fetchall()]
+
+        # Get job details for each batch
+        for batch in batches:
+            cursor.execute('''
+                SELECT id, tiktok_url, status, replace_slide, drive_url, error_message,
+                       created_at, started_at, completed_at
+                FROM tiktok_copy_jobs
+                WHERE batch_id = ?
+                ORDER BY created_at
+            ''', (batch['id'],))
+            batch['jobs'] = [dict(row) for row in cursor.fetchall()]
+
+        return batches
+
+
+def get_tiktok_copy_batches_count() -> int:
+    """Get total count of TikTok Copy batches for pagination."""
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute('SELECT COUNT(*) as count FROM tiktok_copy_batches')
+        return cursor.fetchone()['count']
 
 
 # Initialize database on import

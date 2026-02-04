@@ -145,7 +145,7 @@
                 <div class="bg-gray-800/50 backdrop-blur rounded-xl p-6 shadow-xl">
                     <div class="flex justify-between items-center mb-4">
                         <h2 class="text-xl font-semibold">Job Queue</h2>
-                        <button @click="queueTab === 'slideshow' ? refreshJobs() : fetchVideoJobs()" class="text-sm px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded">
+                        <button @click="queueTab === 'slideshow' ? refreshJobs() : (queueTab === 'video' ? fetchVideoJobs() : fetchTikTokCopyJobs())" class="text-sm px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded">
                             Refresh
                         </button>
                     </div>
@@ -165,6 +165,13 @@
                             :class="queueTab === 'video' ? 'bg-purple-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'"
                         >
                             Video Jobs
+                        </button>
+                        <button
+                            @click="queueTab = 'tiktok-copy'; fetchTikTokCopyJobs()"
+                            class="px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+                            :class="queueTab === 'tiktok-copy' ? 'bg-blue-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'"
+                        >
+                            TikTok Copy
                         </button>
                     </div>
 
@@ -204,6 +211,26 @@
                         </div>
                         <div class="bg-red-500/20 rounded p-2">
                             <div class="text-red-400 font-bold" x-text="videoQueueStats.failed">0</div>
+                            <div class="text-gray-400">Failed</div>
+                        </div>
+                    </div>
+
+                    <!-- TikTok Copy Queue Stats -->
+                    <div x-show="queueTab === 'tiktok-copy'" class="grid grid-cols-4 gap-2 mb-4 text-center text-xs">
+                        <div class="bg-yellow-500/20 rounded p-2">
+                            <div class="text-yellow-400 font-bold" x-text="tiktokCopyStats.pending">0</div>
+                            <div class="text-gray-400">Pending</div>
+                        </div>
+                        <div class="bg-blue-500/20 rounded p-2">
+                            <div class="text-blue-400 font-bold" x-text="tiktokCopyStats.processing">0</div>
+                            <div class="text-gray-400">Processing</div>
+                        </div>
+                        <div class="bg-green-500/20 rounded p-2">
+                            <div class="text-green-400 font-bold" x-text="tiktokCopyStats.completed">0</div>
+                            <div class="text-gray-400">Completed</div>
+                        </div>
+                        <div class="bg-red-500/20 rounded p-2">
+                            <div class="text-red-400 font-bold" x-text="tiktokCopyStats.failed">0</div>
                             <div class="text-gray-400">Failed</div>
                         </div>
                     </div>
@@ -296,6 +323,87 @@
                         </div>
                     </div>
 
+                    <!-- TikTok Copy Batches List -->
+                    <div x-show="queueTab === 'tiktok-copy'" class="space-y-3 mb-4">
+                        <template x-for="batch in tiktokCopyBatches" :key="batch.id">
+                            <div class="bg-gray-700/50 rounded p-3 text-sm">
+                                <!-- Batch Header -->
+                                <div class="flex justify-between items-start mb-2">
+                                    <div class="flex-1 min-w-0">
+                                        <div class="flex items-center space-x-2">
+                                            <span class="font-mono text-xs text-gray-400" x-text="batch.id.substring(0, 8)"></span>
+                                            <span class="text-gray-300" x-text="batch.total_jobs + ' links'"></span>
+                                        </div>
+                                        <div class="text-xs text-gray-500 mt-1" x-text="formatDate(batch.created_at)"></div>
+                                    </div>
+                                    <div class="flex items-center space-x-2 flex-shrink-0 ml-2">
+                                        <span class="px-2 py-0.5 rounded text-xs"
+                                              :class="{
+                                                  'bg-yellow-500/30 text-yellow-400': batch.status === 'pending',
+                                                  'bg-blue-500/30 text-blue-400': batch.status === 'processing',
+                                                  'bg-green-500/30 text-green-400': batch.status === 'completed',
+                                                  'bg-red-500/30 text-red-400': batch.status === 'failed'
+                                              }"
+                                              x-text="batch.status">
+                                        </span>
+                                        <button
+                                            @click="batch.expanded = !batch.expanded"
+                                            class="p-1 text-gray-400 hover:text-gray-300 transition-colors"
+                                        >
+                                            <svg class="w-4 h-4 transition-transform" :class="{ 'rotate-180': batch.expanded }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                                            </svg>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- Batch Stats -->
+                                <div class="flex space-x-4 text-xs mb-2">
+                                    <span class="text-green-400" x-text="batch.completed_jobs + ' done'"></span>
+                                    <span class="text-red-400" x-show="batch.failed_jobs > 0" x-text="batch.failed_jobs + ' failed'"></span>
+                                </div>
+
+                                <!-- Drive Folder Link -->
+                                <div x-show="batch.drive_folder_url" class="mb-2">
+                                    <a :href="batch.drive_folder_url" target="_blank" class="text-xs text-blue-400 hover:text-blue-300">
+                                        Open folder in Drive
+                                    </a>
+                                </div>
+
+                                <!-- Expanded Jobs List -->
+                                <div x-show="batch.expanded" x-transition class="mt-3 pt-3 border-t border-gray-600 space-y-2">
+                                    <template x-for="job in batch.jobs" :key="job.id">
+                                        <div class="flex items-center justify-between bg-gray-600/30 rounded p-2 text-xs">
+                                            <div class="flex-1 min-w-0 mr-2">
+                                                <div class="truncate text-gray-300" x-text="job.tiktok_url"></div>
+                                                <div x-show="job.replace_slide" class="text-purple-400 mt-0.5">
+                                                    Replacing slide #<span x-text="job.replace_slide"></span>
+                                                </div>
+                                            </div>
+                                            <div class="flex items-center space-x-2 flex-shrink-0">
+                                                <span class="px-1.5 py-0.5 rounded text-xs"
+                                                      :class="{
+                                                          'bg-yellow-500/30 text-yellow-400': job.status === 'pending',
+                                                          'bg-blue-500/30 text-blue-400': job.status === 'processing',
+                                                          'bg-green-500/30 text-green-400': job.status === 'completed',
+                                                          'bg-red-500/30 text-red-400': job.status === 'failed'
+                                                      }"
+                                                      x-text="job.status">
+                                                </span>
+                                                <a x-show="job.drive_url" :href="job.drive_url" target="_blank" class="text-blue-400 hover:text-blue-300">
+                                                    Open
+                                                </a>
+                                            </div>
+                                        </div>
+                                    </template>
+                                </div>
+                            </div>
+                        </template>
+                        <div x-show="tiktokCopyBatches.length === 0" class="text-center text-gray-500 py-8">
+                            No TikTok Copy batches found
+                        </div>
+                    </div>
+
                     <!-- Slideshow Pagination -->
                     <div x-show="queueTab === 'slideshow' && totalJobs > perPage" class="flex items-center justify-between pt-4 border-t border-gray-700">
                         <div class="text-sm text-gray-400">
@@ -335,6 +443,29 @@
                             <button
                                 @click="videoNextPage"
                                 :disabled="videoPage * perPage >= totalVideoJobs"
+                                class="px-3 py-1 bg-gray-700 rounded text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-600"
+                            >
+                                Next
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- TikTok Copy Pagination -->
+                    <div x-show="queueTab === 'tiktok-copy' && totalTikTokCopyBatches > perPage" class="flex items-center justify-between pt-4 border-t border-gray-700">
+                        <div class="text-sm text-gray-400">
+                            Showing <span x-text="((tiktokCopyPage - 1) * perPage) + 1"></span>-<span x-text="Math.min(tiktokCopyPage * perPage, totalTikTokCopyBatches)"></span> of <span x-text="totalTikTokCopyBatches"></span>
+                        </div>
+                        <div class="flex space-x-2">
+                            <button
+                                @click="tiktokCopyPrevPage"
+                                :disabled="tiktokCopyPage === 1"
+                                class="px-3 py-1 bg-gray-700 rounded text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-600"
+                            >
+                                Previous
+                            </button>
+                            <button
+                                @click="tiktokCopyNextPage"
+                                :disabled="tiktokCopyPage * perPage >= totalTikTokCopyBatches"
                                 class="px-3 py-1 bg-gray-700 rounded text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-600"
                             >
                                 Next
@@ -388,11 +519,17 @@
                 totalJobs: 0,
 
                 // Video jobs state
-                queueTab: 'slideshow', // 'slideshow' or 'video'
+                queueTab: 'slideshow', // 'slideshow', 'video', or 'tiktok-copy'
                 videoJobs: [],
                 videoQueueStats: { pending: 0, processing: 0, completed: 0, failed: 0 },
                 videoPage: 1,
                 totalVideoJobs: 0,
+
+                // TikTok Copy state
+                tiktokCopyBatches: [],
+                tiktokCopyStats: { pending: 0, processing: 0, completed: 0, failed: 0 },
+                tiktokCopyPage: 1,
+                totalTikTokCopyBatches: 0,
 
                 init() {
                     const storedToken = localStorage.getItem('adminToken');
@@ -650,6 +787,59 @@
                     if (this.videoPage * this.perPage < this.totalVideoJobs) {
                         this.videoPage++;
                         this.fetchVideoJobs();
+                    }
+                },
+
+                // TikTok Copy Jobs methods
+                async fetchTikTokCopyJobs() {
+                    try {
+                        const offset = (this.tiktokCopyPage - 1) * this.perPage;
+                        const res = await fetch(`${API_BASE}/api/admin/tiktok-copy-jobs?limit=${this.perPage}&offset=${offset}`, {
+                            headers: { 'X-Admin-Token': this.token }
+                        });
+                        if (res.ok) {
+                            const data = await res.json();
+                            // Add expanded state to each batch
+                            this.tiktokCopyBatches = (data.batches || []).map(b => ({ ...b, expanded: false }));
+                            this.totalTikTokCopyBatches = data.total || 0;
+                        }
+                    } catch (e) {
+                        console.error('Failed to fetch TikTok Copy jobs:', e);
+                    }
+                    this.fetchTikTokCopyStats();
+                },
+
+                async fetchTikTokCopyStats() {
+                    try {
+                        const res = await fetch(`${API_BASE}/api/admin/tiktok-copy-jobs?limit=1000`, {
+                            headers: { 'X-Admin-Token': this.token }
+                        });
+                        if (res.ok) {
+                            const data = await res.json();
+                            const allBatches = data.batches || [];
+                            this.tiktokCopyStats = {
+                                pending: allBatches.filter(b => b.status === 'pending').length,
+                                processing: allBatches.filter(b => b.status === 'processing').length,
+                                completed: allBatches.filter(b => b.status === 'completed').length,
+                                failed: allBatches.filter(b => b.status === 'failed').length
+                            };
+                        }
+                    } catch (e) {
+                        console.error('Failed to fetch TikTok Copy stats:', e);
+                    }
+                },
+
+                tiktokCopyPrevPage() {
+                    if (this.tiktokCopyPage > 1) {
+                        this.tiktokCopyPage--;
+                        this.fetchTikTokCopyJobs();
+                    }
+                },
+
+                tiktokCopyNextPage() {
+                    if (this.tiktokCopyPage * this.perPage < this.totalTikTokCopyBatches) {
+                        this.tiktokCopyPage++;
+                        this.fetchTikTokCopyJobs();
                     }
                 }
             };
