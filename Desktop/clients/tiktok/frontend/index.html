@@ -976,8 +976,8 @@ https://vm.tiktok.com/abc..."
             ? 'http://localhost:5001'
             : '';
 
-        // Global auth state
-        window.pageAuthenticated = localStorage.getItem('pageAuthenticated') === 'true';
+        // Global auth state (sessionStorage clears on tab close)
+        window.pageAuthenticated = sessionStorage.getItem('pageAuthenticated') === 'true';
 
         function accessControl() {
             return {
@@ -999,7 +999,7 @@ https://vm.tiktok.com/abc..."
                         if (data.valid) {
                             this.isAuthenticated = true;
                             window.pageAuthenticated = true;
-                            localStorage.setItem('pageAuthenticated', 'true');
+                            sessionStorage.setItem('pageAuthenticated', 'true');
                             location.reload();
                         } else {
                             this.accessError = 'Invalid password';
