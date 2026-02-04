@@ -11,7 +11,36 @@
     </style>
 </head>
 <body class="bg-gray-900 min-h-screen">
-    <div class="container mx-auto px-4 py-8 max-w-3xl" x-data="slideshowGenerator()">
+    <!-- Password Protection Modal -->
+    <div x-data="accessControl()" x-show="!isAuthenticated" x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/80 backdrop-blur-sm">
+        <div class="bg-gray-800 rounded-xl p-6 shadow-2xl w-full max-w-sm mx-4">
+            <div class="text-center mb-4">
+                <span class="text-4xl">🔐</span>
+                <h2 class="text-xl font-bold text-white mt-2">Access Required</h2>
+                <p class="text-gray-400 text-sm">Enter password to continue</p>
+            </div>
+            <form @submit.prevent="verifyAccess">
+                <input
+                    type="password"
+                    x-model="accessPassword"
+                    placeholder="Password"
+                    class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-purple-500 mb-3"
+                    autofocus
+                >
+                <div x-show="accessError" class="text-red-400 text-sm mb-3 text-center" x-text="accessError"></div>
+                <button
+                    type="submit"
+                    class="w-full py-3 bg-purple-600 hover:bg-purple-700 rounded-lg font-semibold text-white transition-colors"
+                    :disabled="!accessPassword || verifying"
+                >
+                    <span x-show="!verifying">Access</span>
+                    <span x-show="verifying">Verifying...</span>
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <div class="container mx-auto px-4 py-8 max-w-3xl" x-data="slideshowGenerator()" x-init="$el.style.display = window.pageAuthenticated ? '' : 'none'">
         <!-- Header -->
         <div class="text-center mb-8 relative">
             <a href="admin.html" class="absolute top-0 right-0 text-gray-500 hover:text-gray-300 text-sm transition-colors">
@@ -946,6 +975,42 @@ https://vm.tiktok.com/abc..."
         const API_BASE_URL = window.location.hostname === 'localhost'
             ? 'http://localhost:5001'
             : '';
+
+        // Global auth state
+        window.pageAuthenticated = localStorage.getItem('pageAuthenticated') === 'true';
+
+        function accessControl() {
+            return {
+                isAuthenticated: window.pageAuthenticated,
+                accessPassword: '',
+                accessError: '',
+                verifying: false,
+
+                async verifyAccess() {
+                    this.verifying = true;
+                    this.accessError = '';
+                    try {
+                        const response = await fetch(`${API_BASE_URL}/api/verify-access`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ password: this.accessPassword })
+                        });
+                        const data = await response.json();
+                        if (data.valid) {
+                            this.isAuthenticated = true;
+                            window.pageAuthenticated = true;
+                            localStorage.setItem('pageAuthenticated', 'true');
+                            location.reload();
+                        } else {
+                            this.accessError = 'Invalid password';
+                        }
+                    } catch (e) {
+                        this.accessError = 'Connection error';
+                    }
+                    this.verifying = false;
+                }
+            };
+        }
 
         function slideshowGenerator() {
             return {

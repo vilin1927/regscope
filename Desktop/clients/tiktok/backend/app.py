@@ -96,6 +96,23 @@ def health_check():
     return jsonify({'status': 'ok', 'message': 'TikTok Slideshow Generator API is running'})
 
 
+@app.route('/api/verify-access', methods=['POST'])
+def verify_access():
+    """Verify page access password"""
+    data = request.get_json() or {}
+    password = data.get('password', '')
+
+    page_password = os.getenv('PAGE_PASSWORD')
+    if not page_password:
+        # If no password configured, allow access
+        return jsonify({'valid': True})
+
+    if password == page_password:
+        return jsonify({'valid': True})
+
+    return jsonify({'valid': False, 'error': 'Invalid password'}), 401
+
+
 @app.route('/api/status/<session_id>', methods=['GET'])
 def get_status(session_id):
     """Get progress status for a session"""
