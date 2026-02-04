@@ -135,23 +135,29 @@ def assemble_video(
             "format=yuv420p"
         )
 
+        # Calculate exact video duration
+        video_duration = len(images) * PHOTO_DURATION
+
         if audio_path and os.path.exists(audio_path):
-            # With audio
+            # With audio - loop audio to match video duration
+            # Use -stream_loop to loop audio if shorter than video
+            # Use -t to set exact output duration
             cmd = [
                 'ffmpeg', '-y',
                 '-f', 'concat',
                 '-safe', '0',
                 '-i', file_list_path,
+                '-stream_loop', '-1',  # Loop audio indefinitely
                 '-i', audio_path,
                 '-vf', vf_filter,
                 '-c:v', VIDEO_CODEC,
                 '-r', str(VIDEO_FPS),
                 '-c:a', AUDIO_CODEC,
-                '-shortest',  # End when shorter stream ends
+                '-t', str(video_duration),  # Set exact output duration
                 '-movflags', '+faststart',  # Optimize for streaming
                 output_path
             ]
-            log.info("Assembling video with audio")
+            log.info(f"Assembling video with audio (duration: {video_duration}s)")
         else:
             # Without audio
             cmd = [
