@@ -551,6 +551,75 @@ def _get_image_mime_type(image_path: str) -> str:
     return mime_types.get(ext, 'image/jpeg')
 
 
+def detect_product_slide(slide_paths: list) -> dict:
+    """
+    Send all slideshow images to Gemini to detect which slide is a product/ad slide.
+    Used by TikTok Copy tool for auto-detection mode.
+
+    Args:
+        slide_paths: List of file paths to slideshow slide images
+
+    Returns:
+        dict with keys:
+            - slide_number: int (1-indexed) or None if no product slide found
+            - confidence: 'high', 'medium', or 'low'
+            - reason: brief description of why this slide was identified
+    """
+    client = _get_client(timeout=30)
+
+    contents = [
+        "Analyze these TikTok slideshow images. Identify which slide (if any) "
+        "contains a product photo, Amazon listing, 'link in bio' text, promotional product, "
+        "or branded product packaging.\n\n"
+        "Return ONLY valid JSON (no markdown, no code blocks):\n"
+        '{"slide_number": N, "confidence": "high"|"medium"|"low", "reason": "brief description"}\n\n'
+        "If NO product/promotional slide is found, return:\n"
+        '{"slide_number": null, "confidence": null, "reason": "no product slide found"}\n\n'
+        "Rules:\n"
+        "- Slide numbers are 1-indexed (first slide = 1)\n"
+        "- Look for: product packaging, Amazon logos, 'link in bio', branded products, promotional overlays\n"
+        "- Do NOT count lifestyle/selfie slides with products naturally in the scene\n"
+        "- Only flag slides that are PRIMARILY about promoting/showing a product\n"
+        "- If multiple product slides exist, return the FIRST one\n"
+    ]
+
+    for i, path in enumerate(slide_paths):
+        contents.append(f"[SLIDE {i + 1}]")
+        contents.append(types.Part.from_bytes(
+            data=_load_image_bytes(path),
+            mime_type=_get_image_mime_type(path)
+        ))
+
+    try:
+        response = client.models.generate_content(
+            model=GROUNDING_MODEL,
+            contents=contents,
+            config=types.GenerateContentConfig(
+                safety_settings=SAFETY_SETTINGS,
+                temperature=0.1  # Low temp for consistent classification
+            )
+        )
+
+        response_text = response.text.strip()
+        # Strip markdown code blocks if present
+        if response_text.startswith('```'):
+            response_text = response_text.split('\n', 1)[1] if '\n' in response_text else response_text[3:]
+            if response_text.endswith('```'):
+                response_text = response_text[:-3].strip()
+
+        result = json.loads(response_text)
+        logger.info(f"Product slide detection: slide={result.get('slide_number')}, "
+                     f"confidence={result.get('confidence')}, reason={result.get('reason')}")
+        return result
+
+    except json.JSONDecodeError as e:
+        logger.warning(f"Product slide detection: failed to parse response: {response.text[:200]}")
+        return {'slide_number': None, 'confidence': None, 'reason': f'JSON parse error: {str(e)}'}
+    except Exception as e:
+        logger.warning(f"Product slide detection failed: {str(e)}")
+        return {'slide_number': None, 'confidence': None, 'reason': f'Detection error: {str(e)}'}
+
+
 def _get_style_description(style: str) -> str:
     """Get visual description for font style category."""
     descriptions = {

@@ -89,6 +89,7 @@ def serve_index():
 @app.route('/admin')
 @app.route('/admin/keys')
 @app.route('/admin/queue')
+@app.route('/admin/photos')
 def serve_admin():
     """Serve admin dashboard"""
     return send_from_directory(FRONTEND_DIR, 'admin.html')

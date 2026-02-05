@@ -67,33 +67,139 @@ def extract_links(text: str) -> list[str]:
     return links
 
 
+@tiktok_copy_bp.route('/product-photos', methods=['GET'])
+def list_product_photos_public():
+    """
+    List available product photos by category (public, no auth required).
+    Used by TikTok Copy page to show photo selection grid.
+    """
+    from admin_routes import PRODUCT_CATEGORIES, _ensure_product_photo_dirs, _get_category_photos
+
+    try:
+        _ensure_product_photo_dirs()
+        categories = []
+        for slug, name in PRODUCT_CATEGORIES.items():
+            photos = _get_category_photos(slug)
+            categories.append({
+                'slug': slug,
+                'name': name,
+                'photos': photos,
+                'count': len(photos),
+            })
+        return jsonify({'categories': categories})
+    except Exception as e:
+        logger.error(f"Failed to list product photos: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
 @tiktok_copy_bp.route('/convert', methods=['POST'])
 def convert_tiktok():
     """
-    Submit TikTok links for conversion to video with per-link settings.
+    Submit TikTok links for conversion to video.
 
-    Request (multipart/form-data):
-        links_config: JSON array of link configurations:
-            [
-                {"url": "https://tiktok.com/...", "replace_slide": null, "photo_index": null},
-                {"url": "https://tiktok.com/...", "replace_slide": 2, "photo_index": 0},
-                ...
-            ]
-        product_photo_0: File upload for first link with replacement
-        product_photo_1: File upload for second link with replacement
-        ...
+    Supports two modes:
+    1. Auto-replace (new): AI detects product slide and replaces it
+    2. No-replacement: Just convert slideshow to video as-is
 
-    Response:
+    Request (JSON):
         {
-            "batch_id": "xxx",
-            "jobs": [{"id": "...", "url": "...", "status": "pending", "replace_slide": 2}, ...]
+            "links": ["url1", "url2", ...],
+            "mode": "auto-replace" | "no-replacement",
+            "product_photo_path": "/path/to/photo.jpg"  (required for auto-replace)
         }
+
+    Legacy (multipart/form-data) is still supported for backwards compatibility.
     """
     import json
 
     logger.info("Received convert request")
 
-    # Parse links configuration from form data
+    # Detect request format: JSON (new) or multipart (legacy)
+    if request.is_json:
+        return _handle_json_convert(request.get_json())
+    else:
+        return _handle_legacy_convert()
+
+
+def _handle_json_convert(data):
+    """Handle new simplified JSON convert request."""
+    links = data.get('links', [])
+    mode = data.get('mode', 'auto-replace')
+    product_photo_path = data.get('product_photo_path')
+
+    if mode not in ('auto-replace', 'no-replacement'):
+        return jsonify({'error': 'Invalid mode. Use "auto-replace" or "no-replacement"'}), 400
+
+    if mode == 'auto-replace' and not product_photo_path:
+        return jsonify({'error': 'Product photo required for auto-replace mode'}), 400
+
+    # Validate product photo exists
+    if product_photo_path and not os.path.exists(product_photo_path):
+        return jsonify({'error': 'Product photo not found on server'}), 400
+
+    if not links or not isinstance(links, list):
+        return jsonify({'error': 'No links provided'}), 400
+
+    # Validate URLs
+    valid_links = []
+    for url in links:
+        url = url.strip()
+        if url and validate_tiktok_url(url):
+            valid_links.append(url)
+
+    if not valid_links:
+        return jsonify({
+            'error': 'No valid TikTok links provided',
+            'hint': 'Check your URLs are valid TikTok slideshow links'
+        }), 400
+
+    logger.info(f"Valid links: {len(valid_links)}, mode: {mode}")
+
+    # Create batch with mode
+    batch_id = create_tiktok_copy_batch(
+        mode=mode,
+        product_photo_path=product_photo_path
+    )
+    logger.info(f"Created batch: {batch_id} (mode={mode})")
+
+    # Create jobs — same photo for all links, detection happens at processing time
+    jobs = []
+    for url in valid_links:
+        job_id = create_tiktok_copy_job(
+            batch_id=batch_id,
+            tiktok_url=url,
+            product_photo_path=product_photo_path if mode == 'auto-replace' else None
+        )
+        jobs.append({
+            'id': job_id,
+            'url': url,
+            'status': 'pending',
+            'mode': mode
+        })
+
+    logger.info(f"Created {len(jobs)} jobs for batch {batch_id}")
+
+    # Queue batch for processing
+    try:
+        from tasks import process_tiktok_copy_batch
+        process_tiktok_copy_batch.delay(batch_id)
+        logger.info(f"Queued batch {batch_id} for processing")
+    except ImportError as e:
+        logger.warning(f"Celery task import failed: {e}")
+    except Exception as e:
+        logger.warning(f"Failed to queue batch: {e}")
+
+    return jsonify({
+        'batch_id': batch_id,
+        'jobs': jobs,
+        'mode': mode
+    })
+
+
+def _handle_legacy_convert():
+    """Handle legacy multipart/form-data convert request (backwards compatible)."""
+    import json
+
     links_config_str = request.form.get('links_config', '')
 
     if not links_config_str:
@@ -135,7 +241,7 @@ def convert_tiktok():
             'hint': 'Check your URLs are valid TikTok slideshow links'
         }), 400
 
-    logger.info(f"Valid links: {len(valid_configs)}")
+    logger.info(f"Valid links (legacy): {len(valid_configs)}")
 
     # Save uploaded photos with index mapping
     photo_paths = {}
@@ -156,9 +262,9 @@ def convert_tiktok():
                 photo_paths[idx] = photo_path
                 logger.info(f"Saved product photo {idx}: {photo_path}")
 
-    # Create batch in database (no global settings anymore)
-    batch_id = create_tiktok_copy_batch()
-    logger.info(f"Created batch: {batch_id}")
+    # Create batch in database (legacy mode — no auto-detect)
+    batch_id = create_tiktok_copy_batch(mode='manual')
+    logger.info(f"Created batch: {batch_id} (legacy/manual)")
 
     # Create jobs with per-link settings
     jobs = []
@@ -274,6 +380,7 @@ def get_status(batch_id: str):
     return jsonify({
         'batch_id': batch_id,
         'status': status,
+        'mode': batch.get('mode', 'manual'),
         'total_jobs': total,
         'completed_jobs': completed,
         'failed_jobs': failed,
@@ -284,6 +391,8 @@ def get_status(batch_id: str):
                 'url': j['tiktok_url'],
                 'status': j['status'],
                 'replace_slide': j.get('replace_slide'),
+                'product_slide_detected': j.get('product_slide_detected'),
+                'detection_skipped': bool(j.get('detection_skipped')),
                 'drive_url': j.get('drive_url'),
                 'error': j.get('error_message')
             }

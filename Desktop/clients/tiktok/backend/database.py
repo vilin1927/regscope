@@ -893,8 +893,14 @@ def delete_batch_cascade(batch_id: str) -> Dict[str, int]:
 
 # ============ TikTok Copy Operations ============
 
-def create_tiktok_copy_batch(replace_slide: int = None, product_photo_path: str = None) -> str:
-    """Create a TikTok copy batch and return its ID."""
+def create_tiktok_copy_batch(replace_slide: int = None, product_photo_path: str = None, mode: str = 'auto-replace') -> str:
+    """Create a TikTok copy batch and return its ID.
+
+    Args:
+        replace_slide: Legacy - manual slide number to replace
+        product_photo_path: Path to product photo for replacement
+        mode: 'auto-replace' (AI detects slide) or 'no-replacement' (convert only)
+    """
     batch_id = str(uuid.uuid4())
     with get_db() as conn:
         cursor = conn.cursor()
@@ -907,15 +913,16 @@ def create_tiktok_copy_batch(replace_slide: int = None, product_photo_path: str 
                 failed_jobs INTEGER DEFAULT 0,
                 replace_slide INTEGER,
                 product_photo_path TEXT,
+                mode TEXT DEFAULT 'auto-replace',
                 drive_folder_url TEXT,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 completed_at TIMESTAMP
             )
         ''')
         cursor.execute('''
-            INSERT INTO tiktok_copy_batches (id, replace_slide, product_photo_path)
-            VALUES (?, ?, ?)
-        ''', (batch_id, replace_slide, product_photo_path))
+            INSERT INTO tiktok_copy_batches (id, replace_slide, product_photo_path, mode)
+            VALUES (?, ?, ?, ?)
+        ''', (batch_id, replace_slide, product_photo_path, mode))
     return batch_id
 
 
@@ -995,9 +1002,20 @@ def update_tiktok_copy_job(
     job_id: str,
     status: str,
     drive_url: str = None,
-    error_message: str = None
+    error_message: str = None,
+    product_slide_detected: int = None,
+    detection_skipped: bool = None
 ):
-    """Update TikTok copy job status."""
+    """Update TikTok copy job status.
+
+    Args:
+        job_id: Job ID to update
+        status: New status
+        drive_url: Google Drive URL of generated video
+        error_message: Error message if failed
+        product_slide_detected: Slide number detected by AI as product slide
+        detection_skipped: True if AI found no product slide or detection failed
+    """
     with get_db() as conn:
         cursor = conn.cursor()
         updates = ['status = ?']
@@ -1017,6 +1035,14 @@ def update_tiktok_copy_job(
         if error_message:
             updates.append('error_message = ?')
             params.append(error_message)
+
+        if product_slide_detected is not None:
+            updates.append('product_slide_detected = ?')
+            params.append(product_slide_detected)
+
+        if detection_skipped is not None:
+            updates.append('detection_skipped = ?')
+            params.append(1 if detection_skipped else 0)
 
         params.append(job_id)
         cursor.execute(f'''
@@ -1116,6 +1142,20 @@ def init_tiktok_copy_tables():
         except sqlite3.OperationalError:
             pass  # Column already exists
 
+        # Migration: Auto-detect feature columns
+        try:
+            cursor.execute('ALTER TABLE tiktok_copy_jobs ADD COLUMN product_slide_detected INTEGER')
+        except sqlite3.OperationalError:
+            pass  # Column already exists
+        try:
+            cursor.execute('ALTER TABLE tiktok_copy_jobs ADD COLUMN detection_skipped INTEGER DEFAULT 0')
+        except sqlite3.OperationalError:
+            pass  # Column already exists
+        try:
+            cursor.execute("ALTER TABLE tiktok_copy_batches ADD COLUMN mode TEXT DEFAULT 'auto-replace'")
+        except sqlite3.OperationalError:
+            pass  # Column already exists
+
 
 def list_tiktok_copy_batches(limit: int = 50, offset: int = 0) -> List[Dict[str, Any]]:
     """List TikTok Copy batches with job counts for admin monitoring."""
@@ -1131,7 +1171,8 @@ def list_tiktok_copy_batches(limit: int = 50, offset: int = 0) -> List[Dict[str,
         # Get job details for each batch
         for batch in batches:
             cursor.execute('''
-                SELECT id, tiktok_url, status, replace_slide, drive_url, error_message,
+                SELECT id, tiktok_url, status, replace_slide, product_slide_detected,
+                       detection_skipped, drive_url, error_message,
                        created_at, started_at, completed_at
                 FROM tiktok_copy_jobs
                 WHERE batch_id = ?

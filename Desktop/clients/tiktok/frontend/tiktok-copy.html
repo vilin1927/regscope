@@ -47,143 +47,116 @@
                 &larr; Back to Generator
             </a>
             <h1 class="text-3xl font-bold text-white mb-2">TikTok Copy Tool</h1>
-            <p class="text-gray-400">Convert TikTok slideshows to MP4 videos</p>
+            <p class="text-gray-400">Convert TikTok slideshows to MP4 videos with auto product replacement</p>
         </div>
 
-        <!-- Step 1: Paste Links -->
-        <div x-show="!showLinkTable" class="bg-gray-800 rounded-xl p-6 shadow-xl mb-6">
+        <!-- Main Form (hidden when batch is active) -->
+        <div x-show="!batchId" class="bg-gray-800 rounded-xl p-6 shadow-xl mb-6">
+            <!-- Step 1: Paste Links -->
             <div class="mb-6">
                 <label class="block text-gray-300 text-sm font-medium mb-2">
-                    <span class="text-xl mr-2">&#128203;</span>
-                    Step 1: Paste TikTok Links
+                    Paste TikTok Links <span class="text-gray-500">(one per line)</span>
                 </label>
                 <textarea
                     x-model="rawLinks"
                     placeholder="https://www.tiktok.com/@user/photo/123456
 https://www.tiktok.com/t/ABC123/
-(one link per line)"
-                    rows="6"
+https://vm.tiktok.com/ABC123/"
+                    rows="5"
                     class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 resize-none font-mono text-sm"
                 ></textarea>
                 <p class="text-gray-500 text-xs mt-1" x-show="validLinkCount > 0">
-                    <span class="text-green-400" x-text="validLinkCount"></span> valid link(s) detected
+                    <span class="text-green-400 font-medium" x-text="validLinkCount"></span> valid link(s) detected
                 </p>
             </div>
 
-            <button
-                type="button"
-                @click="parseLinks()"
-                :disabled="validLinkCount === 0"
-                class="w-full py-4 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-600 disabled:cursor-not-allowed rounded-lg font-bold text-white text-lg transition-colors"
-            >
-                Parse Links &rarr;
-            </button>
-        </div>
-
-        <!-- Step 2: Configure Each Link -->
-        <div x-show="showLinkTable" x-transition class="bg-gray-800 rounded-xl p-6 shadow-xl mb-6">
-            <div class="flex items-center justify-between mb-4">
-                <h2 class="text-lg font-semibold text-white">
-                    <span class="mr-2">&#9881;</span>
-                    Step 2: Configure Each Link
-                </h2>
-                <button
-                    @click="resetForm()"
-                    class="text-gray-400 hover:text-gray-300 text-sm"
-                >
-                    &larr; Back to paste
-                </button>
-            </div>
-
-            <!-- Summary -->
-            <div class="mb-4 p-3 bg-gray-700/50 rounded-lg flex items-center justify-between">
-                <div class="text-gray-300 text-sm">
-                    <span class="font-medium" x-text="parsedLinks.length"></span> links total
-                    <span class="mx-2 text-gray-500">|</span>
-                    <span class="text-purple-400" x-text="linksWithReplacement"></span> with slide replacement
+            <!-- Step 2: Mode Selection -->
+            <div class="mb-6">
+                <label class="block text-gray-300 text-sm font-medium mb-3">Mode</label>
+                <div class="flex space-x-4">
+                    <label class="flex items-center cursor-pointer group">
+                        <input type="radio" x-model="mode" value="auto-replace" class="w-4 h-4 text-purple-500 bg-gray-700 border-gray-500 focus:ring-purple-500 focus:ring-offset-gray-800">
+                        <span class="ml-2 text-gray-300 group-hover:text-white transition-colors">Auto-replace product slide</span>
+                    </label>
+                    <label class="flex items-center cursor-pointer group">
+                        <input type="radio" x-model="mode" value="no-replacement" class="w-4 h-4 text-purple-500 bg-gray-700 border-gray-500 focus:ring-purple-500 focus:ring-offset-gray-800">
+                        <span class="ml-2 text-gray-300 group-hover:text-white transition-colors">No replacement (convert only)</span>
+                    </label>
                 </div>
+                <p class="text-gray-500 text-xs mt-2" x-show="mode === 'auto-replace'">
+                    AI will detect the product/ad slide in each slideshow and replace it with your selected photo.
+                </p>
             </div>
 
-            <!-- Links Configuration Table -->
-            <div class="space-y-3 mb-6 max-h-96 overflow-y-auto">
-                <template x-for="(link, index) in parsedLinks" :key="index">
-                    <div class="bg-gray-700/50 rounded-lg p-4">
-                        <!-- URL Row -->
-                        <div class="flex items-center justify-between mb-3">
-                            <div class="flex-1 min-w-0 mr-4">
-                                <p class="text-gray-300 text-sm font-mono truncate" x-text="link.url"></p>
-                            </div>
-                            <span class="text-gray-500 text-xs">#<span x-text="index + 1"></span></span>
-                        </div>
+            <!-- Step 3: Product Photo Selection (only for auto-replace) -->
+            <div x-show="mode === 'auto-replace'" x-transition class="mb-6">
+                <!-- Category Selector -->
+                <label class="block text-gray-300 text-sm font-medium mb-2">Product Category</label>
+                <div class="flex space-x-2 mb-4">
+                    <template x-for="cat in categories" :key="cat.slug">
+                        <button
+                            @click="selectCategory(cat.slug)"
+                            class="px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+                            :class="selectedCategory === cat.slug ? 'bg-purple-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'"
+                        >
+                            <span x-text="cat.name"></span>
+                            <span class="text-xs opacity-70 ml-1" x-text="'(' + cat.count + ')'"></span>
+                        </button>
+                    </template>
+                </div>
 
-                        <!-- Replacement Toggle -->
-                        <label class="flex items-center cursor-pointer">
-                            <input
-                                type="checkbox"
-                                x-model="link.enableReplacement"
-                                class="w-4 h-4 rounded bg-gray-600 border-gray-500 text-purple-500 focus:ring-purple-500 focus:ring-offset-gray-800"
+                <!-- Photo Grid -->
+                <div x-show="categoryPhotos.length > 0">
+                    <label class="block text-gray-300 text-sm font-medium mb-2">Select Photo</label>
+                    <div class="grid grid-cols-5 gap-3">
+                        <template x-for="photo in categoryPhotos" :key="photo.filename">
+                            <div
+                                @click="selectPhoto(photo)"
+                                class="relative cursor-pointer rounded-lg overflow-hidden border-2 transition-all hover:scale-105"
+                                :class="selectedPhotoPath === photo.path ? 'border-purple-500 ring-2 ring-purple-500/50' : 'border-gray-600 hover:border-gray-500'"
                             >
-                            <span class="ml-2 text-gray-400 text-sm">Replace a slide with product photo</span>
-                        </label>
-
-                        <!-- Replacement Options (if enabled) -->
-                        <div x-show="link.enableReplacement" x-transition class="mt-3 pt-3 border-t border-gray-600 grid grid-cols-2 gap-4">
-                            <!-- Slide Number -->
-                            <div>
-                                <label class="block text-gray-400 text-xs mb-1">Slide #</label>
-                                <input
-                                    type="number"
-                                    x-model.number="link.replaceSlide"
-                                    min="1"
-                                    placeholder="e.g., 2"
-                                    class="w-full px-3 py-2 bg-gray-600 border border-gray-500 rounded text-white text-sm placeholder-gray-400 focus:outline-none focus:border-purple-500"
+                                <img
+                                    :src="photo.url"
+                                    :alt="photo.filename"
+                                    class="w-full h-24 object-cover"
                                 >
-                            </div>
-
-                            <!-- Product Photo -->
-                            <div>
-                                <label class="block text-gray-400 text-xs mb-1">Product Photo</label>
                                 <div
-                                    class="border border-dashed border-gray-500 rounded p-2 text-center cursor-pointer hover:border-purple-500 transition-colors"
-                                    @click="document.getElementById('fileInput' + index).click()"
-                                    :class="{ 'border-green-500 bg-green-900/20': link.productPhoto }"
+                                    x-show="selectedPhotoPath === photo.path"
+                                    class="absolute inset-0 bg-purple-600/30 flex items-center justify-center"
                                 >
-                                    <input
-                                        type="file"
-                                        @change="handleFileSelect($event, index)"
-                                        accept="image/*"
-                                        class="hidden"
-                                        :id="'fileInput' + index"
-                                    >
-                                    <div x-show="!link.productPhoto" class="text-gray-400 text-xs py-1">
-                                        Click to upload
-                                    </div>
-                                    <div x-show="link.productPhoto" class="flex items-center justify-center text-green-400 text-xs">
-                                        <span class="mr-1">&#10003;</span>
-                                        <span x-text="link.productPhoto?.name?.substring(0, 15) + '...' || 'Uploaded'"></span>
-                                        <button
-                                            type="button"
-                                            @click.stop="clearLinkPhoto(index)"
-                                            class="ml-2 text-red-400 hover:text-red-300"
-                                        >&times;</button>
-                                    </div>
+                                    <span class="text-white text-xl">&#10003;</span>
                                 </div>
                             </div>
-                        </div>
+                        </template>
                     </div>
-                </template>
+                </div>
+
+                <!-- No Photos Message -->
+                <div x-show="categoryPhotos.length === 0 && selectedCategory" class="p-4 bg-gray-700/50 rounded-lg text-center">
+                    <p class="text-gray-400 text-sm">No photos in this category.</p>
+                    <a href="/admin/photos" class="text-purple-400 hover:text-purple-300 text-sm">Upload photos in Admin Panel</a>
+                </div>
+
+                <!-- Selected Photo Preview -->
+                <div x-show="selectedPhotoPath" class="mt-3 flex items-center space-x-3 p-3 bg-purple-900/20 border border-purple-700/50 rounded-lg">
+                    <img :src="selectedPhotoUrl" class="w-12 h-12 object-cover rounded">
+                    <div class="flex-1">
+                        <p class="text-purple-300 text-sm font-medium">Selected photo</p>
+                        <p class="text-gray-400 text-xs" x-text="selectedPhotoFilename"></p>
+                    </div>
+                    <button @click="clearPhoto()" class="text-gray-400 hover:text-red-400 text-lg">&times;</button>
+                </div>
             </div>
 
             <!-- Submit Button -->
             <button
                 type="button"
-                @click="submitForm()"
-                :disabled="isSubmitting || !canSubmit"
+                @click="submitBatch()"
+                :disabled="!canSubmit || isSubmitting"
                 class="w-full py-4 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-600 disabled:cursor-not-allowed rounded-lg font-bold text-white text-lg transition-colors flex items-center justify-center"
             >
                 <span x-show="!isSubmitting">
-                    <span class="mr-2">&#127916;</span>
-                    Convert <span x-text="parsedLinks.length"></span> Videos
+                    Convert <span x-text="validLinkCount"></span> Video<span x-show="validLinkCount !== 1">s</span>
                 </span>
                 <span x-show="isSubmitting" class="flex items-center">
                     <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -193,11 +166,6 @@ https://www.tiktok.com/t/ABC123/
                     Submitting...
                 </span>
             </button>
-
-            <!-- Validation Error -->
-            <div x-show="validationError" x-transition class="mt-4 p-3 bg-red-900/50 border border-red-700 rounded-lg text-red-300 text-sm">
-                <span x-text="validationError"></span>
-            </div>
         </div>
 
         <!-- Error Message -->
@@ -209,15 +177,22 @@ https://www.tiktok.com/t/ABC123/
         <div x-show="batchId" x-transition class="bg-gray-800 rounded-xl p-6 shadow-xl">
             <div class="flex items-center justify-between mb-4">
                 <h2 class="text-lg font-semibold text-white">Progress</h2>
-                <span
-                    class="px-3 py-1 rounded-full text-sm font-medium"
-                    :class="{
-                        'bg-yellow-900/50 text-yellow-300': batchStatus === 'pending' || batchStatus === 'processing',
-                        'bg-green-900/50 text-green-300': batchStatus === 'completed',
-                        'bg-red-900/50 text-red-300': batchStatus === 'failed'
-                    }"
-                    x-text="batchStatus"
-                ></span>
+                <div class="flex items-center space-x-3">
+                    <span
+                        x-show="batchMode"
+                        class="px-2 py-0.5 rounded text-xs font-medium bg-gray-700 text-gray-300"
+                        x-text="batchMode === 'auto-replace' ? 'Auto-detect' : (batchMode === 'no-replacement' ? 'No replacement' : 'Manual')"
+                    ></span>
+                    <span
+                        class="px-3 py-1 rounded-full text-sm font-medium"
+                        :class="{
+                            'bg-yellow-900/50 text-yellow-300': batchStatus === 'pending' || batchStatus === 'processing',
+                            'bg-green-900/50 text-green-300': batchStatus === 'completed',
+                            'bg-red-900/50 text-red-300': batchStatus === 'failed'
+                        }"
+                        x-text="batchStatus"
+                    ></span>
+                </div>
             </div>
 
             <!-- Drive Folder Link -->
@@ -236,7 +211,15 @@ https://www.tiktok.com/t/ABC123/
                     <div class="flex items-center justify-between p-3 bg-gray-700/50 rounded-lg">
                         <div class="flex-1 min-w-0">
                             <p class="text-gray-300 text-sm truncate" x-text="job.url"></p>
-                            <p x-show="job.replace_slide" class="text-purple-400 text-xs mt-1">
+                            <!-- Detection result -->
+                            <p x-show="job.product_slide_detected" class="text-purple-400 text-xs mt-1">
+                                Replaced slide #<span x-text="job.product_slide_detected"></span>
+                            </p>
+                            <p x-show="job.detection_skipped && job.status === 'completed'" class="text-gray-500 text-xs mt-1">
+                                No product slide found
+                            </p>
+                            <!-- Legacy manual mode -->
+                            <p x-show="job.replace_slide && !job.product_slide_detected" class="text-purple-400 text-xs mt-1">
                                 Replacing slide #<span x-text="job.replace_slide"></span>
                             </p>
                         </div>
@@ -251,10 +234,10 @@ https://www.tiktok.com/t/ABC123/
                                     'bg-red-900/50 text-red-300': job.status === 'failed'
                                 }"
                             >
-                                <span x-show="job.status === 'pending'">&#9208; Pending</span>
-                                <span x-show="job.status === 'processing'">&#9203; Processing...</span>
-                                <span x-show="job.status === 'completed'">&#9989; Done</span>
-                                <span x-show="job.status === 'failed'">&#10060; Failed</span>
+                                <span x-show="job.status === 'pending'">Pending</span>
+                                <span x-show="job.status === 'processing'">Processing...</span>
+                                <span x-show="job.status === 'completed'">Done</span>
+                                <span x-show="job.status === 'failed'">Failed</span>
                             </span>
                             <!-- Drive Link (when completed) -->
                             <a
@@ -334,22 +317,26 @@ https://www.tiktok.com/t/ABC123/
 
         function tiktokCopyTool() {
             return {
-                // Step 1: Raw links
+                // Form state
                 rawLinks: '',
-                showLinkTable: false,
+                mode: 'auto-replace',
 
-                // Step 2: Parsed links with per-link settings
-                // Each link: {url, enableReplacement, replaceSlide, productPhoto, photoIndex}
-                parsedLinks: [],
+                // Product photo selection
+                categories: [],
+                selectedCategory: 'face_tape',
+                categoryPhotos: [],
+                selectedPhotoPath: null,
+                selectedPhotoUrl: null,
+                selectedPhotoFilename: null,
 
                 // State
                 isSubmitting: false,
                 errorMessage: '',
-                validationError: '',
 
                 // Progress tracking
                 batchId: null,
                 batchStatus: null,
+                batchMode: null,
                 driveFolderUrl: null,
                 jobs: [],
                 isPolling: false,
@@ -363,142 +350,76 @@ https://www.tiktok.com/t/ABC123/
                     return lines.filter(line => tiktokPattern.test(line.trim())).length;
                 },
 
-                get linksWithReplacement() {
-                    return this.parsedLinks.filter(l => l.enableReplacement).length;
+                get validLinks() {
+                    if (!this.rawLinks.trim()) return [];
+                    const lines = this.rawLinks.trim().split('\n');
+                    const tiktokPattern = /https?:\/\/(www\.|vm\.)?tiktok\.com\/[^\s]+/;
+                    return lines.map(l => l.trim()).filter(l => l && tiktokPattern.test(l));
                 },
 
                 get canSubmit() {
-                    // Check that all links with replacement enabled have valid settings
-                    for (const link of this.parsedLinks) {
-                        if (link.enableReplacement) {
-                            if (!link.replaceSlide || link.replaceSlide < 1) return false;
-                            if (!link.productPhoto) return false;
-                        }
-                    }
-                    return this.parsedLinks.length > 0;
-                },
-
-                // Parse links and show configuration table
-                parseLinks() {
-                    const tiktokPattern = /https?:\/\/(www\.|vm\.)?tiktok\.com\/[^\s]+/;
-                    const lines = this.rawLinks.trim().split('\n');
-
-                    this.parsedLinks = [];
-                    for (const line of lines) {
-                        const url = line.trim();
-                        if (url && tiktokPattern.test(url)) {
-                            this.parsedLinks.push({
-                                url: url,
-                                enableReplacement: false,
-                                replaceSlide: null,
-                                productPhoto: null,
-                                photoIndex: null
-                            });
-                        }
-                    }
-
-                    if (this.parsedLinks.length > 0) {
-                        this.showLinkTable = true;
-                    }
-                },
-
-                // File handling for per-link uploads
-                handleFileSelect(event, index) {
-                    const file = event.target.files[0];
-                    if (file && file.type.startsWith('image/')) {
-                        this.parsedLinks[index].productPhoto = file;
-                    }
-                },
-
-                clearLinkPhoto(index) {
-                    this.parsedLinks[index].productPhoto = null;
-                    const input = document.getElementById('fileInput' + index);
-                    if (input) input.value = '';
-                },
-
-                // Reset to step 1
-                resetForm() {
-                    this.showLinkTable = false;
-                    this.parsedLinks = [];
-                    this.validationError = '';
-                },
-
-                // Reset everything for new batch
-                resetAll() {
-                    this.rawLinks = '';
-                    this.showLinkTable = false;
-                    this.parsedLinks = [];
-                    this.batchId = null;
-                    this.batchStatus = null;
-                    this.driveFolderUrl = null;
-                    this.jobs = [];
-                    this.errorMessage = '';
-                    this.validationError = '';
-                    this.stopPolling();
-                },
-
-                // Validate before submit
-                validateForm() {
-                    for (let i = 0; i < this.parsedLinks.length; i++) {
-                        const link = this.parsedLinks[i];
-                        if (link.enableReplacement) {
-                            if (!link.replaceSlide || link.replaceSlide < 1) {
-                                this.validationError = `Link #${i + 1}: Please enter a valid slide number`;
-                                return false;
-                            }
-                            if (!link.productPhoto) {
-                                this.validationError = `Link #${i + 1}: Please upload a product photo`;
-                                return false;
-                            }
-                        }
-                    }
-                    this.validationError = '';
+                    if (this.validLinkCount === 0) return false;
+                    if (this.mode === 'auto-replace' && !this.selectedPhotoPath) return false;
                     return true;
                 },
 
-                // Form submission with per-link settings
-                async submitForm() {
-                    this.errorMessage = '';
-                    this.validationError = '';
+                // Init: load product photos
+                init() {
+                    this.fetchCategories();
+                },
 
-                    if (!this.validateForm()) {
-                        return;
+                async fetchCategories() {
+                    try {
+                        const res = await fetch('/api/tiktok-copy/product-photos');
+                        if (res.ok) {
+                            const data = await res.json();
+                            this.categories = data.categories || [];
+                            // Load photos for default category
+                            this.loadCategoryPhotos();
+                        }
+                    } catch (e) {
+                        console.error('Failed to fetch categories:', e);
                     }
+                },
 
+                selectCategory(slug) {
+                    this.selectedCategory = slug;
+                    this.loadCategoryPhotos();
+                },
+
+                loadCategoryPhotos() {
+                    const cat = this.categories.find(c => c.slug === this.selectedCategory);
+                    this.categoryPhotos = cat ? cat.photos : [];
+                },
+
+                selectPhoto(photo) {
+                    this.selectedPhotoPath = photo.path;
+                    this.selectedPhotoUrl = photo.url;
+                    this.selectedPhotoFilename = photo.filename;
+                },
+
+                clearPhoto() {
+                    this.selectedPhotoPath = null;
+                    this.selectedPhotoUrl = null;
+                    this.selectedPhotoFilename = null;
+                },
+
+                // Submit batch
+                async submitBatch() {
+                    this.errorMessage = '';
                     this.isSubmitting = true;
 
                     try {
-                        const formData = new FormData();
-
-                        // Build links config and collect photos
-                        const linksConfig = [];
-                        let photoIndex = 0;
-
-                        for (const link of this.parsedLinks) {
-                            const config = {
-                                url: link.url,
-                                replace_slide: null,
-                                photo_index: null
-                            };
-
-                            if (link.enableReplacement && link.replaceSlide && link.productPhoto) {
-                                config.replace_slide = link.replaceSlide;
-                                config.photo_index = photoIndex;
-
-                                // Add photo to form data
-                                formData.append(`product_photo_${photoIndex}`, link.productPhoto);
-                                photoIndex++;
-                            }
-
-                            linksConfig.push(config);
-                        }
-
-                        // Add links config as JSON
-                        formData.append('links_config', JSON.stringify(linksConfig));
+                        const payload = {
+                            links: this.validLinks,
+                            mode: this.mode,
+                            product_photo_path: this.mode === 'auto-replace' ? this.selectedPhotoPath : null
+                        };
 
                         const response = await fetch('/api/tiktok-copy/convert', {
                             method: 'POST',
-                            body: formData
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(payload)
                         });
 
                         const data = await response.json();
@@ -509,9 +430,9 @@ https://www.tiktok.com/t/ABC123/
 
                         // Success - start polling
                         this.batchId = data.batch_id;
+                        this.batchMode = data.mode;
                         this.jobs = data.jobs;
                         this.batchStatus = 'pending';
-                        this.showLinkTable = false;
                         this.startPolling();
 
                     } catch (error) {
@@ -519,6 +440,19 @@ https://www.tiktok.com/t/ABC123/
                     } finally {
                         this.isSubmitting = false;
                     }
+                },
+
+                // Reset everything for new batch
+                resetAll() {
+                    this.rawLinks = '';
+                    this.mode = 'auto-replace';
+                    this.batchId = null;
+                    this.batchStatus = null;
+                    this.batchMode = null;
+                    this.driveFolderUrl = null;
+                    this.jobs = [];
+                    this.errorMessage = '';
+                    this.stopPolling();
                 },
 
                 // Polling for status updates
@@ -544,6 +478,7 @@ https://www.tiktok.com/t/ABC123/
 
                         if (response.ok) {
                             this.batchStatus = data.status;
+                            this.batchMode = data.mode;
                             this.driveFolderUrl = data.drive_folder_url;
                             this.jobs = data.jobs;
 

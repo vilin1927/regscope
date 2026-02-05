@@ -10,6 +10,7 @@ import time
 from functools import wraps
 from flask import Blueprint, request, jsonify
 from dotenv import load_dotenv, set_key, find_dotenv
+from werkzeug.utils import secure_filename
 
 from logging_config import get_logger
 from database import (
@@ -358,4 +359,138 @@ def list_tiktok_copy_jobs_api():
 
     except Exception as e:
         logger.error(f"Failed to list TikTok Copy batches: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+# ============ Product Photos Management ============
+
+PRODUCT_CATEGORIES = {
+    'face_tape': 'Face Tape',
+    'gua_sha': 'Gua Sha',
+    'steam_eye_mask': 'Steam Eye Mask',
+}
+
+ALLOWED_PHOTO_EXTENSIONS = {'.jpg', '.jpeg', '.png', '.webp'}
+MAX_PHOTOS_PER_CATEGORY = 10
+
+PRODUCT_PHOTOS_DIR = os.path.join(os.path.dirname(__file__), 'static', 'product_photos')
+
+
+def _ensure_product_photo_dirs():
+    """Create product photo directories if they don't exist."""
+    for slug in PRODUCT_CATEGORIES:
+        os.makedirs(os.path.join(PRODUCT_PHOTOS_DIR, slug), exist_ok=True)
+
+
+def _get_category_photos(slug: str) -> list:
+    """Get list of photos for a category."""
+    category_dir = os.path.join(PRODUCT_PHOTOS_DIR, slug)
+    if not os.path.exists(category_dir):
+        return []
+    photos = []
+    for filename in sorted(os.listdir(category_dir)):
+        ext = os.path.splitext(filename)[1].lower()
+        if ext in ALLOWED_PHOTO_EXTENSIONS:
+            photos.append({
+                'filename': filename,
+                'url': f'/static/product_photos/{slug}/{filename}',
+                'path': os.path.join(category_dir, filename),
+            })
+    return photos
+
+
+@admin_bp.route('/product-photos', methods=['GET'])
+@require_auth
+def list_product_photos():
+    """List all product photo categories with their photos."""
+    try:
+        _ensure_product_photo_dirs()
+        categories = []
+        for slug, name in PRODUCT_CATEGORIES.items():
+            photos = _get_category_photos(slug)
+            categories.append({
+                'slug': slug,
+                'name': name,
+                'photos': photos,
+                'count': len(photos),
+            })
+        return jsonify({'categories': categories})
+    except Exception as e:
+        logger.error(f"Failed to list product photos: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@admin_bp.route('/product-photos/<category>', methods=['POST'])
+@require_auth
+def upload_product_photo(category):
+    """Upload a photo to a product category."""
+    try:
+        if category not in PRODUCT_CATEGORIES:
+            return jsonify({'error': f'Invalid category: {category}'}), 400
+
+        _ensure_product_photo_dirs()
+
+        # Check current photo count
+        existing = _get_category_photos(category)
+        if len(existing) >= MAX_PHOTOS_PER_CATEGORY:
+            return jsonify({'error': f'Maximum {MAX_PHOTOS_PER_CATEGORY} photos per category'}), 400
+
+        if 'photo' not in request.files:
+            return jsonify({'error': 'No photo file provided'}), 400
+
+        file = request.files['photo']
+        if not file.filename:
+            return jsonify({'error': 'No file selected'}), 400
+
+        ext = os.path.splitext(file.filename)[1].lower()
+        if ext not in ALLOWED_PHOTO_EXTENSIONS:
+            return jsonify({'error': f'Invalid file type. Allowed: {", ".join(ALLOWED_PHOTO_EXTENSIONS)}'}), 400
+
+        # Generate unique filename
+        filename = secure_filename(file.filename)
+        # Avoid collisions
+        base, ext = os.path.splitext(filename)
+        category_dir = os.path.join(PRODUCT_PHOTOS_DIR, category)
+        final_path = os.path.join(category_dir, filename)
+        counter = 1
+        while os.path.exists(final_path):
+            filename = f"{base}_{counter}{ext}"
+            final_path = os.path.join(category_dir, filename)
+            counter += 1
+
+        file.save(final_path)
+        logger.info(f"Uploaded product photo: {category}/{filename}")
+
+        return jsonify({
+            'filename': filename,
+            'url': f'/static/product_photos/{category}/{filename}',
+            'path': final_path,
+        })
+
+    except Exception as e:
+        logger.error(f"Failed to upload product photo: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@admin_bp.route('/product-photos/<category>/<filename>', methods=['DELETE'])
+@require_auth
+def delete_product_photo(category, filename):
+    """Delete a product photo."""
+    try:
+        if category not in PRODUCT_CATEGORIES:
+            return jsonify({'error': f'Invalid category: {category}'}), 400
+
+        filename = secure_filename(filename)
+        filepath = os.path.join(PRODUCT_PHOTOS_DIR, category, filename)
+
+        if not os.path.exists(filepath):
+            return jsonify({'error': 'Photo not found'}), 404
+
+        os.remove(filepath)
+        logger.info(f"Deleted product photo: {category}/{filename}")
+
+        return jsonify({'success': True})
+
+    except Exception as e:
+        logger.error(f"Failed to delete product photo: {e}")
         return jsonify({'error': str(e)}), 500

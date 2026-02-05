@@ -583,10 +583,12 @@ def process_tiktok_copy_job(
     parent_drive_folder_id: str
 ):
     """
-    Process a single TikTok copy job: scrape, convert to video, upload to Drive.
+    Process a single TikTok copy job: scrape, auto-detect product slide, convert to video, upload to Drive.
 
-    Per-job replacement settings (replace_slide, product_photo_path) are read
-    from the database, allowing each job in a batch to have different settings.
+    Supports 3 modes (set on the batch):
+    - 'auto-replace': AI detects product slide and replaces it with the selected product photo
+    - 'no-replacement': Just convert slideshow to video as-is
+    - 'manual': Legacy mode — uses per-job replace_slide number set by user
 
     Args:
         job_id: UUID of the job to process
@@ -596,22 +598,26 @@ def process_tiktok_copy_job(
         dict with processing result
     """
     from database import get_tiktok_copy_job
+    from gemini_service_v2 import detect_product_slide
 
     logger.info(f"[TikTokCopy Job {job_id[:8]}] Starting job processing")
 
     try:
-        # Get job info from database (includes per-job replacement settings)
+        # Get job info from database
         job = get_tiktok_copy_job(job_id)
         if not job:
             logger.error(f"[TikTokCopy Job {job_id[:8]}] Job not found")
             return {'status': 'error', 'job_id': job_id, 'message': 'Job not found'}
 
+        # Get batch to determine mode
+        batch = get_tiktok_copy_batch(job['batch_id'])
+        mode = batch.get('mode', 'manual') if batch else 'manual'
+
         tiktok_url = job['tiktok_url']
-        replace_slide = job.get('replace_slide')
+        replace_slide = job.get('replace_slide')  # May be None for auto-replace mode
         product_photo_path = job.get('product_photo_path')
 
-        if replace_slide:
-            logger.info(f"[TikTokCopy Job {job_id[:8]}] Will replace slide {replace_slide}")
+        logger.info(f"[TikTokCopy Job {job_id[:8]}] Mode: {mode}")
 
         # Update status to processing
         update_tiktok_copy_job(job_id, 'processing')
@@ -627,9 +633,51 @@ def process_tiktok_copy_job(
             # Step 1: Scrape TikTok slideshow
             logger.info(f"[TikTokCopy Job {job_id[:8]}] Scraping: {tiktok_url[:50]}...")
             scrape_result = scrape_tiktok_slideshow(tiktok_url, scrape_dir, request_id=job_id[:8])
-            logger.info(f"[TikTokCopy Job {job_id[:8]}] Scraped {len(scrape_result['images'])} slides")
+            slide_images = scrape_result['images']
+            logger.info(f"[TikTokCopy Job {job_id[:8]}] Scraped {len(slide_images)} slides")
 
-            # Step 2: Generate video with FFmpeg
+            # Step 2: Auto-detect product slide (only in auto-replace mode)
+            detection_skipped = False
+            product_slide_detected = None
+
+            if mode == 'auto-replace':
+                try:
+                    logger.info(f"[TikTokCopy Job {job_id[:8]}] Running AI slide detection...")
+                    detection_result = detect_product_slide(slide_images)
+                    detected_slide = detection_result.get('slide_number')
+                    confidence = detection_result.get('confidence', 'low')
+                    reason = detection_result.get('reason', '')
+
+                    if detected_slide and confidence in ('high', 'medium'):
+                        replace_slide = detected_slide
+                        product_slide_detected = detected_slide
+                        logger.info(f"[TikTokCopy Job {job_id[:8]}] Detected product slide #{detected_slide} "
+                                    f"({confidence}): {reason}")
+                    else:
+                        detection_skipped = True
+                        logger.info(f"[TikTokCopy Job {job_id[:8]}] No product slide detected "
+                                    f"(confidence={confidence}), skipping replacement")
+                except Exception as e:
+                    detection_skipped = True
+                    logger.warning(f"[TikTokCopy Job {job_id[:8]}] Detection failed: {e}, skipping replacement")
+
+            elif mode == 'no-replacement':
+                # No replacement mode — just convert as-is
+                replace_slide = None
+                product_photo_path = None
+                detection_skipped = True
+                logger.info(f"[TikTokCopy Job {job_id[:8]}] No-replacement mode, converting as-is")
+
+            elif mode == 'manual' and replace_slide:
+                # Legacy manual mode — use the slide number from the job
+                logger.info(f"[TikTokCopy Job {job_id[:8]}] Manual mode: replacing slide {replace_slide}")
+
+            # If detection skipped, don't pass photo for replacement
+            if detection_skipped:
+                replace_slide = None
+                product_photo_path = None
+
+            # Step 3: Generate video with FFmpeg
             video_filename = f"video_{job_id[:8]}.mp4"
             video_path = process_tiktok_copy(
                 scraped_data=scrape_result,
@@ -641,18 +689,25 @@ def process_tiktok_copy_job(
             )
             logger.info(f"[TikTokCopy Job {job_id[:8]}] Video created: {video_path}")
 
-            # Step 3: Upload video to Google Drive
+            # Step 4: Upload video to Google Drive
             file_id = upload_file(video_path, parent_drive_folder_id, video_filename)
             video_drive_url = f"https://drive.google.com/file/d/{file_id}/view"
             logger.info(f"[TikTokCopy Job {job_id[:8]}] Uploaded to Drive: {video_drive_url}")
 
-            # Update job status to completed
-            update_tiktok_copy_job(job_id, 'completed', drive_url=video_drive_url)
+            # Update job status to completed with detection results
+            update_tiktok_copy_job(
+                job_id, 'completed',
+                drive_url=video_drive_url,
+                product_slide_detected=product_slide_detected,
+                detection_skipped=detection_skipped
+            )
 
             return {
                 'status': 'completed',
                 'job_id': job_id,
-                'drive_url': video_drive_url
+                'drive_url': video_drive_url,
+                'product_slide_detected': product_slide_detected,
+                'detection_skipped': detection_skipped
             }
 
         finally:

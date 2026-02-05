@@ -67,6 +67,11 @@
                        :class="currentPage === 'queue' ? 'bg-pink-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'">
                         Job Queue
                     </a>
+                    <a href="/admin/photos"
+                       class="px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+                       :class="currentPage === 'photos' ? 'bg-pink-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'">
+                        Product Photos
+                    </a>
                 </div>
                 <button
                     @click="logout"
@@ -475,6 +480,89 @@
                 </div>
             </div>
 
+            <!-- ==================== PRODUCT PHOTOS PAGE ==================== -->
+            <div x-show="currentPage === 'photos'" x-cloak>
+                <div class="bg-gray-800/50 backdrop-blur rounded-xl p-6 shadow-xl">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-xl font-semibold">Product Photos</h2>
+                        <button @click="fetchProductPhotos()" class="text-sm px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded">
+                            Refresh
+                        </button>
+                    </div>
+
+                    <p class="text-sm text-gray-400 mb-6">
+                        Upload product photos by category. These are used by TikTok Copy auto-detect to replace product slides.
+                    </p>
+
+                    <!-- Photo upload success/error message -->
+                    <div x-show="photoMessage" x-transition class="mb-4 p-3 rounded-lg text-sm"
+                         :class="photoMessageType === 'success' ? 'bg-green-500/20 border border-green-500/50 text-green-400' : 'bg-red-500/20 border border-red-500/50 text-red-400'">
+                        <span x-text="photoMessage"></span>
+                    </div>
+
+                    <!-- Categories -->
+                    <div class="space-y-6">
+                        <template x-for="category in productCategories" :key="category.slug">
+                            <div class="border border-gray-700 rounded-lg p-4">
+                                <!-- Category Header -->
+                                <div class="flex justify-between items-center mb-3">
+                                    <h3 class="font-medium text-gray-200">
+                                        <span x-text="category.name"></span>
+                                        <span class="text-xs text-gray-500 ml-2" x-text="'(' + category.count + ' photos)'"></span>
+                                    </h3>
+                                    <label
+                                        class="px-3 py-1.5 bg-pink-600 hover:bg-pink-700 rounded text-xs font-medium cursor-pointer transition-colors"
+                                        :class="{ 'opacity-50 cursor-not-allowed': category.count >= 10 }"
+                                    >
+                                        + Upload
+                                        <input
+                                            type="file"
+                                            accept=".jpg,.jpeg,.png,.webp"
+                                            class="hidden"
+                                            @change="uploadProductPhoto(category.slug, $event)"
+                                            :disabled="category.count >= 10"
+                                        >
+                                    </label>
+                                </div>
+
+                                <!-- Photo Grid -->
+                                <div x-show="category.photos.length > 0" class="grid grid-cols-4 gap-3">
+                                    <template x-for="photo in category.photos" :key="photo.filename">
+                                        <div class="relative group">
+                                            <img
+                                                :src="API_BASE + photo.url"
+                                                :alt="photo.filename"
+                                                class="w-full h-24 object-cover rounded-lg border border-gray-600"
+                                            >
+                                            <button
+                                                @click="deleteProductPhoto(category.slug, photo.filename)"
+                                                class="absolute top-1 right-1 w-5 h-5 bg-red-600 hover:bg-red-700 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                                                title="Delete"
+                                            >
+                                                <svg class="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                                </svg>
+                                            </button>
+                                            <div class="text-xs text-gray-500 mt-1 truncate" x-text="photo.filename"></div>
+                                        </div>
+                                    </template>
+                                </div>
+
+                                <!-- Empty State -->
+                                <div x-show="category.photos.length === 0" class="text-center text-gray-500 py-4 text-sm">
+                                    No photos yet. Upload some to get started.
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+
+                    <!-- Loading State -->
+                    <div x-show="productCategories.length === 0" class="text-center text-gray-500 py-8">
+                        Loading product photos...
+                    </div>
+                </div>
+            </div>
+
             <!-- Back to App Link -->
             <div class="mt-6 text-center">
                 <a href="/" class="text-pink-400 hover:text-pink-300 text-sm">
@@ -492,7 +580,7 @@
         function adminApp() {
             return {
                 // Page state
-                currentPage: window.location.pathname.includes('/queue') ? 'queue' : 'keys',
+                currentPage: window.location.pathname.includes('/queue') ? 'queue' : (window.location.pathname.includes('/photos') ? 'photos' : 'keys'),
 
                 // Auth state
                 isAuthenticated: false,
@@ -531,6 +619,11 @@
                 tiktokCopyPage: 1,
                 totalTikTokCopyBatches: 0,
 
+                // Product Photos state
+                productCategories: [],
+                photoMessage: '',
+                photoMessageType: 'success',
+
                 init() {
                     const storedToken = localStorage.getItem('adminToken');
                     if (storedToken) {
@@ -550,6 +643,7 @@
                             this.refreshJobs();
                             this.fetchQueueStats();
                             this.fetchVideoJobs();
+                            this.fetchProductPhotos();
                         } else {
                             this.clearToken();
                         }
@@ -586,6 +680,7 @@
                             this.refreshJobs();
                             this.fetchQueueStats();
                             this.fetchVideoJobs();
+                            this.fetchProductPhotos();
                         } else {
                             this.loginError = data.error || 'Login failed';
                         }
@@ -841,6 +936,81 @@
                         this.tiktokCopyPage++;
                         this.fetchTikTokCopyJobs();
                     }
+                },
+
+                // Product Photos methods
+                async fetchProductPhotos() {
+                    try {
+                        const res = await fetch(`${API_BASE}/api/admin/product-photos`, {
+                            headers: { 'X-Admin-Token': this.token }
+                        });
+                        if (res.ok) {
+                            const data = await res.json();
+                            this.productCategories = data.categories || [];
+                        }
+                    } catch (e) {
+                        console.error('Failed to fetch product photos:', e);
+                    }
+                },
+
+                async uploadProductPhoto(categorySlug, event) {
+                    const file = event.target.files[0];
+                    if (!file) return;
+
+                    const formData = new FormData();
+                    formData.append('photo', file);
+
+                    try {
+                        const res = await fetch(`${API_BASE}/api/admin/product-photos/${categorySlug}`, {
+                            method: 'POST',
+                            headers: { 'X-Admin-Token': this.token },
+                            body: formData
+                        });
+
+                        const data = await res.json();
+
+                        if (res.ok) {
+                            this.photoMessageType = 'success';
+                            this.photoMessage = `Uploaded ${data.filename}`;
+                            this.fetchProductPhotos();
+                        } else {
+                            this.photoMessageType = 'error';
+                            this.photoMessage = data.error || 'Upload failed';
+                        }
+                    } catch (e) {
+                        this.photoMessageType = 'error';
+                        this.photoMessage = 'Connection error during upload';
+                    }
+
+                    // Clear the file input
+                    event.target.value = '';
+                    setTimeout(() => { this.photoMessage = ''; }, 4000);
+                },
+
+                async deleteProductPhoto(categorySlug, filename) {
+                    if (!confirm(`Delete ${filename}?`)) return;
+
+                    try {
+                        const res = await fetch(`${API_BASE}/api/admin/product-photos/${categorySlug}/${filename}`, {
+                            method: 'DELETE',
+                            headers: { 'X-Admin-Token': this.token }
+                        });
+
+                        if (res.ok) {
+                            this.photoMessageType = 'success';
+                            this.photoMessage = `Deleted ${filename}`;
+                            this.fetchProductPhotos();
+                        } else {
+                            const data = await res.json();
+                            this.photoMessageType = 'error';
+                            this.photoMessage = data.error || 'Delete failed';
+                        }
+                    } catch (e) {
+                        this.photoMessageType = 'error';
+                        this.photoMessage = 'Connection error during delete';
+                    }
+
+                    setTimeout(() => { this.photoMessage = ''; }, 4000);
                 }
             };
         }
