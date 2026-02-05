@@ -109,10 +109,17 @@ def assemble_video(
 
         with open(file_list_path, 'w') as f:
             for i, img in enumerate(images):
-                # Copy image to temp dir with sequential name
-                ext = os.path.splitext(img)[1]
-                temp_img = os.path.join(temp_dir, f'img_{i:04d}{ext}')
-                shutil.copy2(img, temp_img)
+                # Normalize all images to JPEG for concat demuxer compatibility
+                # (mixing RGBA PNG with JPEG causes silent frame drops)
+                temp_img = os.path.join(temp_dir, f'img_{i:04d}.jpg')
+                ext = os.path.splitext(img)[1].lower()
+                if ext in ('.png', '.webp', '.bmp', '.tiff'):
+                    subprocess.run(
+                        ['ffmpeg', '-y', '-i', img, '-q:v', '2', temp_img],
+                        capture_output=True, timeout=30
+                    )
+                else:
+                    shutil.copy2(img, temp_img)
 
                 # Write to concat file list (duration in seconds)
                 f.write(f"file '{temp_img}'\n")
