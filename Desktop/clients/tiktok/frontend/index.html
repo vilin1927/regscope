@@ -393,7 +393,7 @@ https://vm.tiktok.com/abc..."
                     <!-- Product Photo (used for all links) -->
                     <div class="mb-4">
                         <label class="block text-gray-300 text-sm font-medium mb-2">
-                            Product Photo <span class="text-gray-500 font-normal">(used for all links)</span>
+                            Product Photos <span class="text-gray-500 font-normal">(used for all links)</span>
                         </label>
                         <div
                             @click="$refs.batchProductInput.click()"
@@ -408,30 +408,34 @@ https://vm.tiktok.com/abc..."
                                 x-ref="batchProductInput"
                                 @change="handleBatchProductSelect($event)"
                                 accept="image/*"
+                                multiple
                                 class="hidden"
                             >
-                            <template x-if="!batchData.productPreview">
-                                <div class="text-gray-400">
-                                    <svg class="w-8 h-8 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-                                    </svg>
-                                    <p class="text-sm">Click to upload product photo</p>
-                                    <p class="text-xs text-gray-500 mt-1">Same product image will be used for all links</p>
+                            <div x-show="batchData.productPreviews.length === 0" class="text-gray-400">
+                                <svg class="w-8 h-8 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                                </svg>
+                                <p class="text-sm">Click to upload or drag product photos</p>
+                                <p class="text-xs text-gray-500 mt-1">Upload multiple for photo variations</p>
+                            </div>
+                            <div x-show="batchData.productPreviews.length > 0">
+                                <div class="flex flex-wrap gap-2 justify-center">
+                                    <template x-for="(preview, index) in batchData.productPreviews" :key="index">
+                                        <div class="relative">
+                                            <img :src="preview" class="h-20 w-20 object-cover rounded-lg">
+                                            <button
+                                                type="button"
+                                                @click.stop="removeBatchImageAt(index)"
+                                                class="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 text-xs flex items-center justify-center"
+                                            >&times;</button>
+                                        </div>
+                                    </template>
                                 </div>
-                            </template>
-                            <template x-if="batchData.productPreview">
-                                <div class="relative">
-                                    <img :src="batchData.productPreview" class="max-h-32 mx-auto rounded-lg">
-                                    <button
-                                        @click.stop="clearBatchProduct()"
-                                        class="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center hover:bg-red-600"
-                                    >
-                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-                                        </svg>
-                                    </button>
-                                </div>
-                            </template>
+                                <p class="text-purple-400 text-sm mt-3">
+                                    <span x-text="batchData.productFiles.length"></span> image(s) selected
+                                    <button type="button" @click.stop="clearBatchProduct()" class="text-red-400 ml-2 hover:text-red-300">(clear all)</button>
+                                </p>
+                            </div>
                         </div>
                     </div>
 
@@ -1088,8 +1092,8 @@ INSPIRED BY JAPANESE SKIN CARE: Delivers a lifted, contoured look without silico
                     preset_id: 'gemini',
                     generateVideo: false,
                     folder_name: '',
-                    productFile: null,
-                    productPreview: null,
+                    productFiles: [],
+                    productPreviews: [],
                     product_description: ''
                 },
                 batchValidation: {
@@ -1378,37 +1382,46 @@ INSPIRED BY JAPANESE SKIN CARE: Delivers a lifted, contoured look without silico
                 },
 
                 handleBatchProductSelect(event) {
-                    const file = event.target.files[0];
-                    if (file && file.type.startsWith('image/')) {
-                        this.batchData.productFile = file;
-                        const reader = new FileReader();
-                        reader.onload = (e) => {
-                            this.batchData.productPreview = e.target.result;
-                        };
-                        reader.readAsDataURL(file);
-                    }
+                    const files = Array.from(event.target.files);
+                    files.forEach(file => {
+                        if (file && file.type.startsWith('image/')) {
+                            this.batchData.productFiles.push(file);
+                            const reader = new FileReader();
+                            reader.onload = (e) => {
+                                this.batchData.productPreviews.push(e.target.result);
+                            };
+                            reader.readAsDataURL(file);
+                        }
+                    });
                 },
 
                 handleBatchProductDrop(event) {
-                    const file = event.dataTransfer.files[0];
-                    if (file && file.type.startsWith('image/')) {
-                        this.batchData.productFile = file;
-                        const reader = new FileReader();
-                        reader.onload = (e) => {
-                            this.batchData.productPreview = e.target.result;
-                        };
-                        reader.readAsDataURL(file);
-                    }
+                    const files = Array.from(event.dataTransfer.files);
+                    files.forEach(file => {
+                        if (file && file.type.startsWith('image/')) {
+                            this.batchData.productFiles.push(file);
+                            const reader = new FileReader();
+                            reader.onload = (e) => {
+                                this.batchData.productPreviews.push(e.target.result);
+                            };
+                            reader.readAsDataURL(file);
+                        }
+                    });
+                },
+
+                removeBatchImageAt(index) {
+                    this.batchData.productFiles.splice(index, 1);
+                    this.batchData.productPreviews.splice(index, 1);
                 },
 
                 clearBatchProduct() {
-                    this.batchData.productFile = null;
-                    this.batchData.productPreview = null;
+                    this.batchData.productFiles = [];
+                    this.batchData.productPreviews = [];
                 },
 
                 canSubmitBatch() {
                     // Check for product file and description (used for all links)
-                    return this.batchData.productFile && this.batchData.product_description;
+                    return this.batchData.productFiles.length > 0 && this.batchData.product_description;
                 },
 
                 async submitBatch() {
@@ -1437,10 +1450,10 @@ INSPIRED BY JAPANESE SKIN CARE: Delivers a lifted, contoured look without silico
                         formData.append('folder_name', this.batchData.folder_name);
                     }
 
-                    // Add single product photo and description (used for all links)
-                    if (this.batchData.productFile) {
-                        formData.append('product_photo', this.batchData.productFile);
-                    }
+                    // Add product photos (used for all links)
+                    this.batchData.productFiles.forEach((file, idx) => {
+                        formData.append('product_photos', file);
+                    });
                     formData.append('product_description', this.batchData.product_description);
 
                     try {

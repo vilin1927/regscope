@@ -200,15 +200,32 @@ def create_batch_job():
         # Process each link with its product info
         created_links = []
 
-        # Check for shared product photo (frontend sends 'product_photo' for all links)
-        shared_photo_path = None
-        if 'product_photo' in request.files:
+        # Check for shared product photos (frontend sends 'product_photos' for all links)
+        shared_photo_paths = []
+
+        # Support multiple photos (new format: 'product_photos')
+        if 'product_photos' in request.files:
+            photos = request.files.getlist('product_photos')
+            for idx, photo in enumerate(photos):
+                if photo and photo.filename and allowed_file(photo.filename):
+                    filename = secure_filename(photo.filename)
+                    photo_path = os.path.join(batch_upload_dir, f'shared_{idx}_{filename}')
+                    photo.save(photo_path)
+                    shared_photo_paths.append(photo_path)
+                    log.debug(f"Saved shared product photo {idx}: {filename}")
+
+        # Backwards compatibility: single 'product_photo' field
+        if not shared_photo_paths and 'product_photo' in request.files:
             photo = request.files['product_photo']
             if photo and photo.filename and allowed_file(photo.filename):
                 filename = secure_filename(photo.filename)
-                shared_photo_path = os.path.join(batch_upload_dir, f'shared_{filename}')
-                photo.save(shared_photo_path)
+                photo_path = os.path.join(batch_upload_dir, f'shared_{filename}')
+                photo.save(photo_path)
+                shared_photo_paths.append(photo_path)
                 log.debug(f"Saved shared product photo: {filename}")
+
+        shared_photo_path = shared_photo_paths[0] if shared_photo_paths else None
+        log.info(f"Shared product photos: {len(shared_photo_paths)}")
 
         # Get shared product description
         shared_description = request.form.get('product_description', '')
@@ -230,9 +247,9 @@ def create_batch_job():
                     photo.save(product_photo_path)
                     log.debug(f"Saved product photo for link {i}: {filename}")
 
-            # Use shared photo if no per-link photo
-            if not product_photo_path and shared_photo_path:
-                product_photo_path = shared_photo_path
+            # Use shared photo if no per-link photo (cycle through multiple)
+            if not product_photo_path and shared_photo_paths:
+                product_photo_path = shared_photo_paths[i % len(shared_photo_paths)]
 
             # Check for "apply to all" case - use first photo for all (legacy)
             if not product_photo_path and i > 0:
