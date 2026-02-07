@@ -59,7 +59,7 @@ from google.genai import types
 # Import image generation function from gemini_service_v2
 # We'll call the low-level generation function directly
 from gemini_service_v2 import (
-    _generate_single_image, _get_client, _validate_image_structure,
+    _generate_single_image, _get_client, _record_api_usage, _validate_image_structure,
     IMAGE_MODEL, REQUEST_TIMEOUT
 )
 
@@ -84,7 +84,8 @@ class BatchProcessor:
 
     def __init__(self, queue: Optional[GlobalImageQueue] = None):
         self.queue = queue or get_global_queue()
-        self.client = _get_client()
+        # Note: We no longer store a single client - each image generation
+        # gets a fresh client with key rotation from ApiKeyManager
         self.running = False
         self._stop_event = threading.Event()
         self._paused = False
@@ -264,10 +265,13 @@ class BatchProcessor:
         if task.persona_reference_path and not os.path.exists(task.persona_reference_path):
             raise FileNotFoundError(f"Persona reference missing: {task.persona_reference_path}")
 
+        # Get a fresh client with key rotation
+        client, api_key = _get_client()
+
         try:
             # Call the low-level generation function
             result_path = _generate_single_image(
-                client=self.client,
+                client=client,
                 slide_type=task.slide_type,
                 scene_description=task.scene_description,
                 text_content=task.text_content,
@@ -290,6 +294,8 @@ class BatchProcessor:
                 split_config=task.split_config or None  # Split-screen configuration
             )
 
+            # Record successful API usage
+            _record_api_usage(api_key, success=True)
             return result_path
 
         except Exception as e:
@@ -297,11 +303,15 @@ class BatchProcessor:
 
             # Check for rate limit
             if '429' in error_str or 'resource_exhausted' in error_str or 'rate' in error_str:
+                # Record rate limit failure - marks this key as exhausted
+                _record_api_usage(api_key, success=False, is_rate_limit=True)
                 # Extract retry delay if present
                 match = re.search(r'retry.*?(\d+)', error_str)
                 retry_after = int(match.group(1)) if match else RATE_LIMIT_PAUSE_DEFAULT
                 raise RateLimitError(f"Rate limit exceeded, retry after {retry_after}s", retry_after)
 
+            # Record other failures
+            _record_api_usage(api_key, success=False)
             raise
 
     def _handle_rate_limit(self, error: 'RateLimitError'):

@@ -289,17 +289,53 @@ class GeminiServiceError(Exception):
 def _get_client(timeout: int = REQUEST_TIMEOUT):
     """
     Initialize and return Gemini client with timeout configuration.
+    Uses API key rotation if multiple keys are configured.
 
     Args:
         timeout: HTTP request timeout in seconds (default: REQUEST_TIMEOUT)
+
+    Returns:
+        Tuple of (client, api_key) - api_key is needed for recording usage
     """
-    api_key = os.getenv('GEMINI_API_KEY')  # Read dynamically for hot-reload support
-    if not api_key:
-        raise GeminiServiceError('GEMINI_API_KEY environment variable not set')
-    return genai.Client(
+    try:
+        # Try to use API key manager for rotation
+        from api_key_manager import get_api_key_manager, ApiKeyExhaustedError
+        manager = get_api_key_manager()
+        api_key = manager.get_available_key()
+        logger.debug(f"Using rotated API key: {api_key[:8]}...")
+    except ImportError:
+        # Fallback to single key if manager not available
+        api_key = os.getenv('GEMINI_API_KEY')
+        if not api_key:
+            raise GeminiServiceError('GEMINI_API_KEY environment variable not set')
+    except ApiKeyExhaustedError as e:
+        raise GeminiServiceError(str(e))
+
+    client = genai.Client(
         api_key=api_key,
         http_options={'timeout': timeout * 1000}  # Convert to milliseconds
     )
+    return client, api_key
+
+
+def _record_api_usage(api_key: str, success: bool = True, is_rate_limit: bool = False):
+    """
+    Record API usage for the given key.
+
+    Args:
+        api_key: The API key that was used
+        success: Whether the request succeeded
+        is_rate_limit: Whether this was a 429 rate limit error
+    """
+    try:
+        from api_key_manager import get_api_key_manager
+        manager = get_api_key_manager()
+        if success:
+            manager.record_usage(api_key)
+        else:
+            manager.record_failure(api_key, is_rate_limit=is_rate_limit)
+    except ImportError:
+        pass  # Manager not available, skip tracking
 
 
 # Cache for grounded product searches (avoid repeated API calls)
@@ -328,7 +364,7 @@ def _get_real_products_for_scene(category: str, scene_type: str = "lifestyle", v
             return _grounding_cache[cache_key]
 
     try:
-        client = _get_client(timeout=30)  # Quick timeout for grounding
+        client, _ = _get_client(timeout=30)  # Quick timeout for grounding
 
         # Add variety instruction when variation_id is provided
         variety_instruction = f"\n- Pick DIFFERENT products than typical suggestions (variation #{variation_id})" if variation_id else ""
@@ -390,7 +426,7 @@ def _get_specific_brand_for_product(generic_product: str, variation_id: str = ""
             return _grounding_cache[cache_key]
 
     try:
-        client = _get_client(timeout=20)
+        client, _ = _get_client(timeout=20)
 
         query = f"""What is ONE popular, recognizable brand of {generic_product} that's trending on TikTok?
 
@@ -442,7 +478,7 @@ def _smart_detect_brandable_product(scene_description: str) -> str:
             return _grounding_cache[cache_key]
 
     try:
-        client = _get_client(timeout=15)
+        client, _ = _get_client(timeout=15)
 
         prompt = f"""Analyze this TikTok scene description and determine if it contains a PRODUCT that would look more realistic with a specific brand name.
 
@@ -565,7 +601,7 @@ def detect_product_slide(slide_paths: list) -> dict:
             - confidence: 'high', 'medium', or 'low'
             - reason: brief description of why this slide was identified
     """
-    client = _get_client(timeout=30)
+    client, _ = _get_client(timeout=30)
 
     contents = [
         "Analyze these TikTok slideshow images. Identify which slide (if any) "
@@ -917,7 +953,7 @@ def analyze_and_plan(
     log.info(f"Starting analysis: {len(slide_paths)} slides, product: {product_description[:40]}...")
     start_time = time.time()
 
-    client = _get_client()
+    client, _ = _get_client()
     num_slides = len(slide_paths)
 
     prompt = f"""You are analyzing a viral TikTok slideshow to recreate it with a product insertion.
@@ -3526,7 +3562,7 @@ def generate_all_images(
     log = get_request_logger('gemini', request_id) if request_id else logger
     start_time = time.time()
 
-    client = _get_client()
+    client, _ = _get_client()
     os.makedirs(output_dir, exist_ok=True)
 
     new_slides = analysis['new_slides']

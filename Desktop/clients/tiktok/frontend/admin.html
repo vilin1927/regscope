@@ -143,6 +143,111 @@
                         Only filled fields will be updated. Leave empty to keep current value.
                     </p>
                 </div>
+
+                <!-- Gemini API Key Status -->
+                <div class="bg-gray-800/50 backdrop-blur rounded-xl p-6 shadow-xl mt-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-xl font-semibold">Gemini API Key Status</h2>
+                        <div class="flex items-center space-x-2">
+                            <button
+                                @click="resetApiKeyCounters()"
+                                class="text-sm px-3 py-1 bg-yellow-600 hover:bg-yellow-700 rounded"
+                                :disabled="resettingKeys"
+                            >
+                                <span x-show="!resettingKeys">Reset Counters</span>
+                                <span x-show="resettingKeys">Resetting...</span>
+                            </button>
+                            <button @click="fetchApiKeyStatus()" class="text-sm px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded">
+                                Refresh
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Loading State -->
+                    <div x-show="!apiKeyStatus" class="text-center text-gray-500 py-4">
+                        Loading API key status...
+                    </div>
+
+                    <!-- Summary Stats -->
+                    <div x-show="apiKeyStatus" class="mb-6">
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+                            <div class="bg-gray-700/50 rounded-lg p-3 text-center">
+                                <div class="text-2xl font-bold text-pink-400" x-text="apiKeyStatus?.total_keys || 0"></div>
+                                <div class="text-xs text-gray-400">Total Keys</div>
+                            </div>
+                            <div class="bg-gray-700/50 rounded-lg p-3 text-center">
+                                <div class="text-2xl font-bold"
+                                     :class="apiKeyStatus?.available_keys > 0 ? 'text-green-400' : 'text-red-400'"
+                                     x-text="apiKeyStatus?.available_keys || 0"></div>
+                                <div class="text-xs text-gray-400">Available</div>
+                            </div>
+                            <div class="bg-gray-700/50 rounded-lg p-3 text-center">
+                                <div class="text-2xl font-bold text-blue-400" x-text="apiKeyStatus?.total_rpm_available || 0"></div>
+                                <div class="text-xs text-gray-400">RPM Available</div>
+                            </div>
+                            <div class="bg-gray-700/50 rounded-lg p-3 text-center">
+                                <div class="text-2xl font-bold text-purple-400" x-text="apiKeyStatus?.total_daily_available || 0"></div>
+                                <div class="text-xs text-gray-400">Daily Available</div>
+                            </div>
+                        </div>
+
+                        <!-- Daily Reset Timer -->
+                        <div class="text-center text-sm text-gray-400 mb-4">
+                            Daily quota resets in: <span class="text-yellow-400 font-mono" x-text="formatResetTime(apiKeyStatus?.seconds_until_daily_reset)"></span>
+                        </div>
+                    </div>
+
+                    <!-- Individual Key Cards -->
+                    <div x-show="apiKeyStatus" class="space-y-3">
+                        <template x-for="(key, index) in (apiKeyStatus?.keys || [])" :key="key.key_id">
+                            <div class="bg-gray-700/30 rounded-lg p-4 border"
+                                 :class="key.is_available ? 'border-green-500/30' : 'border-red-500/30'">
+                                <div class="flex items-center justify-between mb-3">
+                                    <div class="flex items-center space-x-3">
+                                        <span class="text-sm font-medium text-gray-300">Key #<span x-text="index + 1"></span></span>
+                                        <span class="font-mono text-xs text-gray-500" x-text="key.key_id + '...'"></span>
+                                        <span class="px-2 py-0.5 rounded text-xs"
+                                              :class="key.is_available ? 'bg-green-500/30 text-green-400' : 'bg-red-500/30 text-red-400'"
+                                              x-text="key.is_available ? 'Available' : 'Exhausted'"></span>
+                                    </div>
+                                </div>
+
+                                <!-- RPM Progress Bar -->
+                                <div class="mb-2">
+                                    <div class="flex justify-between text-xs text-gray-400 mb-1">
+                                        <span>RPM (per minute)</span>
+                                        <span x-text="key.rpm_used + '/' + key.rpm_limit"></span>
+                                    </div>
+                                    <div class="w-full bg-gray-600 rounded-full h-2">
+                                        <div class="h-2 rounded-full transition-all duration-300"
+                                             :class="key.rpm_used >= key.rpm_limit ? 'bg-red-500' : (key.rpm_used > key.rpm_limit * 0.7 ? 'bg-yellow-500' : 'bg-green-500')"
+                                             :style="'width: ' + Math.min(100, (key.rpm_used / key.rpm_limit) * 100) + '%'">
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Daily Progress Bar -->
+                                <div>
+                                    <div class="flex justify-between text-xs text-gray-400 mb-1">
+                                        <span>Daily Quota</span>
+                                        <span x-text="key.daily_used + '/' + key.daily_limit"></span>
+                                    </div>
+                                    <div class="w-full bg-gray-600 rounded-full h-2">
+                                        <div class="h-2 rounded-full transition-all duration-300"
+                                             :class="key.daily_used >= key.daily_limit ? 'bg-red-500' : (key.daily_used > key.daily_limit * 0.7 ? 'bg-yellow-500' : 'bg-blue-500')"
+                                             :style="'width: ' + Math.min(100, (key.daily_used / key.daily_limit) * 100) + '%'">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+
+                    <!-- No Keys State -->
+                    <div x-show="apiKeyStatus && apiKeyStatus.keys && apiKeyStatus.keys.length === 0" class="text-center text-gray-500 py-4">
+                        No API keys configured. Add keys to GEMINI_API_KEYS environment variable.
+                    </div>
+                </div>
             </div>
 
             <!-- ==================== JOB QUEUE PAGE ==================== -->
@@ -624,6 +729,10 @@
                 photoMessage: '',
                 photoMessageType: 'success',
 
+                // API Key Status state
+                apiKeyStatus: null,
+                resettingKeys: false,
+
                 init() {
                     const storedToken = localStorage.getItem('adminToken');
                     if (storedToken) {
@@ -644,6 +753,7 @@
                             this.fetchQueueStats();
                             this.fetchVideoJobs();
                             this.fetchProductPhotos();
+                            this.fetchApiKeyStatus();
                         } else {
                             this.clearToken();
                         }
@@ -681,6 +791,7 @@
                             this.fetchQueueStats();
                             this.fetchVideoJobs();
                             this.fetchProductPhotos();
+                            this.fetchApiKeyStatus();
                         } else {
                             this.loginError = data.error || 'Login failed';
                         }
@@ -831,6 +942,53 @@
                     if (!dateStr) return '';
                     const date = new Date(dateStr);
                     return date.toLocaleString();
+                },
+
+                formatResetTime(seconds) {
+                    if (!seconds || seconds <= 0) return '0h 0m';
+                    const hours = Math.floor(seconds / 3600);
+                    const minutes = Math.floor((seconds % 3600) / 60);
+                    return `${hours}h ${minutes}m`;
+                },
+
+                // API Key Status methods
+                async fetchApiKeyStatus() {
+                    try {
+                        const res = await fetch(`${API_BASE}/api/admin/api-keys/status`, {
+                            headers: { 'X-Admin-Token': this.token }
+                        });
+                        if (res.ok) {
+                            this.apiKeyStatus = await res.json();
+                        }
+                    } catch (e) {
+                        console.error('Failed to fetch API key status:', e);
+                    }
+                },
+
+                async resetApiKeyCounters() {
+                    if (!confirm('Reset all API key usage counters? This is useful for testing but may cause rate limit issues if keys are actually exhausted.')) return;
+
+                    this.resettingKeys = true;
+                    try {
+                        const res = await fetch(`${API_BASE}/api/admin/api-keys/reset`, {
+                            method: 'POST',
+                            headers: { 'X-Admin-Token': this.token }
+                        });
+                        if (res.ok) {
+                            this.message = 'API key counters reset successfully';
+                            this.messageType = 'success';
+                            this.fetchApiKeyStatus();
+                        } else {
+                            const data = await res.json();
+                            this.message = data.error || 'Reset failed';
+                            this.messageType = 'error';
+                        }
+                    } catch (e) {
+                        this.message = 'Connection error during reset';
+                        this.messageType = 'error';
+                    }
+                    this.resettingKeys = false;
+                    setTimeout(() => { this.message = ''; }, 4000);
                 },
 
                 // Video Jobs methods

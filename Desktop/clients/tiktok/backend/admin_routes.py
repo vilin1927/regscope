@@ -494,3 +494,99 @@ def delete_product_photo(category, filename):
     except Exception as e:
         logger.error(f"Failed to delete product photo: {e}")
         return jsonify({'error': str(e)}), 500
+
+
+# ============ API Key Rotation Status ============
+
+@admin_bp.route('/api-keys/status', methods=['GET'])
+@require_auth
+def get_api_keys_status():
+    """
+    Get status of all Gemini API keys with usage stats.
+
+    Returns:
+    {
+        "total_keys": 5,
+        "available_keys": 4,
+        "total_rpm_available": 65,
+        "total_daily_available": 980,
+        "seconds_until_daily_reset": 28800,
+        "keys": [
+            {
+                "key_id": "AIzaSyBY",
+                "rpm_used": 5,
+                "rpm_limit": 18,
+                "daily_used": 50,
+                "daily_limit": 250,
+                "is_available": true
+            },
+            ...
+        ]
+    }
+    """
+    try:
+        from api_key_manager import get_api_key_manager
+        manager = get_api_key_manager()
+        summary = manager.get_summary()
+        return jsonify(summary)
+    except ImportError:
+        # Manager not available, return single-key status
+        gemini_key = os.getenv('GEMINI_API_KEY', '')
+        return jsonify({
+            'total_keys': 1 if gemini_key else 0,
+            'available_keys': 1 if gemini_key else 0,
+            'total_rpm_available': 18 if gemini_key else 0,
+            'total_daily_available': 250 if gemini_key else 0,
+            'seconds_until_daily_reset': 0,
+            'keys': [{
+                'key_id': mask_key(gemini_key) if gemini_key else 'N/A',
+                'rpm_used': 0,
+                'rpm_limit': 18,
+                'daily_used': 0,
+                'daily_limit': 250,
+                'is_available': bool(gemini_key)
+            }] if gemini_key else []
+        })
+    except Exception as e:
+        logger.error(f"Failed to get API keys status: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@admin_bp.route('/api-keys/reset', methods=['POST'])
+@require_auth
+def reset_api_keys():
+    """
+    Reset usage counters for all API keys (or a specific key).
+
+    Expected JSON (optional):
+    - key_id: Specific key ID to reset (first 8 chars). If not provided, resets all.
+
+    Returns:
+    - status: "reset"
+    - message: Description
+    """
+    try:
+        from api_key_manager import get_api_key_manager
+        manager = get_api_key_manager()
+
+        data = request.get_json() or {}
+        key_id = data.get('key_id')
+
+        if key_id:
+            manager.reset_key(key_id)
+            return jsonify({
+                'status': 'reset',
+                'message': f'Reset counters for key {key_id}'
+            })
+        else:
+            manager.reset_all_keys()
+            return jsonify({
+                'status': 'reset',
+                'message': 'Reset counters for all keys'
+            })
+
+    except ImportError:
+        return jsonify({'error': 'API key manager not available'}), 500
+    except Exception as e:
+        logger.error(f"Failed to reset API keys: {e}")
+        return jsonify({'error': str(e)}), 500
