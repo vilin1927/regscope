@@ -953,7 +953,7 @@ def analyze_and_plan(
     log.info(f"Starting analysis: {len(slide_paths)} slides, product: {product_description[:40]}...")
     start_time = time.time()
 
-    client, _ = _get_client()
+    client, api_key = _get_client()
     num_slides = len(slide_paths)
 
     prompt = f"""You are analyzing a viral TikTok slideshow to recreate it with a product insertion.
@@ -1946,6 +1946,9 @@ CRITICAL RULES:
         log.error(f"Failed to parse analysis JSON: {e}")
         raise GeminiServiceError(f'Failed to parse analysis JSON: {e}')
     except Exception as e:
+        # Record rate limit failures so the key manager can skip this key
+        is_rate_limit = '429' in str(e) or 'RESOURCE_EXHAUSTED' in str(e)
+        _record_api_usage(api_key, success=False, is_rate_limit=is_rate_limit)
         log.error(f"Analysis failed: {str(e)}", exc_info=True)
         raise GeminiServiceError(f'Analysis failed: {str(e)}')
 
