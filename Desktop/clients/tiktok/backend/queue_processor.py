@@ -367,6 +367,45 @@ class BatchProcessor:
             except:
                 pass
 
+        # CRITICAL: Clean pending queue for tasks with missing files or too old
+        # This prevents deadlocks where tasks wait forever for deleted temp files
+        from datetime import datetime
+        pending_tasks = self.queue.redis.zrange(self.queue.PENDING_KEY, 0, -1)
+        for task_id in pending_tasks:
+            task_data_key = f"{self.queue.TASK_DATA_PREFIX}{task_id}"
+            task_data = self.queue.redis.hgetall(task_data_key)
+
+            if not task_data:
+                self.queue.redis.zrem(self.queue.PENDING_KEY, task_id)
+                cleaned += 1
+                logger.warning(f"Removed orphaned pending task (no data): {task_id}")
+                continue
+
+            # Check if reference files exist
+            ref_path = task_data.get('reference_image_path', '')
+            if ref_path and not os.path.exists(ref_path):
+                self.queue.redis.zrem(self.queue.PENDING_KEY, task_id)
+                self.queue.redis.delete(task_data_key)
+                self.queue.redis.sadd(self.queue.FAILED_KEY, task_id)
+                cleaned += 1
+                logger.warning(f"Removed pending task with missing file: {task_id}")
+                continue
+
+            # Check if task is too old (older than 2 hours = likely orphaned)
+            created_at = task_data.get('created_at', '')
+            if created_at:
+                try:
+                    create_time = datetime.fromisoformat(created_at)
+                    age_seconds = (datetime.utcnow() - create_time).total_seconds()
+                    if age_seconds > 7200:  # 2 hours
+                        self.queue.redis.zrem(self.queue.PENDING_KEY, task_id)
+                        self.queue.redis.delete(task_data_key)
+                        self.queue.redis.sadd(self.queue.FAILED_KEY, task_id)
+                        cleaned += 1
+                        logger.warning(f"Removed stale pending task (age {age_seconds/3600:.1f}h): {task_id}")
+                except:
+                    pass
+
         return cleaned
 
     def get_stats(self) -> dict:
