@@ -26,8 +26,10 @@ REDIS_PORT = int(os.getenv('REDIS_PORT', '6379'))
 REDIS_DB = int(os.getenv('REDIS_QUEUE_DB', '1'))  # Use separate DB from Celery
 
 # Queue configuration
-BATCH_SIZE = 18  # Images per batch (matches 20 RPM limit with margin)
-BATCH_INTERVAL = 60  # Seconds between batches
+# With 5 API keys rotating at 18 RPM each = 90 RPM total capacity
+# Process 15 at a time with staggered delays to avoid burst rate limits
+BATCH_SIZE = 15  # Images per batch (conservative for 5-key rotation)
+BATCH_INTERVAL = 20  # Seconds between batches (faster with more keys)
 MAX_RETRIES = 3  # Max retry attempts before permanent failure
 
 

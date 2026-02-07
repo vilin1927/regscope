@@ -197,13 +197,17 @@ class BatchProcessor:
         succeeded = 0
         failed = 0
 
-        # Submit all tasks to thread pool
+        # Submit tasks to thread pool with staggered delays to avoid rate limit bursts
+        # With 5 API keys at 18 RPM each, we can do ~1.5 requests/second sustained
+        STAGGER_DELAY = 0.5  # 500ms between task submissions
+
         with ThreadPoolExecutor(max_workers=BATCH_SIZE) as executor:
-            # Submit all tasks
-            futures = {
-                executor.submit(self._generate_image, task): task
-                for task in tasks
-            }
+            # Submit tasks with delay between each to stagger API calls
+            futures = {}
+            for i, task in enumerate(tasks):
+                futures[executor.submit(self._generate_image, task)] = task
+                if i < len(tasks) - 1:  # Don't sleep after last task
+                    time.sleep(STAGGER_DELAY)
 
             # Process results as they complete (no timeout - strict 60s timer handles pacing)
             for future in as_completed(futures):
