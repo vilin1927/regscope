@@ -1955,6 +1955,7 @@ CRITICAL RULES:
 
 def _generate_single_image(
     client,
+    api_key: str,
     slide_type: str,
     scene_description: str,
     text_content: str,
@@ -3448,6 +3449,8 @@ If [PRODUCT_IMAGE] shows face patches, any patches in scene must look IDENTICAL.
                     # Validate image structure
                     is_valid, issues = _validate_image_structure(output_path, expected_ratio="3:4")
                     if is_valid:
+                        # Record successful API usage
+                        _record_api_usage(api_key, success=True)
                         return output_path
                     else:
                         # Validation failed - log and retry
@@ -3497,12 +3500,19 @@ If [PRODUCT_IMAGE] shows face patches, any patches in scene must look IDENTICAL.
 
             # Check for rate limit error and extract retry delay
             if '429' in str(e) or 'RESOURCE_EXHAUSTED' in str(e):
+                # Record rate limit failure so key manager skips this key
+                _record_api_usage(api_key, success=False, is_rate_limit=True)
+
+                # Get NEW client with different API key
+                client, api_key = _get_client()
+                logger.info(f"Switched to new API key after rate limit: {api_key[:8]}...")
+
                 # Try to extract retry delay from error (e.g., "retry in 51s")
                 match = re.search(r'retry in (\d+\.?\d*)s', error_str)
                 if match:
                     wait_time = float(match.group(1)) + 5  # Add buffer
                 else:
-                    wait_time = 60  # Default 60s for rate limits
+                    wait_time = 10  # Shorter wait since we have a fresh key
                 logger.warning(f"Rate limited (429), waiting {wait_time:.0f}s before retry {attempt + 2}/{MAX_RETRIES}")
             else:
                 wait_time = (2 ** attempt) + 1  # Normal exponential backoff
@@ -3565,7 +3575,7 @@ def generate_all_images(
     log = get_request_logger('gemini', request_id) if request_id else logger
     start_time = time.time()
 
-    client, _ = _get_client()
+    client, api_key = _get_client()
     os.makedirs(output_dir, exist_ok=True)
 
     new_slides = analysis['new_slides']
@@ -3785,6 +3795,7 @@ def generate_all_images(
             try:
                 return task['task_id'], _generate_single_image(
                     client,
+                    api_key,
                     task['slide_type'],
                     task['scene_description'],
                     task['text_content'],
