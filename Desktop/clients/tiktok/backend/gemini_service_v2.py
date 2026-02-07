@@ -39,10 +39,10 @@ from google import genai
 from google.genai import types
 from google.genai.types import HarmCategory, HarmBlockThreshold, SafetySetting
 
-# Model names - using stable 2.5 models (preview models have restricted quotas)
-ANALYSIS_MODEL = 'gemini-2.5-pro'
-IMAGE_MODEL = 'gemini-2.5-flash-image'  # Stable image generation model
-GROUNDING_MODEL = 'gemini-2.5-flash'  # Fast model for grounding searches
+# Model names - ALWAYS use latest gemini-3 models, never downgrade
+ANALYSIS_MODEL = 'gemini-3-pro-preview'
+IMAGE_MODEL = 'gemini-3-pro-image-preview'
+GROUNDING_MODEL = 'gemini-3-flash-preview'
 
 # Generation config
 MAX_RETRIES = 5       # Retries for direct generation mode
