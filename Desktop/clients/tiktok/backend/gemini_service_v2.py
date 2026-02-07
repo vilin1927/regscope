@@ -364,7 +364,7 @@ def _get_real_products_for_scene(category: str, scene_type: str = "lifestyle", v
             return _grounding_cache[cache_key]
 
     try:
-        client, _ = _get_client(timeout=30)  # Quick timeout for grounding
+        client, api_key = _get_client(timeout=30)  # Quick timeout for grounding
 
         # Add variety instruction when variation_id is provided
         variety_instruction = f"\n- Pick DIFFERENT products than typical suggestions (variation #{variation_id})" if variation_id else ""
@@ -393,6 +393,9 @@ Just the product names, nothing else."""
 
         products = response.text.strip()
 
+        # Record successful API usage
+        _record_api_usage(api_key, success=True)
+
         # Cache the result
         with _grounding_cache_lock:
             _grounding_cache[cache_key] = products
@@ -401,7 +404,12 @@ Just the product names, nothing else."""
         return products
 
     except Exception as e:
-        logger.warning(f"Grounding search failed for {cache_key}: {e}")
+        # Check for rate limit and record failure
+        if '429' in str(e) or 'RESOURCE_EXHAUSTED' in str(e):
+            _record_api_usage(api_key, success=False, is_rate_limit=True)
+            logger.warning(f"Grounding search rate limited for {cache_key}, key {api_key[:8]} marked exhausted")
+        else:
+            logger.warning(f"Grounding search failed for {cache_key}: {e}")
         # Return empty - scene will generate without specific products
         return ""
 
@@ -426,7 +434,7 @@ def _get_specific_brand_for_product(generic_product: str, variation_id: str = ""
             return _grounding_cache[cache_key]
 
     try:
-        client, _ = _get_client(timeout=20)
+        client, api_key = _get_client(timeout=20)
 
         query = f"""What is ONE popular, recognizable brand of {generic_product} that's trending on TikTok?
 
@@ -448,6 +456,9 @@ Just the single brand + product name, nothing else. Pick something visually reco
 
         brand = response.text.strip().strip('"').strip("'")
 
+        # Record successful API usage
+        _record_api_usage(api_key, success=True)
+
         # Cache the result
         with _grounding_cache_lock:
             _grounding_cache[cache_key] = brand
@@ -456,7 +467,12 @@ Just the single brand + product name, nothing else. Pick something visually reco
         return brand
 
     except Exception as e:
-        logger.warning(f"Brand grounding failed for {generic_product}: {e}")
+        # Check for rate limit and record failure
+        if '429' in str(e) or 'RESOURCE_EXHAUSTED' in str(e):
+            _record_api_usage(api_key, success=False, is_rate_limit=True)
+            logger.warning(f"Brand grounding rate limited for {generic_product}, key {api_key[:8]} marked exhausted")
+        else:
+            logger.warning(f"Brand grounding failed for {generic_product}: {e}")
         return ""
 
 
@@ -478,7 +494,7 @@ def _smart_detect_brandable_product(scene_description: str) -> str:
             return _grounding_cache[cache_key]
 
     try:
-        client, _ = _get_client(timeout=15)
+        client, api_key = _get_client(timeout=15)
 
         prompt = f"""Analyze this TikTok scene description and determine if it contains a PRODUCT that would look more realistic with a specific brand name.
 
@@ -517,6 +533,9 @@ Your response (product name or NONE):"""
 
         result = response.text.strip().lower()
 
+        # Record successful API usage
+        _record_api_usage(api_key, success=True)
+
         # Cache result
         with _grounding_cache_lock:
             _grounding_cache[cache_key] = result if result != "none" else ""
@@ -528,7 +547,12 @@ Your response (product name or NONE):"""
         return ""
 
     except Exception as e:
-        logger.warning(f"Smart product detection failed: {e}")
+        # Check for rate limit and record failure
+        if '429' in str(e) or 'RESOURCE_EXHAUSTED' in str(e):
+            _record_api_usage(api_key, success=False, is_rate_limit=True)
+            logger.warning(f"Smart product detection rate limited, key {api_key[:8]} marked exhausted")
+        else:
+            logger.warning(f"Smart product detection failed: {e}")
         return ""
 
 
@@ -601,7 +625,7 @@ def detect_product_slide(slide_paths: list) -> dict:
             - confidence: 'high', 'medium', or 'low'
             - reason: brief description of why this slide was identified
     """
-    client, _ = _get_client(timeout=30)
+    client, api_key = _get_client(timeout=30)
 
     contents = [
         "Analyze these TikTok slideshow images. Identify which slide (if any) "
@@ -644,15 +668,26 @@ def detect_product_slide(slide_paths: list) -> dict:
                 response_text = response_text[:-3].strip()
 
         result = json.loads(response_text)
+
+        # Record successful API usage
+        _record_api_usage(api_key, success=True)
+
         logger.info(f"Product slide detection: slide={result.get('slide_number')}, "
                      f"confidence={result.get('confidence')}, reason={result.get('reason')}")
         return result
 
     except json.JSONDecodeError as e:
+        # JSON parse error is not a rate limit - still record success for the API call
+        _record_api_usage(api_key, success=True)
         logger.warning(f"Product slide detection: failed to parse response: {response.text[:200]}")
         return {'slide_number': None, 'confidence': None, 'reason': f'JSON parse error: {str(e)}'}
     except Exception as e:
-        logger.warning(f"Product slide detection failed: {str(e)}")
+        # Check for rate limit and record failure
+        if '429' in str(e) or 'RESOURCE_EXHAUSTED' in str(e):
+            _record_api_usage(api_key, success=False, is_rate_limit=True)
+            logger.warning(f"Product slide detection rate limited, key {api_key[:8]} marked exhausted")
+        else:
+            logger.warning(f"Product slide detection failed: {str(e)}")
         return {'slide_number': None, 'confidence': None, 'reason': f'Detection error: {str(e)}'}
 
 
