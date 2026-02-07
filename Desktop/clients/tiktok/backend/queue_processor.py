@@ -9,11 +9,38 @@ import signal
 import threading
 import re
 import json
+import gc
 from concurrent.futures import ThreadPoolExecutor, as_completed, TimeoutError
 from typing import List, Optional
 from dotenv import load_dotenv
 
 load_dotenv()
+
+
+def get_memory_usage_mb() -> float:
+    """Get current process memory usage in MB (RSS - Resident Set Size)."""
+    try:
+        # Read from /proc/self/status (Linux)
+        with open('/proc/self/status', 'r') as f:
+            for line in f:
+                if line.startswith('VmRSS:'):
+                    # Format: "VmRSS:    123456 kB"
+                    parts = line.split()
+                    return int(parts[1]) / 1024  # Convert kB to MB
+    except:
+        pass
+
+    # Fallback: use resource module
+    try:
+        import resource
+        # Returns bytes on Linux, need to convert
+        usage = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+        # On Linux ru_maxrss is in KB, on macOS it's in bytes
+        if sys.platform == 'darwin':
+            return usage / (1024 * 1024)
+        return usage / 1024
+    except:
+        return 0.0
 
 from logging_config import setup_logging, get_logger
 
@@ -117,14 +144,37 @@ class BatchProcessor:
             tasks = self.queue.get_batch(BATCH_SIZE)
 
             if tasks:
-                logger.info(f"Processing batch #{self.batches_processed + 1}: {len(tasks)} tasks")
+                # Log memory before processing
+                mem_before = get_memory_usage_mb()
+                queue_stats = self.queue.get_queue_stats()
+                logger.info(f"Processing batch #{self.batches_processed + 1}: {len(tasks)} tasks | "
+                           f"Memory: {mem_before:.0f}MB | "
+                           f"Queue: {queue_stats['pending']} pending, {queue_stats['processing']} processing")
+
                 self._process_batch(tasks)
                 self.batches_processed += 1
+
+                # Log memory after processing
+                mem_after = get_memory_usage_mb()
+                mem_delta = mem_after - mem_before
+                logger.info(f"Batch #{self.batches_processed} complete | "
+                           f"Memory: {mem_after:.0f}MB ({mem_delta:+.0f}MB) | "
+                           f"Generated: {self.images_generated}, Failed: {self.images_failed}")
+
+                # Force garbage collection if memory grew significantly
+                if mem_delta > 100:  # More than 100MB growth
+                    gc.collect()
+                    mem_after_gc = get_memory_usage_mb()
+                    logger.info(f"GC triggered: {mem_after:.0f}MB -> {mem_after_gc:.0f}MB")
 
                 # Run periodic cleanup
                 self._run_periodic_cleanup()
             else:
-                logger.debug("No tasks in queue, waiting...")
+                # Log memory stats even when idle (every 5 minutes worth of batches)
+                if self.batches_processed % 5 == 0:
+                    mem = get_memory_usage_mb()
+                    queue_stats = self.queue.get_queue_stats()
+                    logger.debug(f"Idle | Memory: {mem:.0f}MB | Queue: {queue_stats['pending']} pending")
 
             # Calculate time to wait until next batch
             elapsed = time.time() - batch_start
