@@ -118,6 +118,16 @@ def process_link(self, batch_link_id: str, parent_drive_folder_id: str):
     logger.info(f"[Link {batch_link_id[:8]}] Starting link processing")
 
     try:
+        # CRITICAL FIX: Cancel any stale queue tasks from previous retry attempts
+        # When Celery retries a task, old queue tasks may still exist pointing to
+        # deleted temp directories. Cancel them before submitting new tasks.
+        if USE_QUEUE_MODE:
+            from image_queue import get_global_queue
+            queue = get_global_queue()
+            cancelled = queue.cancel_job(batch_link_id)
+            if cancelled.get('cancelled', 0) > 0:
+                logger.info(f"[Link {batch_link_id[:8]}] Cancelled {cancelled['cancelled']} stale queue tasks from previous attempt")
+
         # Get link info
         link = get_batch_link(batch_link_id)
         if not link:

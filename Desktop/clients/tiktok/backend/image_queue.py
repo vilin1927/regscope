@@ -360,6 +360,11 @@ class GlobalImageQueue:
             # Permanent failure
             self.redis.sadd(self.FAILED_KEY, task_id)
             logger.error(f"Task {task_id} permanently failed after {MAX_RETRIES} attempts: {error}")
+
+            # CRITICAL: If this was a persona_first task, fail all dependent tasks
+            # This prevents deadlock where dependents wait forever for a failed dependency
+            if task.dependency_type == "persona_first":
+                self._fail_dependent_tasks(task.dependency_group, f"Dependency {task_id} failed: {error}")
         else:
             # Add to retry queue (will be picked up in next batch)
             score = time.time()
@@ -538,6 +543,50 @@ class GlobalImageQueue:
 
         status_key = f"{self.JOB_STATUS_PREFIX}{job_id}"
         self.redis.hset(status_key, mapping={k: str(v) for k, v in counts.items()})
+
+    def _fail_dependent_tasks(self, dependency_group: str, error: str):
+        """
+        Fail all tasks that depend on a failed persona_first task.
+        Prevents deadlock where dependents wait forever for a failed dependency.
+
+        Args:
+            dependency_group: The dependency group (e.g., "job123_persona")
+            error: Error message to assign to failed tasks
+        """
+        failed_count = 0
+
+        # Find all pending tasks in this dependency group
+        pending_ids = self.redis.zrange(self.PENDING_KEY, 0, -1)
+        for task_id in pending_ids:
+            task = self._get_task(task_id)
+            if task and task.dependency_group == dependency_group and task.dependency_type == "persona_dependent":
+                # Move from pending to failed
+                self.redis.zrem(self.PENDING_KEY, task_id)
+                self.redis.sadd(self.FAILED_KEY, task_id)
+                task.last_error = error
+                self._save_task(task)
+                failed_count += 1
+
+        # Also check retry queue
+        retry_ids = self.redis.zrange(self.RETRY_KEY, 0, -1)
+        for task_id in retry_ids:
+            task = self._get_task(task_id)
+            if task and task.dependency_group == dependency_group and task.dependency_type == "persona_dependent":
+                self.redis.zrem(self.RETRY_KEY, task_id)
+                self.redis.sadd(self.FAILED_KEY, task_id)
+                task.last_error = error
+                self._save_task(task)
+                failed_count += 1
+
+        if failed_count > 0:
+            logger.warning(f"Failed {failed_count} dependent tasks for group {dependency_group}")
+
+            # Update job status for affected jobs
+            for task_id in pending_ids + retry_ids:
+                task = self._get_task(task_id)
+                if task and task.dependency_group == dependency_group:
+                    self._update_job_status(task.job_id)
+                    break  # Only need to update once per job
 
     def cleanup_job(self, job_id: str):
         """
