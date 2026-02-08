@@ -3539,22 +3539,11 @@ If [PRODUCT_IMAGE] shows face patches, any patches in scene must look IDENTICAL.
                         time.sleep(2)  # Brief pause before retry
                         continue  # Retry with aggressive sanitization
 
-            # Check for rate limit error and extract retry delay
+            # Check for rate limit error — re-raise immediately for outer loop to handle key rotation
             if '429' in str(e) or 'RESOURCE_EXHAUSTED' in str(e):
-                # Record rate limit failure for image model so key manager skips this key
-                _record_api_usage(api_key, success=False, is_rate_limit=True, model_type='image')
-
-                # Get NEW client with different API key
-                client, api_key = _get_client()
-                logger.info(f"Switched to new API key after rate limit: {api_key[:8]}...")
-
-                # Try to extract retry delay from error (e.g., "retry in 51s")
-                match = re.search(r'retry in (\d+\.?\d*)s', error_str)
-                if match:
-                    wait_time = float(match.group(1)) + 5  # Add buffer
-                else:
-                    wait_time = 10  # Shorter wait since we have a fresh key
-                logger.warning(f"Rate limited (429), waiting {wait_time:.0f}s before retry {attempt + 2}/{MAX_RETRIES}")
+                # Don't retry here — let queue_processor._generate_image() rotate to next key
+                # Inner retry loop should only handle safety blocks and validation retries
+                raise
             else:
                 wait_time = (2 ** attempt) + 1  # Normal exponential backoff
 
