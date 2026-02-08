@@ -39,10 +39,15 @@ from google import genai
 from google.genai import types
 from google.genai.types import HarmCategory, HarmBlockThreshold, SafetySetting
 
-# Model names - ALWAYS use latest gemini-3 models, never downgrade
-ANALYSIS_MODEL = 'gemini-3-pro-preview'
+# Model names - 2 models only for simplicity and rate limit management
+# TEXT_MODEL: All text analysis, grounding, scene generation (high capacity: 1000 RPM, 10K RPD)
+# IMAGE_MODEL: Image generation only (low capacity: 20 RPM, 250 RPD)
+TEXT_MODEL = 'gemini-3-flash-preview'
 IMAGE_MODEL = 'gemini-3-pro-image-preview'
-GROUNDING_MODEL = 'gemini-3-flash-preview'
+
+# Backwards compatibility aliases (deprecated, use TEXT_MODEL instead)
+ANALYSIS_MODEL = TEXT_MODEL
+GROUNDING_MODEL = TEXT_MODEL
 
 # Generation config
 MAX_RETRIES = 5       # Retries for direct generation mode
@@ -318,22 +323,23 @@ def _get_client(timeout: int = REQUEST_TIMEOUT):
     return client, api_key
 
 
-def _record_api_usage(api_key: str, success: bool = True, is_rate_limit: bool = False):
+def _record_api_usage(api_key: str, success: bool = True, is_rate_limit: bool = False, model_type: str = 'text'):
     """
-    Record API usage for the given key.
+    Record API usage for the given key and model type.
 
     Args:
         api_key: The API key that was used
         success: Whether the request succeeded
         is_rate_limit: Whether this was a 429 rate limit error
+        model_type: 'text' or 'image' (default: 'text' for analysis calls)
     """
     try:
         from api_key_manager import get_api_key_manager
         manager = get_api_key_manager()
         if success:
-            manager.record_usage(api_key)
+            manager.record_usage(api_key, model_type=model_type)
         else:
-            manager.record_failure(api_key, is_rate_limit=is_rate_limit)
+            manager.record_failure(api_key, model_type=model_type, is_rate_limit=is_rate_limit)
     except ImportError:
         pass  # Manager not available, skip tracking
 
@@ -383,7 +389,7 @@ Focus on products that are:
 Just the product names, nothing else."""
 
         response = client.models.generate_content(
-            model=GROUNDING_MODEL,
+            model=TEXT_MODEL,
             contents=query,
             config=types.GenerateContentConfig(
                 tools=[types.Tool(google_search=types.GoogleSearch())],
@@ -446,7 +452,7 @@ Return ONLY the brand name + product, like:
 Just the single brand + product name, nothing else. Pick something visually recognizable."""
 
         response = client.models.generate_content(
-            model=GROUNDING_MODEL,
+            model=TEXT_MODEL,
             contents=query,
             config=types.GenerateContentConfig(
                 tools=[types.Tool(google_search=types.GoogleSearch())],
@@ -526,7 +532,7 @@ Examples:
 Your response (product name or NONE):"""
 
         response = client.models.generate_content(
-            model=GROUNDING_MODEL,
+            model=TEXT_MODEL,
             contents=prompt,
             config=types.GenerateContentConfig(temperature=0.1)
         )
@@ -652,7 +658,7 @@ def detect_product_slide(slide_paths: list) -> dict:
 
     try:
         response = client.models.generate_content(
-            model=GROUNDING_MODEL,
+            model=TEXT_MODEL,
             contents=contents,
             config=types.GenerateContentConfig(
                 safety_settings=SAFETY_SETTINGS,
@@ -1918,9 +1924,9 @@ CRITICAL RULES:
         ))
 
     try:
-        log.debug(f"Calling {ANALYSIS_MODEL} with {len(contents)} content parts")
+        log.debug(f"Calling {TEXT_MODEL} with {len(contents)} content parts")
         response = client.models.generate_content(
-            model=ANALYSIS_MODEL,
+            model=TEXT_MODEL,
             contents=contents,
             config=types.GenerateContentConfig(
                 safety_settings=SAFETY_SETTINGS  # Allow benign lifestyle content analysis
@@ -3484,8 +3490,8 @@ If [PRODUCT_IMAGE] shows face patches, any patches in scene must look IDENTICAL.
                     # Validate image structure
                     is_valid, issues = _validate_image_structure(output_path, expected_ratio="3:4")
                     if is_valid:
-                        # Record successful API usage
-                        _record_api_usage(api_key, success=True)
+                        # Record successful API usage for image model
+                        _record_api_usage(api_key, success=True, model_type='image')
                         return output_path
                     else:
                         # Validation failed - log and retry
@@ -3535,8 +3541,8 @@ If [PRODUCT_IMAGE] shows face patches, any patches in scene must look IDENTICAL.
 
             # Check for rate limit error and extract retry delay
             if '429' in str(e) or 'RESOURCE_EXHAUSTED' in str(e):
-                # Record rate limit failure so key manager skips this key
-                _record_api_usage(api_key, success=False, is_rate_limit=True)
+                # Record rate limit failure for image model so key manager skips this key
+                _record_api_usage(api_key, success=False, is_rate_limit=True, model_type='image')
 
                 # Get NEW client with different API key
                 client, api_key = _get_client()
@@ -4747,7 +4753,7 @@ def run_pipeline_queued(
 # For testing
 if __name__ == '__main__':
     print('Gemini Service V2 - Redesigned Pipeline')
-    print(f'Analysis Model: {ANALYSIS_MODEL}')
+    print(f'Text Model: {TEXT_MODEL}')
     print(f'Image Model: {IMAGE_MODEL}')
     print(f'API Key configured: {bool(os.getenv("GEMINI_API_KEY"))}')
     print(f'Queue Mode: {USE_QUEUE_MODE}')

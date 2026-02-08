@@ -1,6 +1,10 @@
 """
 API Key Manager - Handles rotation and usage tracking for Gemini API keys.
-Tracks both RPM (requests per minute) and daily limits per key.
+Tracks both RPM (requests per minute) and daily limits per key, per model type.
+
+Model Types:
+- 'text': Gemini 3 Flash for all text analysis (1000 RPM, 10K RPD)
+- 'image': Gemini 3 Pro Image for image generation (20 RPM, 250 RPD)
 """
 import os
 import time
@@ -16,9 +20,23 @@ from logging_config import get_logger
 
 logger = get_logger('api_key_manager')
 
-# Configuration
-GEMINI_RPM_LIMIT = 18  # Safe limit (actual is ~20-25)
-GEMINI_DAILY_LIMIT = 250  # Images per day per project
+# Configuration - Per-model rate limits
+# Use safe limits below actual to avoid hitting hard limits
+RATE_LIMITS = {
+    'text': {
+        'rpm': 900,      # Safe limit for Flash (actual: 1000)
+        'daily': 9000,   # Safe limit (actual: 10,000)
+    },
+    'image': {
+        'rpm': 18,       # Safe limit for Pro Image (actual: 20)
+        'daily': 240,    # Safe limit (actual: 250)
+    }
+}
+
+# Backwards compatibility - default to image limits (most restrictive)
+GEMINI_RPM_LIMIT = RATE_LIMITS['image']['rpm']
+GEMINI_DAILY_LIMIT = RATE_LIMITS['image']['daily']
+
 REDIS_HOST = os.getenv('REDIS_HOST', 'localhost')
 REDIS_PORT = int(os.getenv('REDIS_PORT', '6379'))
 REDIS_DB = int(os.getenv('REDIS_QUEUE_DB', '1'))  # Same DB as image queue
@@ -90,13 +108,18 @@ class ApiKeyManager:
         """Get seconds until midnight Pacific Time."""
         return self._get_midnight_pt_timestamp() - int(time.time())
 
-    def get_key_usage(self, key: str) -> Dict:
+    def get_key_usage(self, key: str, model_type: str = 'image') -> Dict:
         """
-        Get current usage stats for a key.
+        Get current usage stats for a key for a specific model type.
+
+        Args:
+            key: The API key
+            model_type: 'text' or 'image' (default: 'image')
 
         Returns:
             {
                 'key_id': str (first 8 chars),
+                'model_type': str,
                 'rpm_used': int,
                 'rpm_limit': int,
                 'daily_used': int,
@@ -105,29 +128,37 @@ class ApiKeyManager:
             }
         """
         key_id = self._get_key_id(key)
+        limits = RATE_LIMITS.get(model_type, RATE_LIMITS['image'])
 
-        rpm_key = f"{KEY_PREFIX}{key_id}:rpm"
-        daily_key = f"{KEY_PREFIX}{key_id}:daily"
+        rpm_key = f"{KEY_PREFIX}{key_id}:{model_type}:rpm"
+        daily_key = f"{KEY_PREFIX}{key_id}:{model_type}:daily"
 
         rpm_used = int(self.redis.get(rpm_key) or 0)
         daily_used = int(self.redis.get(daily_key) or 0)
 
+        rpm_limit = limits['rpm']
+        daily_limit = limits['daily']
+
         return {
             'key_id': key_id,
+            'model_type': model_type,
             'rpm_used': rpm_used,
-            'rpm_limit': GEMINI_RPM_LIMIT,
+            'rpm_limit': rpm_limit,
             'daily_used': daily_used,
-            'daily_limit': GEMINI_DAILY_LIMIT,
-            'is_available': rpm_used < GEMINI_RPM_LIMIT and daily_used < GEMINI_DAILY_LIMIT
+            'daily_limit': daily_limit,
+            'is_available': rpm_used < rpm_limit and daily_used < daily_limit
         }
 
-    def get_all_keys_status(self) -> List[Dict]:
-        """Get usage stats for all keys."""
-        return [self.get_key_usage(key) for key in self.keys]
+    def get_all_keys_status(self, model_type: str = 'image') -> List[Dict]:
+        """Get usage stats for all keys for a specific model type."""
+        return [self.get_key_usage(key, model_type) for key in self.keys]
 
-    def get_available_key(self) -> str:
+    def get_available_key(self, model_type: str = 'image') -> str:
         """
         Get the next available API key using round-robin with limit checking.
+
+        Args:
+            model_type: 'text' or 'image' (default: 'image')
 
         Returns:
             API key string
@@ -139,45 +170,46 @@ class ApiKeyManager:
         for i in range(len(self.keys)):
             idx = (self._last_key_index + 1 + i) % len(self.keys)
             key = self.keys[idx]
-            usage = self.get_key_usage(key)
+            usage = self.get_key_usage(key, model_type)
 
             if usage['is_available']:
                 self._last_key_index = idx
-                logger.debug(f"Selected key #{idx + 1} ({usage['key_id']}) | "
+                logger.debug(f"Selected key #{idx + 1} ({usage['key_id']}) for {model_type} | "
                            f"RPM: {usage['rpm_used']}/{usage['rpm_limit']} | "
                            f"Daily: {usage['daily_used']}/{usage['daily_limit']}")
                 return key
 
         # All keys exhausted - log status
-        status = self.get_all_keys_status()
-        logger.error(f"All {len(self.keys)} API keys exhausted!")
+        status = self.get_all_keys_status(model_type)
+        logger.error(f"All {len(self.keys)} API keys exhausted for {model_type} model!")
         for i, s in enumerate(status):
             logger.error(f"  Key #{i + 1} ({s['key_id']}): "
                         f"RPM {s['rpm_used']}/{s['rpm_limit']}, "
                         f"Daily {s['daily_used']}/{s['daily_limit']}")
 
         raise ApiKeyExhaustedError(
-            f"All {len(self.keys)} Gemini API keys exhausted. "
+            f"All {len(self.keys)} Gemini API keys exhausted for {model_type}. "
             f"RPM resets in <60s, daily resets at midnight PT."
         )
 
-    def record_usage(self, key: str):
+    def record_usage(self, key: str, model_type: str = 'image'):
         """
-        Record that a request was made with this key.
-        Increments both RPM and daily counters.
+        Record that a request was made with this key for a specific model.
+        Increments both RPM and daily counters for that model type.
 
         Args:
             key: The API key that was used
+            model_type: 'text' or 'image' (default: 'image')
         """
         key_id = self._get_key_id(key)
 
         # Increment RPM counter (expires in 60 seconds)
-        rpm_key = f"{KEY_PREFIX}{key_id}:rpm"
+        rpm_key = f"{KEY_PREFIX}{key_id}:{model_type}:rpm"
         self.redis.incr(rpm_key)
         self.redis.expire(rpm_key, 60)
 
         # Increment daily counter (expires at midnight PT)
-        daily_key = f"{KEY_PREFIX}{key_id}:daily"
+        daily_key = f"{KEY_PREFIX}{key_id}:{model_type}:daily"
         self.redis.incr(daily_key)
 
         # Set expiry to midnight PT if not already set
@@ -186,74 +218,97 @@ class ApiKeyManager:
             seconds_until_midnight = self._get_seconds_until_midnight_pt()
             self.redis.expire(daily_key, seconds_until_midnight)
 
-    def record_failure(self, key: str, is_rate_limit: bool = False):
+    def record_failure(self, key: str, model_type: str = 'image', is_rate_limit: bool = False):
         """
         Record that a request failed.
-        If rate limit error, mark this key as temporarily exhausted.
+        If rate limit error, mark this key as temporarily exhausted for that model.
 
         Args:
             key: The API key that failed
+            model_type: 'text' or 'image' (default: 'image')
             is_rate_limit: Whether this was a 429 rate limit error
         """
         if is_rate_limit:
             key_id = self._get_key_id(key)
+            limits = RATE_LIMITS.get(model_type, RATE_LIMITS['image'])
             # Set RPM to max to prevent using this key for 60s
-            rpm_key = f"{KEY_PREFIX}{key_id}:rpm"
-            self.redis.set(rpm_key, GEMINI_RPM_LIMIT)
+            rpm_key = f"{KEY_PREFIX}{key_id}:{model_type}:rpm"
+            self.redis.set(rpm_key, limits['rpm'])
             self.redis.expire(rpm_key, 60)
-            logger.warning(f"Key {key_id} hit rate limit, marked exhausted for 60s")
+            logger.warning(f"Key {key_id} hit rate limit for {model_type}, marked exhausted for 60s")
 
-    def get_summary(self) -> Dict:
+    def get_summary(self, model_type: str = None) -> Dict:
         """
         Get overall summary of API key status.
+
+        Args:
+            model_type: 'text', 'image', or None for all models
 
         Returns:
             {
                 'total_keys': int,
-                'available_keys': int,
-                'total_rpm_available': int,
-                'total_daily_available': int,
-                'keys': List[Dict]
+                'seconds_until_daily_reset': int,
+                'text': { model stats },
+                'image': { model stats },
+                'keys': { per-key stats }
             }
         """
-        status = self.get_all_keys_status()
-        available = [s for s in status if s['is_available']]
-
-        total_rpm_available = sum(
-            GEMINI_RPM_LIMIT - s['rpm_used']
-            for s in status
-        )
-        total_daily_available = sum(
-            GEMINI_DAILY_LIMIT - s['daily_used']
-            for s in status
-        )
-
-        return {
+        result = {
             'total_keys': len(self.keys),
-            'available_keys': len(available),
-            'total_rpm_available': total_rpm_available,
-            'total_daily_available': total_daily_available,
             'seconds_until_daily_reset': self._get_seconds_until_midnight_pt(),
-            'keys': status
         }
 
-    def reset_key(self, key_id: str):
+        # Get stats for each model type
+        for mtype in ['text', 'image']:
+            if model_type and mtype != model_type:
+                continue
+
+            status = self.get_all_keys_status(mtype)
+            available = [s for s in status if s['is_available']]
+            limits = RATE_LIMITS[mtype]
+
+            total_rpm_available = sum(
+                limits['rpm'] - s['rpm_used']
+                for s in status
+            )
+            total_daily_available = sum(
+                limits['daily'] - s['daily_used']
+                for s in status
+            )
+
+            result[mtype] = {
+                'available_keys': len(available),
+                'total_rpm_available': total_rpm_available,
+                'total_daily_available': total_daily_available,
+                'rpm_limit_per_key': limits['rpm'],
+                'daily_limit_per_key': limits['daily'],
+                'keys': status
+            }
+
+        return result
+
+    def reset_key(self, key_id: str, model_type: str = None):
         """
         Manually reset a key's counters (admin function).
 
         Args:
             key_id: First 8 chars of the key to reset
+            model_type: 'text', 'image', or None for all
         """
-        rpm_key = f"{KEY_PREFIX}{key_id}:rpm"
-        daily_key = f"{KEY_PREFIX}{key_id}:daily"
-        self.redis.delete(rpm_key, daily_key)
-        logger.info(f"Manually reset counters for key {key_id}")
+        model_types = [model_type] if model_type else ['text', 'image']
 
-    def reset_all_keys(self):
+        for mtype in model_types:
+            rpm_key = f"{KEY_PREFIX}{key_id}:{mtype}:rpm"
+            daily_key = f"{KEY_PREFIX}{key_id}:{mtype}:daily"
+            self.redis.delete(rpm_key, daily_key)
+
+        logger.info(f"Manually reset counters for key {key_id} ({model_type or 'all models'})")
+
+    def reset_all_keys(self, model_type: str = None):
         """Manually reset all key counters (admin function)."""
         for key in self.keys:
-            self.reset_key(self._get_key_id(key))
-        logger.info("Manually reset all API key counters")
+            self.reset_key(self._get_key_id(key), model_type)
+        logger.info(f"Manually reset all API key counters ({model_type or 'all models'})")
 
 
 # Global singleton instance

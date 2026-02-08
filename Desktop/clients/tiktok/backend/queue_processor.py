@@ -298,8 +298,8 @@ class BatchProcessor:
                 split_config=task.split_config or None  # Split-screen configuration
             )
 
-            # Record successful API usage
-            _record_api_usage(api_key, success=True)
+            # Record successful API usage for image model
+            _record_api_usage(api_key, success=True, model_type='image')
             return result_path
 
         except Exception as e:
@@ -307,15 +307,15 @@ class BatchProcessor:
 
             # Check for rate limit
             if '429' in error_str or 'resource_exhausted' in error_str or 'rate' in error_str:
-                # Record rate limit failure - marks this key as exhausted
-                _record_api_usage(api_key, success=False, is_rate_limit=True)
+                # Record rate limit failure for image model - marks this key as exhausted
+                _record_api_usage(api_key, success=False, is_rate_limit=True, model_type='image')
                 # Extract retry delay if present
                 match = re.search(r'retry.*?(\d+)', error_str)
                 retry_after = int(match.group(1)) if match else RATE_LIMIT_PAUSE_DEFAULT
                 raise RateLimitError(f"Rate limit exceeded, retry after {retry_after}s", retry_after)
 
-            # Record other failures
-            _record_api_usage(api_key, success=False)
+            # Record other failures for image model
+            _record_api_usage(api_key, success=False, model_type='image')
             raise
 
     def _handle_rate_limit(self, error: 'RateLimitError'):
