@@ -533,14 +533,19 @@ def get_api_keys_status():
         image_data = summary.get('image', {})
         keys = image_data.get('keys', [])
         total_images_today = sum(k.get('daily_used', 0) for k in keys)
-        total_daily_capacity = sum(k.get('daily_limit', 0) for k in keys)
-        total_images_remaining = total_daily_capacity - total_images_today
+        # Only count usable keys for remaining/capacity (exclude exhausted and free-tier)
+        usable_keys = [k for k in keys if not k.get('is_daily_exhausted') and not k.get('is_free_tier')]
+        total_daily_capacity = sum(k.get('daily_limit', 0) for k in usable_keys)
+        total_images_remaining = sum(
+            max(0, k.get('daily_limit', 0) - k.get('daily_used', 0))
+            for k in usable_keys
+        )
 
         summary['image_stats'] = {
             'total_images_today': total_images_today,
             'total_daily_capacity': total_daily_capacity,
-            'total_images_remaining': max(0, total_images_remaining),
-            'estimated_links_remaining': max(0, total_images_remaining) // 8,  # ~8 images per link avg
+            'total_images_remaining': total_images_remaining,
+            'estimated_links_remaining': total_images_remaining // 8,  # ~8 images per link avg
         }
 
         # Add link processing stats from SQLite
