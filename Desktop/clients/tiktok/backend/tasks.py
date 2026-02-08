@@ -343,15 +343,15 @@ def finalize_batch(self, link_results: list, batch_id: str):
     logger.info(f"[Batch {batch_id[:8]}] Finalizing batch")
 
     try:
-        # Count results
+        # Count results - treat None/missing results as failures
         completed = sum(1 for r in link_results if r and r.get('status') == 'completed')
-        failed = sum(1 for r in link_results if r and r.get('status') == 'error')
         total = len(link_results)
+        failed = total - completed  # Everything not completed is failed
 
         logger.info(f"[Batch {batch_id[:8]}] Results: {completed}/{total} completed, {failed} failed")
 
         # Determine final status
-        if failed == total:
+        if completed == 0:
             final_status = 'failed'
             error_msg = 'All links failed to process'
         elif failed > 0:
@@ -770,15 +770,15 @@ def finalize_tiktok_copy_batch(self, job_results: list, batch_id: str):
     logger.info(f"[TikTokCopy {batch_id[:8]}] Finalizing batch")
 
     try:
-        # Count results
+        # Count results - treat None/missing results as failures
         completed = sum(1 for r in job_results if r and r.get('status') == 'completed')
-        failed = sum(1 for r in job_results if r and r.get('status') == 'error')
         total = len(job_results)
+        failed = total - completed
 
         logger.info(f"[TikTokCopy {batch_id[:8]}] Results: {completed}/{total} completed, {failed} failed")
 
         # Determine final status
-        if failed == total:
+        if completed == 0:
             final_status = 'failed'
         elif completed == total:
             final_status = 'completed'
