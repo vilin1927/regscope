@@ -62,6 +62,9 @@ from gemini_service_v2 import (
     IMAGE_MODEL, REQUEST_TIMEOUT
 )
 
+# Import ApiKeyExhaustedError to handle key exhaustion as rate limit
+from api_key_manager import ApiKeyExhaustedError
+
 # Import metrics (optional - gracefully degrades if not installed)
 try:
     from metrics import (
@@ -287,11 +290,18 @@ class BatchProcessor:
                     record_image_failed('timeout')
                     logger.warning(f"Task {task.task_id} timed out")
 
-                except RateLimitError as e:
-                    # Rate limit - pause queue and don't count against retries
+                except (RateLimitError, ApiKeyExhaustedError) as e:
+                    # Rate limit or keys exhausted - pause queue and don't count against retries
                     self.queue.mark_failed(task.task_id, str(e), is_rate_limit=True)
                     failed += 1
-                    self._handle_rate_limit(e)
+                    # Handle rate limit pause (RateLimitError has retry_after, ApiKeyExhaustedError doesn't)
+                    if isinstance(e, RateLimitError):
+                        self._handle_rate_limit(e)
+                    else:
+                        # For ApiKeyExhaustedError, pause for default duration
+                        self._paused = True
+                        self._pause_until = time.time() + RATE_LIMIT_PAUSE_DEFAULT + 5
+                        logger.warning(f"All API keys exhausted! Pausing queue for {RATE_LIMIT_PAUSE_DEFAULT + 5}s")
                     record_image_failed('rate_limit')
                     # Record for circuit breaker
                     if "All" in str(e) and "exhausted" in str(e):

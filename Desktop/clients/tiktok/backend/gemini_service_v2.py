@@ -313,8 +313,8 @@ def _get_client(timeout: int = REQUEST_TIMEOUT):
         api_key = os.getenv('GEMINI_API_KEY')
         if not api_key:
             raise GeminiServiceError('GEMINI_API_KEY environment variable not set')
-    except ApiKeyExhaustedError as e:
-        raise GeminiServiceError(str(e))
+    except ApiKeyExhaustedError:
+        raise  # Let it propagate - handled by queue_processor
 
     client = genai.Client(
         api_key=api_key,
