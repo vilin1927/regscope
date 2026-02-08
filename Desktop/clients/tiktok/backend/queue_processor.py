@@ -256,7 +256,7 @@ class BatchProcessor:
         failed = 0
 
         # Submit tasks to thread pool with staggered delays to avoid rate limit bursts
-        # With 4 API keys at 18 RPM each = 72 requests/minute capacity
+        # 4 keys × 18 RPM each = 72 requests/minute capacity
         stagger_delay = QueueConfig.STAGGER_DELAY
 
         with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
@@ -363,6 +363,9 @@ class BatchProcessor:
             # Get a fresh client with key rotation
             client, api_key = _get_client()
 
+            # Pre-record usage so concurrent tasks see this key's RPM count
+            _record_api_usage(api_key, success=True, model_type='image')
+
             try:
                 # Call the low-level generation function
                 result_path = _generate_single_image(
@@ -389,8 +392,7 @@ class BatchProcessor:
                     split_config=task.split_config or None  # Split-screen configuration
                 )
 
-                # Record successful API usage for image model
-                _record_api_usage(api_key, success=True, model_type='image')
+                # Usage already pre-recorded above
                 return result_path
 
             except Exception as e:
