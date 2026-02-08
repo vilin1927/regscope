@@ -399,6 +399,9 @@ class BatchProcessor:
                 error_str = str(e).lower()
                 last_error = e
 
+                # DEBUG: log the raw error to understand what Google returns
+                logger.warning(f"Key {api_key[:8]} raw error: {str(e)[:200]}")
+
                 # Check for FREE TIER error (billing not enabled for this model)
                 if 'free_tier' in error_str or 'limit: 0' in error_str:
                     logger.error(f"Key {api_key[:8]} is FREE TIER - no quota for image model! Skipping this key.")
