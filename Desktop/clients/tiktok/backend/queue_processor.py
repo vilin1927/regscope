@@ -269,54 +269,64 @@ class BatchProcessor:
         if task.persona_reference_path and not os.path.exists(task.persona_reference_path):
             raise FileNotFoundError(f"Persona reference missing: {task.persona_reference_path}")
 
-        # Get a fresh client with key rotation
-        client, api_key = _get_client()
+        # Try all available API keys before giving up
+        from api_key_manager import get_api_key_manager, ApiKeyExhaustedError
+        manager = get_api_key_manager()
+        num_keys = len(manager.keys)
+        last_error = None
 
-        try:
-            # Call the low-level generation function
-            result_path = _generate_single_image(
-                client=client,
-                slide_type=task.slide_type,
-                scene_description=task.scene_description,
-                text_content=task.text_content,
-                text_position_hint=task.text_position_hint,
-                output_path=task.output_path,
-                reference_image_path=task.reference_image_path,
-                product_image_path=task.product_image_path,
-                persona_reference_path=task.persona_reference_path,
-                has_persona=task.has_persona,
-                text_style=task.text_style,
-                visual_style=task.visual_style,
-                persona_info=task.persona_info,  # Demographics for new persona creation
-                version=task.version,
-                clean_image_mode=task.clean_image_mode,
-                product_description=task.product_description,
-                shows_product_on_face=task.shows_product_on_face,  # Per-slide face tape flag
-                transformation_role=task.transformation_role or None,  # "before", "after", or None
-                transformation_problem=task.transformation_problem or None,  # "under_eye", "forehead_lines", etc.
-                layout_type=task.layout_type or "single",  # "single" or "split_screen"
-                split_config=task.split_config or None  # Split-screen configuration
-            )
+        for attempt in range(num_keys):
+            # Get a fresh client with key rotation
+            client, api_key = _get_client()
 
-            # Record successful API usage for image model
-            _record_api_usage(api_key, success=True, model_type='image')
-            return result_path
+            try:
+                # Call the low-level generation function
+                result_path = _generate_single_image(
+                    client=client,
+                    slide_type=task.slide_type,
+                    scene_description=task.scene_description,
+                    text_content=task.text_content,
+                    text_position_hint=task.text_position_hint,
+                    output_path=task.output_path,
+                    reference_image_path=task.reference_image_path,
+                    product_image_path=task.product_image_path,
+                    persona_reference_path=task.persona_reference_path,
+                    has_persona=task.has_persona,
+                    text_style=task.text_style,
+                    visual_style=task.visual_style,
+                    persona_info=task.persona_info,  # Demographics for new persona creation
+                    version=task.version,
+                    clean_image_mode=task.clean_image_mode,
+                    product_description=task.product_description,
+                    shows_product_on_face=task.shows_product_on_face,  # Per-slide face tape flag
+                    transformation_role=task.transformation_role or None,  # "before", "after", or None
+                    transformation_problem=task.transformation_problem or None,  # "under_eye", "forehead_lines", etc.
+                    layout_type=task.layout_type or "single",  # "single" or "split_screen"
+                    split_config=task.split_config or None  # Split-screen configuration
+                )
 
-        except Exception as e:
-            error_str = str(e).lower()
+                # Record successful API usage for image model
+                _record_api_usage(api_key, success=True, model_type='image')
+                return result_path
 
-            # Check for rate limit
-            if '429' in error_str or 'resource_exhausted' in error_str or 'rate' in error_str:
-                # Record rate limit failure for image model - marks this key as exhausted
-                _record_api_usage(api_key, success=False, is_rate_limit=True, model_type='image')
-                # Extract retry delay if present
-                match = re.search(r'retry.*?(\d+)', error_str)
-                retry_after = int(match.group(1)) if match else RATE_LIMIT_PAUSE_DEFAULT
-                raise RateLimitError(f"Rate limit exceeded, retry after {retry_after}s", retry_after)
+            except Exception as e:
+                error_str = str(e).lower()
+                last_error = e
 
-            # Record other failures for image model
-            _record_api_usage(api_key, success=False, model_type='image')
-            raise
+                # Check for rate limit / quota error
+                if '429' in error_str or 'resource_exhausted' in error_str or 'rate' in error_str or 'quota' in error_str:
+                    # Record rate limit failure for image model - marks this key as exhausted
+                    _record_api_usage(api_key, success=False, is_rate_limit=True, model_type='image')
+                    logger.warning(f"Key {api_key[:8]} failed (429/quota), trying next key... (attempt {attempt+1}/{num_keys})")
+                    # Try next key instead of failing immediately
+                    continue
+
+                # Non-rate-limit error - don't retry with other keys
+                _record_api_usage(api_key, success=False, model_type='image')
+                raise
+
+        # All keys exhausted
+        raise RateLimitError(f"All {num_keys} Gemini API keys exhausted for image. RPM resets in <60s, daily resets at midnight PT.", RATE_LIMIT_PAUSE_DEFAULT)
 
     def _handle_rate_limit(self, error: 'RateLimitError'):
         """
