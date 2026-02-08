@@ -104,8 +104,79 @@ def serve_tiktok_copy():
 
 @app.route('/api/health', methods=['GET'])
 def health_check():
-    """Health check endpoint"""
-    return jsonify({'status': 'ok', 'message': 'TikTok Slideshow Generator API is running'})
+    """Comprehensive health check endpoint for monitoring."""
+    import time as time_module
+    health = {
+        'status': 'healthy',
+        'timestamp': datetime.utcnow().isoformat(),
+        'service': 'TikTok Slideshow Generator API',
+        'checks': {}
+    }
+
+    # Check Redis
+    try:
+        import redis
+        redis_client = redis.Redis(
+            host=os.getenv('REDIS_HOST', 'localhost'),
+            port=int(os.getenv('REDIS_PORT', '6379')),
+            db=int(os.getenv('REDIS_QUEUE_DB', '1'))
+        )
+        redis_client.ping()
+        health['checks']['redis'] = 'ok'
+    except Exception as e:
+        health['checks']['redis'] = f'error: {str(e)[:50]}'
+        health['status'] = 'unhealthy'
+
+    # Check queue processor heartbeat
+    try:
+        last_heartbeat = redis_client.get('queue_processor:heartbeat')
+        if last_heartbeat:
+            age = time_module.time() - float(last_heartbeat)
+            if age < 120:  # 2 minutes
+                health['checks']['queue_processor'] = f'ok (last seen {age:.0f}s ago)'
+            else:
+                health['checks']['queue_processor'] = f'stale ({age:.0f}s ago)'
+                health['status'] = 'degraded'
+        else:
+            health['checks']['queue_processor'] = 'unknown (no heartbeat)'
+    except Exception as e:
+        health['checks']['queue_processor'] = f'error: {str(e)[:50]}'
+
+    # Check API keys
+    try:
+        from api_key_manager import get_api_key_manager
+        manager = get_api_key_manager()
+        summary = manager.get_summary('image')
+        available = summary['image']['available_keys']
+        total = summary['total_keys']
+        free_tier_count = sum(1 for s in summary['image']['keys'] if s.get('is_free_tier'))
+
+        if free_tier_count > 0:
+            health['checks']['api_keys'] = f'{available}/{total} available ({free_tier_count} free tier)'
+        else:
+            health['checks']['api_keys'] = f'{available}/{total} available'
+
+        if available == 0:
+            health['status'] = 'degraded'
+    except Exception as e:
+        health['checks']['api_keys'] = f'error: {str(e)[:50]}'
+
+    # Check queue stats
+    try:
+        from image_queue import get_global_queue
+        queue = get_global_queue()
+        stats = queue.get_queue_stats()
+        health['checks']['queue'] = {
+            'pending': stats['pending'],
+            'processing': stats['processing'],
+            'retry': stats['retry'],
+            'failed': stats['failed']
+        }
+    except Exception as e:
+        health['checks']['queue'] = f'error: {str(e)[:50]}'
+
+    status_code = 200 if health['status'] == 'healthy' else 503
+    return jsonify(health), status_code
 
 
 @app.route('/api/verify-access', methods=['POST'])

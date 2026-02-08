@@ -32,6 +32,11 @@ BATCH_SIZE = 15  # Images per batch (conservative for 5-key rotation)
 BATCH_INTERVAL = 20  # Seconds between batches (faster with more keys)
 MAX_RETRIES = 3  # Max retry attempts before permanent failure
 
+# TTL configuration (auto-expire old data)
+TASK_DATA_TTL = 86400  # 24 hours - task metadata
+JOB_DATA_TTL = 86400   # 24 hours - job status
+RESULT_TTL = 86400     # 24 hours - completed image paths
+
 
 @dataclass
 class ImageTask:
@@ -192,9 +197,10 @@ class GlobalImageQueue:
         # Use timestamp as score for pure FIFO
         score = time.time()
 
-        # Store task data
+        # Store task data with TTL
         task_key = f"{self.TASK_DATA_PREFIX}{task.task_id}"
         self.redis.hset(task_key, mapping=task.to_dict())
+        self.redis.expire(task_key, TASK_DATA_TTL)
 
         # Add to pending queue (sorted by timestamp = FIFO)
         self.redis.zadd(self.PENDING_KEY, {task.task_id: score})
@@ -316,8 +322,10 @@ class GlobalImageQueue:
         self.redis.srem(self.PROCESSING_KEY, task_id)
         self.redis.sadd(self.COMPLETED_KEY, task_id)
 
-        # Store result
-        self.redis.set(f"{self.RESULTS_PREFIX}{task_id}", result_path)
+        # Store result with TTL
+        result_key = f"{self.RESULTS_PREFIX}{task_id}"
+        self.redis.set(result_key, result_path)
+        self.redis.expire(result_key, RESULT_TTL)
 
         # Update dependency if this was a persona_first task
         if task.dependency_type == "persona_first":
@@ -545,6 +553,7 @@ class GlobalImageQueue:
 
         status_key = f"{self.JOB_STATUS_PREFIX}{job_id}"
         self.redis.hset(status_key, mapping={k: str(v) for k, v in counts.items()})
+        self.redis.expire(status_key, JOB_DATA_TTL)
 
     def _fail_dependent_tasks(self, dependency_group: str, error: str):
         """

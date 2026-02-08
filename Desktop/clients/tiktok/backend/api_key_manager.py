@@ -124,11 +124,28 @@ class ApiKeyManager:
                 'rpm_limit': int,
                 'daily_used': int,
                 'daily_limit': int,
-                'is_available': bool
+                'is_available': bool,
+                'is_free_tier': bool
             }
         """
         key_id = self._get_key_id(key)
         limits = RATE_LIMITS.get(model_type, RATE_LIMITS['image'])
+
+        # Check if key is marked as free tier (permanently unusable)
+        free_tier_key = f"{KEY_PREFIX}{key_id}:{model_type}:free_tier"
+        is_free_tier = self.redis.get(free_tier_key) == "true"
+
+        if is_free_tier:
+            return {
+                'key_id': key_id,
+                'model_type': model_type,
+                'rpm_used': 0,
+                'rpm_limit': 0,
+                'daily_used': 0,
+                'daily_limit': 0,
+                'is_available': False,
+                'is_free_tier': True
+            }
 
         rpm_key = f"{KEY_PREFIX}{key_id}:{model_type}:rpm"
         daily_key = f"{KEY_PREFIX}{key_id}:{model_type}:daily"
@@ -146,7 +163,8 @@ class ApiKeyManager:
             'rpm_limit': rpm_limit,
             'daily_used': daily_used,
             'daily_limit': daily_limit,
-            'is_available': rpm_used < rpm_limit and daily_used < daily_limit
+            'is_available': rpm_used < rpm_limit and daily_used < daily_limit,
+            'is_free_tier': False
         }
 
     def get_all_keys_status(self, model_type: str = 'image') -> List[Dict]:
@@ -172,6 +190,11 @@ class ApiKeyManager:
             key = self.keys[idx]
             usage = self.get_key_usage(key, model_type)
 
+            # Skip free tier keys
+            if usage.get('is_free_tier'):
+                logger.debug(f"Skipping key #{idx + 1} ({usage['key_id']}) - FREE TIER")
+                continue
+
             if usage['is_available']:
                 self._last_key_index = idx
                 logger.debug(f"Selected key #{idx + 1} ({usage['key_id']}) for {model_type} | "
@@ -183,9 +206,12 @@ class ApiKeyManager:
         status = self.get_all_keys_status(model_type)
         logger.error(f"All {len(self.keys)} API keys exhausted for {model_type} model!")
         for i, s in enumerate(status):
-            logger.error(f"  Key #{i + 1} ({s['key_id']}): "
-                        f"RPM {s['rpm_used']}/{s['rpm_limit']}, "
-                        f"Daily {s['daily_used']}/{s['daily_limit']}")
+            if s.get('is_free_tier'):
+                logger.error(f"  Key #{i + 1} ({s['key_id']}): FREE TIER (no billing)")
+            else:
+                logger.error(f"  Key #{i + 1} ({s['key_id']}): "
+                            f"RPM {s['rpm_used']}/{s['rpm_limit']}, "
+                            f"Daily {s['daily_used']}/{s['daily_limit']}")
 
         raise ApiKeyExhaustedError(
             f"All {len(self.keys)} Gemini API keys exhausted for {model_type}. "

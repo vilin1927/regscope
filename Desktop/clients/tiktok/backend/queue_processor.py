@@ -82,6 +82,15 @@ class BatchProcessor:
     4. Start next batch at exactly t+60s (strict timer)
     """
 
+    # Circuit breaker settings
+    CIRCUIT_BREAKER_THRESHOLD = 3  # Consecutive all-key failures before opening
+    CIRCUIT_BREAKER_RESET_TIME = 300  # 5 minutes
+
+    # Cleanup settings
+    STALE_PENDING_HOURS = 2.0  # Max age for pending tasks
+    STALE_RETRY_HOURS = 1.0   # Max age for retry tasks
+    STALE_PROCESSING_HOURS = 0.5  # Max age for processing tasks (30 min)
+
     def __init__(self, queue: Optional[GlobalImageQueue] = None):
         self.queue = queue or get_global_queue()
         # Note: We no longer store a single client - each image generation
@@ -96,6 +105,13 @@ class BatchProcessor:
         self.images_generated = 0
         self.images_failed = 0
         self._last_cleanup = 0  # Batch count at last cleanup
+
+        # Startup cleanup flag
+        self._startup_cleanup_done = False
+
+        # Circuit breaker state
+        self._consecutive_all_key_failures = 0
+        self._circuit_open_until = 0
 
         logger.info(f"BatchProcessor initialized: batch_size={BATCH_SIZE}, interval={BATCH_INTERVAL}s")
 
@@ -130,8 +146,22 @@ class BatchProcessor:
 
     def _run_loop(self):
         """Main processing loop - strict 60-second batches."""
+        # Run startup cleanup once
+        if not self._startup_cleanup_done:
+            self._run_startup_cleanup()
+
         while not self._stop_event.is_set():
             batch_start = time.time()
+
+            # Update heartbeat for health checks
+            self.queue.redis.set('queue_processor:heartbeat', str(time.time()))
+
+            # Check circuit breaker
+            if self._is_circuit_open():
+                remaining = self._circuit_open_until - time.time()
+                logger.warning(f"Circuit breaker OPEN - skipping batch ({remaining:.0f}s remaining)")
+                self._stop_event.wait(BATCH_INTERVAL)
+                continue
 
             # Check if paused (rate limit recovery)
             if self._paused and time.time() < self._pause_until:
@@ -217,6 +247,7 @@ class BatchProcessor:
                     self.queue.mark_complete(task.task_id, result_path)
                     succeeded += 1
                     self.images_generated += 1
+                    self._record_generation_success()  # Reset circuit breaker
                     logger.info(f"Task {task.task_id} completed: {os.path.basename(result_path)}")
 
                 except TimeoutError:
@@ -230,6 +261,9 @@ class BatchProcessor:
                     self.queue.mark_failed(task.task_id, str(e), is_rate_limit=True)
                     failed += 1
                     self._handle_rate_limit(e)
+                    # Record for circuit breaker
+                    if "All" in str(e) and "exhausted" in str(e):
+                        self._record_all_keys_exhausted()
 
                 except FileNotFoundError as e:
                     # Missing files - permanent failure, no retries
@@ -313,12 +347,22 @@ class BatchProcessor:
                 error_str = str(e).lower()
                 last_error = e
 
+                # Check for FREE TIER error (billing not enabled for this model)
+                if 'free_tier' in error_str or 'limit: 0' in error_str:
+                    logger.error(f"Key {api_key[:8]} is FREE TIER - no quota for image model! Skipping this key.")
+                    _record_api_usage(api_key, success=False, is_rate_limit=True, model_type='image')
+                    # Mark as free tier in Redis (permanent until fixed)
+                    try:
+                        manager.redis.set(f"gemini:key:{api_key[:8]}:image:free_tier", "true")
+                    except Exception:
+                        pass
+                    continue
+
                 # Check for rate limit / quota error
                 if '429' in error_str or 'resource_exhausted' in error_str or 'rate' in error_str or 'quota' in error_str:
                     # Record rate limit failure for image model - marks this key as exhausted
                     _record_api_usage(api_key, success=False, is_rate_limit=True, model_type='image')
-                    logger.warning(f"Key {api_key[:8]} failed (429/quota), trying next key... (attempt {attempt+1}/{num_keys})")
-                    # Try next key instead of failing immediately
+                    logger.warning(f"Key {api_key[:8]} rate limited, trying next key... (attempt {attempt+1}/{num_keys})")
                     continue
 
                 # Non-rate-limit error - don't retry with other keys
@@ -341,6 +385,16 @@ class BatchProcessor:
             self._pause_until = time.time() + pause_duration
             logger.warning(f"Rate limit hit! Pausing queue for {pause_duration}s")
 
+    def _run_startup_cleanup(self):
+        """Run comprehensive cleanup on processor startup."""
+        if self._startup_cleanup_done:
+            return
+
+        logger.info("Running startup cleanup...")
+        cleaned = self._cleanup_all_queues()
+        logger.info(f"Startup cleanup complete: {cleaned} stale tasks removed")
+        self._startup_cleanup_done = True
+
     def _run_periodic_cleanup(self):
         """
         Run periodic cleanup of stale tasks.
@@ -353,134 +407,121 @@ class BatchProcessor:
         logger.info("Running periodic queue cleanup...")
 
         try:
-            cleaned = self._cleanup_stale_tasks()
+            cleaned = self._cleanup_all_queues()
             if cleaned > 0:
                 logger.info(f"Cleanup complete: removed {cleaned} stale tasks")
         except Exception as e:
             logger.error(f"Cleanup failed: {e}")
 
-    def _cleanup_stale_tasks(self) -> int:
-        """
-        Remove stale tasks from the queue:
-        1. Tasks with missing reference files
-        2. Tasks stuck in processing for too long
+    def _cleanup_all_queues(self) -> int:
+        """Clean stale tasks from all queues."""
+        cleaned = 0
+        cleaned += self._cleanup_queue_by_criteria(
+            self.queue.PENDING_KEY, 'pending', self.STALE_PENDING_HOURS)
+        cleaned += self._cleanup_queue_by_criteria(
+            self.queue.RETRY_KEY, 'retry', self.STALE_RETRY_HOURS)
+        cleaned += self._cleanup_queue_by_criteria(
+            self.queue.PROCESSING_KEY, 'processing', self.STALE_PROCESSING_HOURS, is_set=True)
+        return cleaned
 
-        Returns count of removed tasks.
+    def _cleanup_queue_by_criteria(self, queue_key: str, queue_name: str,
+                                    max_age_hours: float, is_set: bool = False) -> int:
+        """
+        Clean tasks from a queue based on:
+        1. Missing reference files
+        2. Task age exceeds max_age_hours
+        3. Orphaned tasks (no task data)
         """
         cleaned = 0
 
-        # Get all tasks in processing queue
-        processing_tasks = self.queue.redis.zrange(self.queue.PROCESSING_KEY, 0, -1)
+        # Get task IDs from queue
+        if is_set:
+            task_ids = self.queue.redis.smembers(queue_key)
+        else:
+            task_ids = self.queue.redis.zrange(queue_key, 0, -1)
 
-        for task_id in processing_tasks:
+        for task_id in task_ids:
             task_data_key = f"{self.queue.TASK_DATA_PREFIX}{task_id}"
-            task_json = self.queue.redis.get(task_data_key)
 
-            if not task_json:
-                # Task data missing - remove from processing
-                self.queue.redis.zrem(self.queue.PROCESSING_KEY, task_id)
-                cleaned += 1
-                logger.warning(f"Removed orphaned task (no data): {task_id}")
-                continue
-
-            try:
-                task_data = json.loads(task_json)
-            except:
-                self.queue.redis.zrem(self.queue.PROCESSING_KEY, task_id)
-                self.queue.redis.delete(task_data_key)
-                cleaned += 1
-                logger.warning(f"Removed corrupted task: {task_id}")
-                continue
-
-            # Check if reference files exist
-            ref_path = task_data.get('reference_image_path', '')
-            if ref_path and not os.path.exists(ref_path):
-                self.queue.redis.zrem(self.queue.PROCESSING_KEY, task_id)
-                self.queue.redis.delete(task_data_key)
-                self.queue.redis.sadd(self.queue.FAILED_KEY, task_id)
-                cleaned += 1
-                logger.warning(f"Removed task with missing file: {task_id} ({ref_path})")
-                continue
-
-            # Check if task is stuck (in processing too long)
-            started_at = task_data.get('started_at', '')
-            if started_at:
-                try:
-                    from datetime import datetime
-                    start_time = datetime.fromisoformat(started_at)
-                    elapsed = (datetime.now() - start_time).total_seconds()
-                    if elapsed > STALE_TASK_TIMEOUT:
-                        self.queue.redis.zrem(self.queue.PROCESSING_KEY, task_id)
-                        self.queue.redis.delete(task_data_key)
-                        self.queue.redis.sadd(self.queue.FAILED_KEY, task_id)
-                        cleaned += 1
-                        logger.warning(f"Removed stale task (stuck {elapsed:.0f}s): {task_id}")
-                except:
-                    pass
-
-        # Also clean retry queue for tasks with missing files
-        retry_tasks = self.queue.redis.zrange(self.queue.RETRY_KEY, 0, -1)
-        for task_id in retry_tasks:
-            task_data_key = f"{self.queue.TASK_DATA_PREFIX}{task_id}"
-            task_json = self.queue.redis.get(task_data_key)
-
-            if not task_json:
-                self.queue.redis.zrem(self.queue.RETRY_KEY, task_id)
-                cleaned += 1
-                continue
-
-            try:
-                task_data = json.loads(task_json)
-                ref_path = task_data.get('reference_image_path', '')
-                if ref_path and not os.path.exists(ref_path):
-                    self.queue.redis.zrem(self.queue.RETRY_KEY, task_id)
-                    self.queue.redis.delete(task_data_key)
-                    self.queue.redis.sadd(self.queue.FAILED_KEY, task_id)
-                    cleaned += 1
-                    logger.warning(f"Removed retry task with missing file: {task_id}")
-            except:
-                pass
-
-        # CRITICAL: Clean pending queue for tasks with missing files or too old
-        # This prevents deadlocks where tasks wait forever for deleted temp files
-        from datetime import datetime
-        pending_tasks = self.queue.redis.zrange(self.queue.PENDING_KEY, 0, -1)
-        for task_id in pending_tasks:
-            task_data_key = f"{self.queue.TASK_DATA_PREFIX}{task_id}"
-            task_data = self.queue.redis.hgetall(task_data_key)
+            # Check for orphaned task (no data)
+            if is_set:
+                task_data = self.queue.redis.hgetall(task_data_key)
+            else:
+                task_data = self.queue.redis.hgetall(task_data_key)
 
             if not task_data:
-                self.queue.redis.zrem(self.queue.PENDING_KEY, task_id)
+                self._remove_from_queue(task_id, queue_key, is_set)
                 cleaned += 1
-                logger.warning(f"Removed orphaned pending task (no data): {task_id}")
+                logger.warning(f"Removed orphaned {queue_name} task: {task_id}")
                 continue
 
-            # Check if reference files exist
+            # Check for missing reference files
             ref_path = task_data.get('reference_image_path', '')
             if ref_path and not os.path.exists(ref_path):
-                self.queue.redis.zrem(self.queue.PENDING_KEY, task_id)
-                self.queue.redis.delete(task_data_key)
-                self.queue.redis.sadd(self.queue.FAILED_KEY, task_id)
+                self._remove_task_completely(task_id, queue_key, task_data_key, is_set)
                 cleaned += 1
-                logger.warning(f"Removed pending task with missing file: {task_id}")
+                logger.warning(f"Removed {queue_name} task with missing file: {task_id}")
                 continue
 
-            # Check if task is too old (older than 2 hours = likely orphaned)
+            # Check task age
             created_at = task_data.get('created_at', '')
             if created_at:
-                try:
-                    create_time = datetime.fromisoformat(created_at)
-                    age_seconds = (datetime.utcnow() - create_time).total_seconds()
-                    if age_seconds > 7200:  # 2 hours
-                        self.queue.redis.zrem(self.queue.PENDING_KEY, task_id)
-                        self.queue.redis.delete(task_data_key)
-                        self.queue.redis.sadd(self.queue.FAILED_KEY, task_id)
-                        cleaned += 1
-                        logger.warning(f"Removed stale pending task (age {age_seconds/3600:.1f}h): {task_id}")
-                except:
-                    pass
+                age_hours = self._get_task_age_hours(created_at)
+                if age_hours is not None and age_hours > max_age_hours:
+                    self._remove_task_completely(task_id, queue_key, task_data_key, is_set)
+                    cleaned += 1
+                    logger.warning(f"Removed stale {queue_name} task (age {age_hours:.1f}h): {task_id}")
 
         return cleaned
+
+    def _get_task_age_hours(self, created_at: str) -> Optional[float]:
+        """Get task age in hours from ISO timestamp."""
+        try:
+            from datetime import datetime
+            create_time = datetime.fromisoformat(created_at.replace('Z', '+00:00'))
+            # Handle timezone-naive vs aware
+            now = datetime.utcnow()
+            if create_time.tzinfo is not None:
+                from datetime import timezone
+                now = datetime.now(timezone.utc)
+            age_seconds = (now - create_time.replace(tzinfo=None)).total_seconds()
+            return age_seconds / 3600
+        except (ValueError, TypeError):
+            return None
+
+    def _remove_from_queue(self, task_id: str, queue_key: str, is_set: bool):
+        """Remove task from queue (sorted set or set)."""
+        if is_set:
+            self.queue.redis.srem(queue_key, task_id)
+        else:
+            self.queue.redis.zrem(queue_key, task_id)
+
+    def _remove_task_completely(self, task_id: str, queue_key: str,
+                                 task_data_key: str, is_set: bool):
+        """Remove task from queue and mark as failed."""
+        self._remove_from_queue(task_id, queue_key, is_set)
+        self.queue.redis.delete(task_data_key)
+        self.queue.redis.sadd(self.queue.FAILED_KEY, task_id)
+
+    def _is_circuit_open(self) -> bool:
+        """Check if circuit breaker is open."""
+        return time.time() < self._circuit_open_until
+
+    def _record_all_keys_exhausted(self):
+        """Record that all API keys failed - may trigger circuit breaker."""
+        self._consecutive_all_key_failures += 1
+
+        if self._consecutive_all_key_failures >= self.CIRCUIT_BREAKER_THRESHOLD:
+            self._circuit_open_until = time.time() + self.CIRCUIT_BREAKER_RESET_TIME
+            logger.error(
+                f"Circuit breaker OPENED after {self._consecutive_all_key_failures} consecutive failures. "
+                f"Pausing for {self.CIRCUIT_BREAKER_RESET_TIME}s"
+            )
+
+    def _record_generation_success(self):
+        """Record successful generation - resets circuit breaker counter."""
+        self._consecutive_all_key_failures = 0
+
 
     def get_stats(self) -> dict:
         """Get processor statistics."""
