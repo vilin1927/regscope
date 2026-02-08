@@ -100,7 +100,7 @@ class BatchProcessor:
     Processes image generation tasks in batches.
 
     Configuration is loaded from QueueConfig (config.py).
-    Default: pull up to 10 tasks every 60 seconds (5 keys × 2 RPM = 10/min).
+    Default: pull up to 18 tasks every 60 seconds (4 keys × 18 RPM = 72/min capacity).
     """
 
     # Circuit breaker settings (from config)
@@ -256,7 +256,7 @@ class BatchProcessor:
         failed = 0
 
         # Submit tasks to thread pool with staggered delays to avoid rate limit bursts
-        # With 5 API keys at 2 RPM each = 10 requests/minute, stagger 6s between each
+        # With 4 API keys at 18 RPM each = 72 requests/minute capacity
         stagger_delay = QueueConfig.STAGGER_DELAY
 
         with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
@@ -417,13 +417,11 @@ class BatchProcessor:
                         # Daily limit — mark key unavailable until midnight PT, try next key
                         manager.record_daily_exhaustion(api_key, model_type='image')
                         logger.warning(f"Key {api_key[:8]} hit DAILY limit, marked until midnight PT. Trying next key... (attempt {attempt+1}/{num_keys})")
-                        continue
                     else:
-                        # RPM limit — don't try other keys (they're likely near limit too with RPM 2)
-                        # Record the RPM failure and let the task be re-queued
+                        # RPM limit — mark exhausted for 60s, try next key
                         _record_api_usage(api_key, success=False, is_rate_limit=True, model_type='image')
-                        logger.warning(f"Key {api_key[:8]} hit RPM limit (2 RPM). Re-queuing task instead of trying other keys.")
-                        raise RateLimitError(f"Key {api_key[:8]} RPM limit hit. Re-queuing.", RATE_LIMIT_PAUSE_DEFAULT)
+                        logger.warning(f"Key {api_key[:8]} hit RPM limit, trying next key... (attempt {attempt+1}/{num_keys})")
+                    continue
 
                 # Non-rate-limit error - don't retry with other keys
                 _record_api_usage(api_key, success=False, model_type='image')
