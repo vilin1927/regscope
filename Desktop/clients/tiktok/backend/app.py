@@ -180,6 +180,41 @@ def health_check():
     return jsonify(health), status_code
 
 
+@app.route('/metrics', methods=['GET'])
+def prometheus_metrics():
+    """Prometheus metrics endpoint for monitoring."""
+    try:
+        from metrics import get_metrics, get_content_type, update_queue_metrics, update_api_key_metrics
+
+        # Update current queue stats before returning metrics
+        try:
+            from image_queue import get_global_queue
+            queue = get_global_queue()
+            stats = queue.get_queue_stats()
+            update_queue_metrics(stats)
+        except Exception:
+            pass
+
+        # Update API key availability
+        try:
+            from api_key_manager import get_api_key_manager
+            manager = get_api_key_manager()
+            text_summary = manager.get_summary('text')
+            image_summary = manager.get_summary('image')
+            update_api_key_metrics(
+                text_available=text_summary['text']['available_keys'],
+                image_available=image_summary['image']['available_keys'],
+                total=manager.get_summary()['total_keys']
+            )
+        except Exception:
+            pass
+
+        from flask import Response
+        return Response(get_metrics(), mimetype=get_content_type())
+    except ImportError:
+        return "prometheus_client not installed", 501
+
+
 @app.route('/api/verify-access', methods=['POST'])
 def verify_access():
     """Verify page access password"""

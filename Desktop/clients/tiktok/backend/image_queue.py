@@ -159,12 +159,16 @@ class GlobalImageQueue:
     RETRY_KEY = "image_queue:retry"               # Sorted set (score = timestamp for FIFO)
     COMPLETED_KEY = "image_queue:completed"       # Set of completed task IDs
     FAILED_KEY = "image_queue:failed"             # Set of permanently failed task IDs
+    DEAD_LETTER_KEY = "image_queue:dead_letter"   # Sorted set for failed tasks (for analysis)
     TASK_DATA_PREFIX = "image_queue:task:"        # Hash for task data
     JOB_TASKS_PREFIX = "image_queue:job:"         # Set of task IDs per job
     JOB_STATUS_PREFIX = "image_queue:job_status:" # Hash for job status
     RESULTS_PREFIX = "image_queue:results:"       # String for task results (output path)
     DEPENDENCY_PREFIX = "image_queue:dep:"        # Hash for dependency resolution
     STATS_KEY = "image_queue:stats"               # Hash for global stats
+
+    # Dead letter queue TTL (keep failed tasks for 7 days for analysis)
+    DEAD_LETTER_TTL = 604800  # 7 days
 
     def __init__(self, redis_client: Optional[redis.Redis] = None):
         """Initialize queue with Redis connection."""
@@ -223,9 +227,14 @@ class GlobalImageQueue:
         logger.debug(f"Submitted task {task.task_id} for job {task.job_id}")
         return task.task_id
 
+    # Distributed lock settings
+    BATCH_LOCK_KEY = "image_queue:batch_lock"
+    BATCH_LOCK_TIMEOUT = 30  # seconds
+
     def get_batch(self, limit: int = BATCH_SIZE) -> List[ImageTask]:
         """
         Get next batch of tasks in FIFO order, respecting dependencies.
+        Uses distributed Redis lock for multi-instance safety.
 
         Args:
             limit: Maximum tasks to return (default: 18)
@@ -233,40 +242,60 @@ class GlobalImageQueue:
         Returns:
             List of ImageTask objects ready for processing
         """
+        # Use Redis distributed lock for multi-instance safety
+        lock = self.redis.lock(
+            self.BATCH_LOCK_KEY,
+            timeout=self.BATCH_LOCK_TIMEOUT,
+            blocking_timeout=5  # Wait up to 5 seconds for lock
+        )
+
+        if not lock.acquire(blocking=True):
+            logger.warning("Could not acquire batch lock - another processor may be running")
+            return []
+
+        try:
+            return self._get_batch_internal(limit)
+        finally:
+            try:
+                lock.release()
+            except Exception as e:
+                logger.warning(f"Could not release batch lock: {e}")
+
+    def _get_batch_internal(self, limit: int) -> List[ImageTask]:
+        """Internal batch retrieval (called within lock)."""
         tasks = []
         skipped_deps = set()  # Track skipped dependency groups
 
-        with self._lock:
-            # First, check retry queue (retries get priority to clear backlog)
-            retry_ids = self.redis.zrange(self.RETRY_KEY, 0, limit - 1)
-            for task_id in retry_ids:
+        # First, check retry queue (retries get priority to clear backlog)
+        retry_ids = self.redis.zrange(self.RETRY_KEY, 0, limit - 1)
+        for task_id in retry_ids:
+            if len(tasks) >= limit:
+                break
+            task = self._get_task(task_id)
+            if task and self._can_process_task(task, skipped_deps):
+                tasks.append(task)
+                # Move from retry to processing
+                self.redis.zrem(self.RETRY_KEY, task_id)
+                self.redis.sadd(self.PROCESSING_KEY, task_id)
+                task.started_at = datetime.utcnow().isoformat()
+                self._save_task(task)
+
+        # Then, fill remaining slots from pending queue (FIFO)
+        remaining = limit - len(tasks)
+        if remaining > 0:
+            # Get more than needed to account for skipped dependencies
+            pending_ids = self.redis.zrange(self.PENDING_KEY, 0, remaining * 2)
+            for task_id in pending_ids:
                 if len(tasks) >= limit:
                     break
                 task = self._get_task(task_id)
                 if task and self._can_process_task(task, skipped_deps):
                     tasks.append(task)
-                    # Move from retry to processing
-                    self.redis.zrem(self.RETRY_KEY, task_id)
+                    # Move from pending to processing
+                    self.redis.zrem(self.PENDING_KEY, task_id)
                     self.redis.sadd(self.PROCESSING_KEY, task_id)
                     task.started_at = datetime.utcnow().isoformat()
                     self._save_task(task)
-
-            # Then, fill remaining slots from pending queue (FIFO)
-            remaining = limit - len(tasks)
-            if remaining > 0:
-                # Get more than needed to account for skipped dependencies
-                pending_ids = self.redis.zrange(self.PENDING_KEY, 0, remaining * 2)
-                for task_id in pending_ids:
-                    if len(tasks) >= limit:
-                        break
-                    task = self._get_task(task_id)
-                    if task and self._can_process_task(task, skipped_deps):
-                        tasks.append(task)
-                        # Move from pending to processing
-                        self.redis.zrem(self.PENDING_KEY, task_id)
-                        self.redis.sadd(self.PROCESSING_KEY, task_id)
-                        task.started_at = datetime.utcnow().isoformat()
-                        self._save_task(task)
 
         if tasks:
             logger.info(f"Retrieved batch of {len(tasks)} tasks (skipped {len(skipped_deps)} blocked deps)")
@@ -366,9 +395,18 @@ class GlobalImageQueue:
         self._save_task(task)
 
         if permanent or task.retry_count >= MAX_RETRIES:
-            # Permanent failure
+            # Permanent failure - move to dead letter queue for analysis
             self.redis.sadd(self.FAILED_KEY, task_id)
-            logger.error(f"Task {task_id} permanently failed after {MAX_RETRIES} attempts: {error}")
+
+            # Add to dead letter queue with timestamp
+            self.redis.zadd(self.DEAD_LETTER_KEY, {task_id: time.time()})
+
+            # Keep task data longer for dead letter analysis (7 days instead of 24h)
+            task_key = f"{self.TASK_DATA_PREFIX}{task_id}"
+            self.redis.expire(task_key, self.DEAD_LETTER_TTL)
+
+            logger.error(f"Task {task_id} permanently failed after {task.retry_count} attempts: {error}")
+            logger.info(f"Task {task_id} moved to dead letter queue for analysis")
 
             # CRITICAL: If this was a persona_first task, fail all dependent tasks
             # This prevents deadlock where dependents wait forever for a failed dependency
@@ -499,6 +537,7 @@ class GlobalImageQueue:
                 'retry': int,
                 'completed': int,
                 'failed': int,
+                'dead_letter': int,
                 'total_jobs': int
             }
         """
@@ -508,6 +547,7 @@ class GlobalImageQueue:
             'retry': self.redis.zcard(self.RETRY_KEY),
             'completed': self.redis.scard(self.COMPLETED_KEY),
             'failed': self.redis.scard(self.FAILED_KEY),
+            'dead_letter': self.redis.zcard(self.DEAD_LETTER_KEY),
             'total_jobs': len(self.redis.keys(f"{self.JOB_TASKS_PREFIX}*"))
         }
 
@@ -618,6 +658,106 @@ class GlobalImageQueue:
         self.redis.delete(f"{self.JOB_STATUS_PREFIX}{job_id}")
 
         logger.info(f"Cleaned up job {job_id}: {len(task_ids)} tasks removed")
+
+    # =========================================================================
+    # Dead Letter Queue Methods
+    # =========================================================================
+
+    def get_dead_letter_tasks(self, limit: int = 100) -> List[dict]:
+        """
+        Get tasks from dead letter queue for analysis.
+
+        Args:
+            limit: Maximum number of tasks to return
+
+        Returns:
+            List of task data dicts with error info
+        """
+        task_ids = self.redis.zrange(self.DEAD_LETTER_KEY, 0, limit - 1)
+        tasks = []
+
+        for task_id in task_ids:
+            task = self._get_task(task_id)
+            if task:
+                task_dict = task.to_dict()
+                # Add dead letter timestamp
+                score = self.redis.zscore(self.DEAD_LETTER_KEY, task_id)
+                if score:
+                    from datetime import datetime
+                    task_dict['dead_letter_at'] = datetime.fromtimestamp(score).isoformat()
+                tasks.append(task_dict)
+
+        return tasks
+
+    def get_dead_letter_count(self) -> int:
+        """Get number of tasks in dead letter queue."""
+        return self.redis.zcard(self.DEAD_LETTER_KEY)
+
+    def requeue_dead_letter_task(self, task_id: str) -> bool:
+        """
+        Move a task from dead letter queue back to pending for retry.
+
+        Args:
+            task_id: Task ID to requeue
+
+        Returns:
+            True if successful, False if task not found
+        """
+        # Check if task exists in dead letter queue
+        if not self.redis.zscore(self.DEAD_LETTER_KEY, task_id):
+            return False
+
+        # Get task and reset retry count
+        task = self._get_task(task_id)
+        if not task:
+            return False
+
+        task.retry_count = 0
+        task.last_error = ""
+        self._save_task(task)
+
+        # Move from dead letter to pending
+        self.redis.zrem(self.DEAD_LETTER_KEY, task_id)
+        self.redis.srem(self.FAILED_KEY, task_id)
+        self.redis.zadd(self.PENDING_KEY, {task_id: time.time()})
+
+        logger.info(f"Requeued dead letter task: {task_id}")
+        return True
+
+    def clear_dead_letter_queue(self, older_than_hours: float = None) -> int:
+        """
+        Clear tasks from dead letter queue.
+
+        Args:
+            older_than_hours: Only clear tasks older than this. If None, clear all.
+
+        Returns:
+            Number of tasks cleared
+        """
+        if older_than_hours is None:
+            # Clear all
+            count = self.redis.zcard(self.DEAD_LETTER_KEY)
+            task_ids = self.redis.zrange(self.DEAD_LETTER_KEY, 0, -1)
+
+            for task_id in task_ids:
+                self.redis.delete(f"{self.TASK_DATA_PREFIX}{task_id}")
+                self.redis.srem(self.FAILED_KEY, task_id)
+
+            self.redis.delete(self.DEAD_LETTER_KEY)
+            logger.info(f"Cleared all {count} tasks from dead letter queue")
+            return count
+        else:
+            # Clear only old tasks
+            cutoff = time.time() - (older_than_hours * 3600)
+            task_ids = self.redis.zrangebyscore(self.DEAD_LETTER_KEY, 0, cutoff)
+
+            for task_id in task_ids:
+                self.redis.delete(f"{self.TASK_DATA_PREFIX}{task_id}")
+                self.redis.srem(self.FAILED_KEY, task_id)
+                self.redis.zrem(self.DEAD_LETTER_KEY, task_id)
+
+            logger.info(f"Cleared {len(task_ids)} old tasks from dead letter queue")
+            return len(task_ids)
 
 
 # Global singleton instance

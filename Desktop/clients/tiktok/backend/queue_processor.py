@@ -62,6 +62,25 @@ from gemini_service_v2 import (
     IMAGE_MODEL, REQUEST_TIMEOUT
 )
 
+# Import metrics (optional - gracefully degrades if not installed)
+try:
+    from metrics import (
+        record_image_generated, record_image_failed, record_batch_processed,
+        record_api_request, set_circuit_breaker_state, set_processor_state,
+        update_queue_metrics, init_metrics
+    )
+    METRICS_AVAILABLE = True
+except ImportError:
+    METRICS_AVAILABLE = False
+    def record_image_generated(*args, **kwargs): pass
+    def record_image_failed(*args, **kwargs): pass
+    def record_batch_processed(*args, **kwargs): pass
+    def record_api_request(*args, **kwargs): pass
+    def set_circuit_breaker_state(*args, **kwargs): pass
+    def set_processor_state(*args, **kwargs): pass
+    def update_queue_metrics(*args, **kwargs): pass
+    def init_metrics(): pass
+
 # Use configuration values
 BATCH_SIZE = QueueConfig.BATCH_SIZE
 BATCH_INTERVAL = QueueConfig.BATCH_INTERVAL
@@ -119,6 +138,10 @@ class BatchProcessor:
         self.running = True
         self._stop_event.clear()
 
+        # Initialize metrics
+        init_metrics()
+        set_processor_state(True)
+
         # Set up signal handlers for graceful shutdown
         signal.signal(signal.SIGTERM, self._handle_shutdown)
         signal.signal(signal.SIGINT, self._handle_shutdown)
@@ -130,6 +153,7 @@ class BatchProcessor:
             raise
         finally:
             self.running = False
+            set_processor_state(False)
             logger.info("BatchProcessor stopped")
 
     def stop(self):
@@ -221,6 +245,8 @@ class BatchProcessor:
         Args:
             tasks: List of ImageTask objects to process
         """
+        batch_start = time.time()
+
         # Track results
         succeeded = 0
         failed = 0
@@ -232,7 +258,9 @@ class BatchProcessor:
         with ThreadPoolExecutor(max_workers=BATCH_SIZE) as executor:
             # Submit tasks with delay between each to stagger API calls
             futures = {}
+            task_start_times = {}
             for i, task in enumerate(tasks):
+                task_start_times[task.task_id] = time.time()
                 futures[executor.submit(self._generate_image, task)] = task
                 if i < len(tasks) - 1:  # Don't sleep after last task
                     time.sleep(stagger_delay)
@@ -240,18 +268,23 @@ class BatchProcessor:
             # Process results as they complete (no timeout - strict 60s timer handles pacing)
             for future in as_completed(futures):
                 task = futures[future]
+                task_duration = time.time() - task_start_times.get(task.task_id, time.time())
+
                 try:
                     result_path = future.result(timeout=BATCH_TIMEOUT)
                     self.queue.mark_complete(task.task_id, result_path)
                     succeeded += 1
                     self.images_generated += 1
                     self._record_generation_success()  # Reset circuit breaker
+                    # Record metrics
+                    record_image_generated(task.slide_type or 'unknown', task_duration)
                     logger.info(f"Task {task.task_id} completed: {os.path.basename(result_path)}")
 
                 except TimeoutError:
                     self.queue.mark_failed(task.task_id, "Generation timeout")
                     failed += 1
                     self.images_failed += 1
+                    record_image_failed('timeout')
                     logger.warning(f"Task {task.task_id} timed out")
 
                 except RateLimitError as e:
@@ -259,6 +292,7 @@ class BatchProcessor:
                     self.queue.mark_failed(task.task_id, str(e), is_rate_limit=True)
                     failed += 1
                     self._handle_rate_limit(e)
+                    record_image_failed('rate_limit')
                     # Record for circuit breaker
                     if "All" in str(e) and "exhausted" in str(e):
                         self._record_all_keys_exhausted()
@@ -268,13 +302,20 @@ class BatchProcessor:
                     self.queue.mark_failed(task.task_id, str(e), permanent=True)
                     failed += 1
                     self.images_failed += 1
+                    record_image_failed('file_missing')
                     logger.error(f"Task {task.task_id} permanently failed (missing file): {e}")
 
                 except Exception as e:
                     self.queue.mark_failed(task.task_id, str(e))
                     failed += 1
                     self.images_failed += 1
+                    record_image_failed('api_error')
                     logger.error(f"Task {task.task_id} failed: {e}")
+
+        # Record batch metrics
+        batch_duration = time.time() - batch_start
+        record_batch_processed(batch_duration)
+        update_queue_metrics(self.queue.get_queue_stats())
 
         logger.info(f"Batch complete: {succeeded} succeeded, {failed} failed")
 
@@ -503,7 +544,9 @@ class BatchProcessor:
 
     def _is_circuit_open(self) -> bool:
         """Check if circuit breaker is open."""
-        return time.time() < self._circuit_open_until
+        is_open = time.time() < self._circuit_open_until
+        set_circuit_breaker_state(is_open)
+        return is_open
 
     def _record_all_keys_exhausted(self):
         """Record that all API keys failed - may trigger circuit breaker."""
@@ -511,6 +554,7 @@ class BatchProcessor:
 
         if self._consecutive_all_key_failures >= self.CIRCUIT_BREAKER_THRESHOLD:
             self._circuit_open_until = time.time() + self.CIRCUIT_BREAKER_RESET_TIME
+            set_circuit_breaker_state(True)
             logger.error(
                 f"Circuit breaker OPENED after {self._consecutive_all_key_failures} consecutive failures. "
                 f"Pausing for {self.CIRCUIT_BREAKER_RESET_TIME}s"
@@ -518,6 +562,8 @@ class BatchProcessor:
 
     def _record_generation_success(self):
         """Record successful generation - resets circuit breaker counter."""
+        if self._consecutive_all_key_failures > 0:
+            set_circuit_breaker_state(False)
         self._consecutive_all_key_failures = 0
 
 
