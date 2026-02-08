@@ -79,6 +79,43 @@ SAFETY_SETTINGS = [
 # These replace potentially triggering words with safer alternatives
 # IMPORTANT: Phrase patterns (multi-word) must come BEFORE single-word patterns
 # to avoid broken grammar like "cozy setting soft linens" instead of "soft blanket"
+# ============ JSON Repair Utility ============
+
+def _repair_json(text: str) -> str:
+    """
+    Attempt to repair common JSON errors from Gemini responses.
+    Fixes: trailing commas, missing closing brackets, truncated strings.
+    Returns repaired text (may still be invalid - caller should handle).
+    """
+    # Remove trailing commas before } or ]
+    text = re.sub(r',\s*([}\]])', r'\1', text)
+
+    # Fix truncated response: count brackets and close unclosed ones
+    open_braces = text.count('{') - text.count('}')
+    open_brackets = text.count('[') - text.count(']')
+
+    # If truncated mid-string, close the string first
+    in_string = False
+    escape_next = False
+    for ch in text:
+        if escape_next:
+            escape_next = False
+            continue
+        if ch == '\\':
+            escape_next = True
+            continue
+        if ch == '"':
+            in_string = not in_string
+    if in_string:
+        text += '"'
+
+    # Close unclosed brackets/braces
+    text += ']' * max(0, open_brackets)
+    text += '}' * max(0, open_braces)
+
+    return text
+
+
 SAFETY_PHRASE_REPLACEMENTS = [
     # Multi-word phrases - MUST be processed first
     # Bed-related phrases (most common safety triggers)
@@ -1923,75 +1960,112 @@ CRITICAL RULES:
             mime_type=_get_image_mime_type(product_path)
         ))
 
-    try:
-        log.debug(f"Calling {TEXT_MODEL} with {len(contents)} content parts")
-        response = client.models.generate_content(
-            model=TEXT_MODEL,
-            contents=contents,
-            config=types.GenerateContentConfig(
-                safety_settings=SAFETY_SETTINGS  # Allow benign lifestyle content analysis
+    max_analysis_retries = 2
+    last_error = None
+
+    for attempt in range(1, max_analysis_retries + 1):
+        try:
+            # Get fresh client on retry (may rotate to different key)
+            if attempt > 1:
+                client, api_key = _get_client()
+                log.info(f"Analysis retry {attempt}/{max_analysis_retries} with key {api_key[:8]}")
+
+            log.debug(f"Calling {TEXT_MODEL} with {len(contents)} content parts")
+            response = client.models.generate_content(
+                model=TEXT_MODEL,
+                contents=contents,
+                config=types.GenerateContentConfig(
+                    safety_settings=SAFETY_SETTINGS  # Allow benign lifestyle content analysis
+                )
             )
-        )
-        elapsed = time.time() - start_time
-        result_text = response.text
-        log.debug(f"Analysis API response in {elapsed:.1f}s, response length: {len(result_text)}")
+            elapsed = time.time() - start_time
+            result_text = response.text
+            log.debug(f"Analysis API response in {elapsed:.1f}s, response length: {len(result_text)}")
 
-        # Parse JSON
-        start = result_text.find('{')
-        end = result_text.rfind('}') + 1
-        if start >= 0 and end > start:
-            analysis = json.loads(result_text[start:end])
-        else:
-            log.error("No valid JSON in analysis response")
-            raise GeminiServiceError('No valid JSON in response')
+            # Parse JSON - extract JSON object from response
+            start = result_text.find('{')
+            end = result_text.rfind('}') + 1
+            if start < 0 or end <= start:
+                log.error("No valid JSON in analysis response")
+                last_error = GeminiServiceError('No valid JSON in response')
+                continue
 
-        # Validate structure
-        if 'new_slides' not in analysis:
-            log.error("Missing new_slides in analysis")
-            raise GeminiServiceError('Missing new_slides in analysis')
+            json_text = result_text[start:end]
 
-        # Validate slide count based on product_placement action
-        # - "replace": same number of slides as original (or fewer if CTA excluded)
-        # - "add": original + 1 (product slide added at end), or fewer if CTA excluded
-        # Note: CTA slides may be excluded per our rules, so allow fewer slides
-        product_placement = analysis.get('product_placement', {})
-        placement_action = product_placement.get('action', 'add')
-        max_expected_slides = num_slides if placement_action == 'replace' else num_slides + 1
-        min_expected_slides = max(2, max_expected_slides - 2)  # Allow up to 2 slides excluded (CTA, etc.)
+            # Try parsing as-is first, then with repair
+            try:
+                analysis = json.loads(json_text)
+            except json.JSONDecodeError as parse_err:
+                log.warning(f"JSON parse failed (attempt {attempt}): {parse_err}. Trying repair...")
+                repaired = _repair_json(json_text)
+                try:
+                    analysis = json.loads(repaired)
+                    log.info(f"JSON repair successful on attempt {attempt}")
+                except json.JSONDecodeError:
+                    log.error(f"JSON repair failed on attempt {attempt}")
+                    last_error = GeminiServiceError(f'Failed to parse analysis JSON: {parse_err}')
+                    continue
 
-        actual_slides = len(analysis['new_slides'])
-        if actual_slides < min_expected_slides or actual_slides > max_expected_slides:
-            log.error(f"Slide count out of range: expected {min_expected_slides}-{max_expected_slides} (action={placement_action}), got {actual_slides}")
-            raise GeminiServiceError(f"Expected {min_expected_slides}-{max_expected_slides} slides (action={placement_action}), got {actual_slides}")
+            # Validate structure
+            if 'new_slides' not in analysis:
+                log.error("Missing new_slides in analysis")
+                last_error = GeminiServiceError('Missing new_slides in analysis')
+                continue
 
-        if actual_slides < max_expected_slides:
-            log.info(f"Slide count adjusted: {actual_slides} slides (max was {max_expected_slides}, likely CTA excluded)")
+            # Validate slide count based on product_placement action
+            # - "replace": same number of slides as original (or fewer if CTA excluded)
+            # - "add": original + 1 (product slide added at end), or fewer if CTA excluded
+            # Note: CTA slides may be excluded per our rules, so allow fewer slides
+            product_placement = analysis.get('product_placement', {})
+            placement_action = product_placement.get('action', 'add')
+            max_expected_slides = num_slides if placement_action == 'replace' else num_slides + 1
+            min_expected_slides = max(2, max_expected_slides - 2)  # Allow up to 2 slides excluded (CTA, etc.)
 
-        # Validate exactly one product slide
-        product_slides = [s for s in analysis['new_slides'] if s.get('slide_type') == 'product']
-        if len(product_slides) != 1:
-            log.error(f"Product slide count error: expected 1, got {len(product_slides)}")
-            raise GeminiServiceError(f"Expected exactly 1 product slide, got {len(product_slides)}")
+            actual_slides = len(analysis['new_slides'])
+            if actual_slides < min_expected_slides or actual_slides > max_expected_slides:
+                log.error(f"Slide count out of range: expected {min_expected_slides}-{max_expected_slides} (action={placement_action}), got {actual_slides}")
+                last_error = GeminiServiceError(f"Expected {min_expected_slides}-{max_expected_slides} slides (action={placement_action}), got {actual_slides}")
+                continue
 
-        # Save analysis.json
-        os.makedirs(output_dir, exist_ok=True)
-        analysis_path = os.path.join(output_dir, 'analysis.json')
-        with open(analysis_path, 'w') as f:
-            json.dump(analysis, f, indent=2)
+            if actual_slides < max_expected_slides:
+                log.info(f"Slide count adjusted: {actual_slides} slides (max was {max_expected_slides}, likely CTA excluded)")
 
-        slideshow_type = analysis.get('slideshow_type', 'unknown')
-        log.info(f"Analysis complete in {elapsed:.1f}s: type={slideshow_type}, {len(analysis['new_slides'])} slides")
-        return analysis
+            # Validate exactly one product slide
+            product_slides = [s for s in analysis['new_slides'] if s.get('slide_type') == 'product']
+            if len(product_slides) != 1:
+                log.error(f"Product slide count error: expected 1, got {len(product_slides)}")
+                last_error = GeminiServiceError(f"Expected exactly 1 product slide, got {len(product_slides)}")
+                continue
 
-    except json.JSONDecodeError as e:
-        log.error(f"Failed to parse analysis JSON: {e}")
-        raise GeminiServiceError(f'Failed to parse analysis JSON: {e}')
-    except Exception as e:
-        # Record rate limit failures so the key manager can skip this key
-        is_rate_limit = '429' in str(e) or 'RESOURCE_EXHAUSTED' in str(e)
-        _record_api_usage(api_key, success=False, is_rate_limit=is_rate_limit)
-        log.error(f"Analysis failed: {str(e)}", exc_info=True)
-        raise GeminiServiceError(f'Analysis failed: {str(e)}')
+            # All validations passed - save and return
+            os.makedirs(output_dir, exist_ok=True)
+            analysis_path = os.path.join(output_dir, 'analysis.json')
+            with open(analysis_path, 'w') as f:
+                json.dump(analysis, f, indent=2)
+
+            slideshow_type = analysis.get('slideshow_type', 'unknown')
+            if attempt > 1:
+                log.info(f"Analysis succeeded on retry {attempt} in {elapsed:.1f}s: type={slideshow_type}, {len(analysis['new_slides'])} slides")
+            else:
+                log.info(f"Analysis complete in {elapsed:.1f}s: type={slideshow_type}, {len(analysis['new_slides'])} slides")
+            return analysis
+
+        except Exception as e:
+            # Record rate limit failures so the key manager can skip this key
+            is_rate_limit = '429' in str(e) or 'RESOURCE_EXHAUSTED' in str(e)
+            _record_api_usage(api_key, success=False, is_rate_limit=is_rate_limit)
+
+            if is_rate_limit:
+                # Rate limits should not be retried here - let the caller handle
+                log.error(f"Analysis rate limited: {str(e)}")
+                raise GeminiServiceError(f'Analysis failed: {str(e)}')
+
+            log.error(f"Analysis attempt {attempt} failed: {str(e)}", exc_info=(attempt == max_analysis_retries))
+            last_error = GeminiServiceError(f'Analysis failed: {str(e)}')
+
+    # All retries exhausted
+    log.error(f"Analysis failed after {max_analysis_retries} attempts")
+    raise last_error or GeminiServiceError('Analysis failed after all retries')
 
 
 def _generate_single_image(

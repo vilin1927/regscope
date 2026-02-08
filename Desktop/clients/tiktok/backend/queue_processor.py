@@ -370,6 +370,7 @@ class BatchProcessor:
                 # Call the low-level generation function
                 result_path = _generate_single_image(
                     client=client,
+                    api_key=api_key,
                     slide_type=task.slide_type,
                     scene_description=task.scene_description,
                     text_content=task.text_content,
@@ -413,7 +414,7 @@ class BatchProcessor:
                     continue
 
                 # Check for rate limit / quota error
-                if '429' in error_str or 'resource_exhausted' in error_str or 'rate' in error_str or 'quota' in error_str:
+                if '429' in error_str or 'resource_exhausted' in error_str or 'rate limit' in error_str or 'rate_limit' in error_str or 'quota' in error_str:
                     # Detect DAILY limit vs RPM limit
                     is_daily = ('daily' in error_str or 'per day' in error_str or
                                'quota' in error_str or 'generatecontent' in error_str)
