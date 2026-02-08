@@ -1,6 +1,6 @@
 """
 Queue Processor - Batch Image Generation Worker
-Processes up to 18 images every 60 seconds from the global queue.
+Processes images in batches from the global queue.
 """
 import os
 import sys
@@ -16,6 +16,9 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+# Import configuration
+from config import QueueConfig, RedisConfig
+
 
 def get_memory_usage_mb() -> float:
     """Get current process memory usage in MB (RSS - Resident Set Size)."""
@@ -27,7 +30,7 @@ def get_memory_usage_mb() -> float:
                     # Format: "VmRSS:    123456 kB"
                     parts = line.split()
                     return int(parts[1]) / 1024  # Convert kB to MB
-    except:
+    except (IOError, OSError, ValueError, IndexError):
         pass
 
     # Fallback: use resource module
@@ -39,7 +42,7 @@ def get_memory_usage_mb() -> float:
         if sys.platform == 'darwin':
             return usage / (1024 * 1024)
         return usage / 1024
-    except:
+    except (ImportError, AttributeError, OSError):
         return 0.0
 
 from logging_config import setup_logging, get_logger
@@ -48,48 +51,43 @@ from logging_config import setup_logging, get_logger
 setup_logging()
 logger = get_logger('queue_processor')
 
-from image_queue import (
-    GlobalImageQueue, ImageTask, get_global_queue,
-    BATCH_SIZE, BATCH_INTERVAL, MAX_RETRIES
-)
+from image_queue import GlobalImageQueue, ImageTask, get_global_queue
 
 from google import genai
 from google.genai import types
 
 # Import image generation function from gemini_service_v2
-# We'll call the low-level generation function directly
 from gemini_service_v2 import (
     _generate_single_image, _get_client, _record_api_usage, _validate_image_structure,
     IMAGE_MODEL, REQUEST_TIMEOUT
 )
 
-# Configuration
-BATCH_TIMEOUT = 120  # Max seconds to wait for individual image generation
-PAUSE_ON_RATE_LIMIT = True  # Pause queue on 429 errors
-RATE_LIMIT_PAUSE_DEFAULT = 65  # Default pause duration for rate limits
-CLEANUP_INTERVAL = 10  # Run cleanup every N batches
-STALE_TASK_TIMEOUT = 1800  # Tasks stuck in processing for 30 min are stale
+# Use configuration values
+BATCH_SIZE = QueueConfig.BATCH_SIZE
+BATCH_INTERVAL = QueueConfig.BATCH_INTERVAL
+BATCH_TIMEOUT = QueueConfig.BATCH_TIMEOUT
+PAUSE_ON_RATE_LIMIT = QueueConfig.PAUSE_ON_RATE_LIMIT
+RATE_LIMIT_PAUSE_DEFAULT = QueueConfig.RATE_LIMIT_PAUSE_DEFAULT
+CLEANUP_INTERVAL = QueueConfig.CLEANUP_INTERVAL
+STALE_TASK_TIMEOUT = QueueConfig.STALE_TASK_TIMEOUT
 
 
 class BatchProcessor:
     """
     Processes image generation tasks in batches.
 
-    Every 60 seconds:
-    1. Pull up to 18 tasks from queue (FIFO, respecting dependencies)
-    2. Submit all to Gemini API in parallel
-    3. Handle results as they complete
-    4. Start next batch at exactly t+60s (strict timer)
+    Configuration is loaded from QueueConfig (config.py).
+    Default: pull up to 18 tasks every 60 seconds.
     """
 
-    # Circuit breaker settings
-    CIRCUIT_BREAKER_THRESHOLD = 3  # Consecutive all-key failures before opening
-    CIRCUIT_BREAKER_RESET_TIME = 300  # 5 minutes
+    # Circuit breaker settings (from config)
+    CIRCUIT_BREAKER_THRESHOLD = QueueConfig.CIRCUIT_BREAKER_THRESHOLD
+    CIRCUIT_BREAKER_RESET_TIME = QueueConfig.CIRCUIT_BREAKER_RESET_TIME
 
-    # Cleanup settings
-    STALE_PENDING_HOURS = 2.0  # Max age for pending tasks
-    STALE_RETRY_HOURS = 1.0   # Max age for retry tasks
-    STALE_PROCESSING_HOURS = 0.5  # Max age for processing tasks (30 min)
+    # Cleanup settings (from config)
+    STALE_PENDING_HOURS = QueueConfig.STALE_PENDING_HOURS
+    STALE_RETRY_HOURS = QueueConfig.STALE_RETRY_HOURS
+    STALE_PROCESSING_HOURS = QueueConfig.STALE_PROCESSING_HOURS
 
     def __init__(self, queue: Optional[GlobalImageQueue] = None):
         self.queue = queue or get_global_queue()
@@ -229,7 +227,7 @@ class BatchProcessor:
 
         # Submit tasks to thread pool with staggered delays to avoid rate limit bursts
         # With 5 API keys at 18 RPM each, we can do ~1.5 requests/second sustained
-        STAGGER_DELAY = 0.5  # 500ms between task submissions
+        stagger_delay = QueueConfig.STAGGER_DELAY
 
         with ThreadPoolExecutor(max_workers=BATCH_SIZE) as executor:
             # Submit tasks with delay between each to stagger API calls
@@ -237,7 +235,7 @@ class BatchProcessor:
             for i, task in enumerate(tasks):
                 futures[executor.submit(self._generate_image, task)] = task
                 if i < len(tasks) - 1:  # Don't sleep after last task
-                    time.sleep(STAGGER_DELAY)
+                    time.sleep(stagger_delay)
 
             # Process results as they complete (no timeout - strict 60s timer handles pacing)
             for future in as_completed(futures):
@@ -354,8 +352,8 @@ class BatchProcessor:
                     # Mark as free tier in Redis (permanent until fixed)
                     try:
                         manager.redis.set(f"gemini:key:{api_key[:8]}:image:free_tier", "true")
-                    except Exception:
-                        pass
+                    except (ConnectionError, TimeoutError) as redis_err:
+                        logger.warning(f"Could not mark key as free tier in Redis: {redis_err}")
                     continue
 
                 # Check for rate limit / quota error
@@ -542,11 +540,81 @@ class RateLimitError(Exception):
         self.retry_after = retry_after
 
 
+def validate_startup() -> bool:
+    """
+    Validate all dependencies before starting.
+    Returns True if all checks pass, False otherwise.
+    """
+    import redis
+
+    all_ok = True
+
+    # Check Redis connection
+    try:
+        r = redis.Redis(
+            host=RedisConfig.HOST,
+            port=RedisConfig.PORT,
+            db=RedisConfig.QUEUE_DB,
+            socket_connect_timeout=5
+        )
+        r.ping()
+        logger.info(f"Redis: OK (connected to {RedisConfig.HOST}:{RedisConfig.PORT})")
+    except redis.ConnectionError as e:
+        logger.critical(f"Redis: FAILED - Cannot connect to {RedisConfig.HOST}:{RedisConfig.PORT}: {e}")
+        all_ok = False
+    except Exception as e:
+        logger.critical(f"Redis: FAILED - {e}")
+        all_ok = False
+
+    # Check API keys
+    try:
+        from api_key_manager import get_api_key_manager
+        manager = get_api_key_manager()
+        total_keys = len(manager.keys)
+
+        if total_keys == 0:
+            logger.critical("API Keys: FAILED - No Gemini API keys configured!")
+            all_ok = False
+        else:
+            # Check for free tier keys
+            free_tier_count = 0
+            for key in manager.keys:
+                usage = manager.get_key_usage(key, 'image')
+                if usage.get('is_free_tier'):
+                    free_tier_count += 1
+                    logger.warning(f"  Key {key[:8]}: FREE TIER (will be skipped)")
+
+            available = total_keys - free_tier_count
+            if available == 0:
+                logger.critical("API Keys: FAILED - All keys are FREE TIER!")
+                all_ok = False
+            elif free_tier_count > 0:
+                logger.warning(f"API Keys: PARTIAL - {available}/{total_keys} keys available ({free_tier_count} free tier)")
+            else:
+                logger.info(f"API Keys: OK ({total_keys} keys available)")
+    except Exception as e:
+        logger.critical(f"API Keys: FAILED - {e}")
+        all_ok = False
+
+    # Log configuration
+    logger.info(f"Config: batch_size={BATCH_SIZE}, interval={BATCH_INTERVAL}s, "
+                f"circuit_breaker={QueueConfig.CIRCUIT_BREAKER_THRESHOLD} failures")
+
+    return all_ok
+
+
 def main():
     """Main entry point for queue processor."""
     logger.info("=" * 60)
     logger.info("TikTok Image Queue Processor Starting")
-    logger.info(f"Configuration: batch_size={BATCH_SIZE}, interval={BATCH_INTERVAL}s")
+    logger.info("=" * 60)
+
+    # Validate dependencies
+    if not validate_startup():
+        logger.critical("Startup validation FAILED - exiting")
+        sys.exit(1)
+
+    logger.info("Startup validation PASSED")
     logger.info("=" * 60)
 
     processor = BatchProcessor()

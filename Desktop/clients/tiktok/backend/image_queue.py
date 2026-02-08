@@ -1,7 +1,7 @@
 """
 Global Image Queue System
 Redis-backed queue for batch processing of Gemini image generation.
-Processes 18 images per 60-second batch with FIFO ordering.
+Configuration is loaded from config.py.
 """
 import os
 import json
@@ -17,25 +17,24 @@ load_dotenv()
 import redis
 
 from logging_config import get_logger
+from config import QueueConfig, RedisConfig
 
 logger = get_logger('image_queue')
 
-# Redis configuration
-REDIS_HOST = os.getenv('REDIS_HOST', 'localhost')
-REDIS_PORT = int(os.getenv('REDIS_PORT', '6379'))
-REDIS_DB = int(os.getenv('REDIS_QUEUE_DB', '1'))  # Use separate DB from Celery
+# Redis configuration (from config module)
+REDIS_HOST = RedisConfig.HOST
+REDIS_PORT = RedisConfig.PORT
+REDIS_DB = RedisConfig.QUEUE_DB
 
-# Queue configuration
-# With 5 API keys rotating at 18 RPM each = 90 RPM total capacity
-# Process 15 at a time with staggered delays to avoid burst rate limits
-BATCH_SIZE = 15  # Images per batch (conservative for 5-key rotation)
-BATCH_INTERVAL = 20  # Seconds between batches (faster with more keys)
-MAX_RETRIES = 3  # Max retry attempts before permanent failure
+# Queue configuration (from config module)
+BATCH_SIZE = QueueConfig.BATCH_SIZE
+BATCH_INTERVAL = QueueConfig.BATCH_INTERVAL
+MAX_RETRIES = QueueConfig.MAX_RETRIES
 
-# TTL configuration (auto-expire old data)
-TASK_DATA_TTL = 86400  # 24 hours - task metadata
-JOB_DATA_TTL = 86400   # 24 hours - job status
-RESULT_TTL = 86400     # 24 hours - completed image paths
+# TTL configuration (from config module)
+TASK_DATA_TTL = QueueConfig.TASK_DATA_TTL
+JOB_DATA_TTL = QueueConfig.JOB_DATA_TTL
+RESULT_TTL = QueueConfig.RESULT_TTL
 
 
 @dataclass

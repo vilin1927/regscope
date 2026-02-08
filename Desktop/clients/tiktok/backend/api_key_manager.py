@@ -3,8 +3,8 @@ API Key Manager - Handles rotation and usage tracking for Gemini API keys.
 Tracks both RPM (requests per minute) and daily limits per key, per model type.
 
 Model Types:
-- 'text': Gemini 3 Flash for all text analysis (1000 RPM, 10K RPD)
-- 'image': Gemini 3 Pro Image for image generation (20 RPM, 250 RPD)
+- 'text': Gemini Flash for all text analysis
+- 'image': Gemini Pro Image for image generation
 """
 import os
 import time
@@ -17,19 +17,19 @@ from dotenv import load_dotenv
 load_dotenv()
 
 from logging_config import get_logger
+from config import ApiKeyConfig, RedisConfig
 
 logger = get_logger('api_key_manager')
 
-# Configuration - Per-model rate limits
-# Use safe limits below actual to avoid hitting hard limits
+# Configuration - Per-model rate limits (from config)
 RATE_LIMITS = {
     'text': {
-        'rpm': 900,      # Safe limit for Flash (actual: 1000)
-        'daily': 9000,   # Safe limit (actual: 10,000)
+        'rpm': ApiKeyConfig.TEXT_RPM,
+        'daily': ApiKeyConfig.TEXT_DAILY,
     },
     'image': {
-        'rpm': 18,       # Safe limit for Pro Image (actual: 20)
-        'daily': 240,    # Safe limit (actual: 250)
+        'rpm': ApiKeyConfig.IMAGE_RPM,
+        'daily': ApiKeyConfig.IMAGE_DAILY,
     }
 }
 
@@ -37,9 +37,10 @@ RATE_LIMITS = {
 GEMINI_RPM_LIMIT = RATE_LIMITS['image']['rpm']
 GEMINI_DAILY_LIMIT = RATE_LIMITS['image']['daily']
 
-REDIS_HOST = os.getenv('REDIS_HOST', 'localhost')
-REDIS_PORT = int(os.getenv('REDIS_PORT', '6379'))
-REDIS_DB = int(os.getenv('REDIS_QUEUE_DB', '1'))  # Same DB as image queue
+# Redis configuration (from config)
+REDIS_HOST = RedisConfig.HOST
+REDIS_PORT = RedisConfig.PORT
+REDIS_DB = RedisConfig.QUEUE_DB
 
 # Key prefixes in Redis
 KEY_PREFIX = "gemini:key:"
