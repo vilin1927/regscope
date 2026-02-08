@@ -145,7 +145,25 @@ class ApiKeyManager:
                 'daily_used': 0,
                 'daily_limit': 0,
                 'is_available': False,
-                'is_free_tier': True
+                'is_free_tier': True,
+                'is_daily_exhausted': False
+            }
+
+        # Check if key hit daily quota limit (marked until midnight PT)
+        daily_exhausted_key = f"{KEY_PREFIX}{key_id}:{model_type}:daily_exhausted"
+        is_daily_exhausted = self.redis.get(daily_exhausted_key) == "true"
+
+        if is_daily_exhausted:
+            return {
+                'key_id': key_id,
+                'model_type': model_type,
+                'rpm_used': 0,
+                'rpm_limit': limits['rpm'],
+                'daily_used': limits['daily'],
+                'daily_limit': limits['daily'],
+                'is_available': False,
+                'is_free_tier': False,
+                'is_daily_exhausted': True
             }
 
         rpm_key = f"{KEY_PREFIX}{key_id}:{model_type}:rpm"
@@ -165,7 +183,8 @@ class ApiKeyManager:
             'daily_used': daily_used,
             'daily_limit': daily_limit,
             'is_available': rpm_used < rpm_limit and daily_used < daily_limit,
-            'is_free_tier': False
+            'is_free_tier': False,
+            'is_daily_exhausted': False
         }
 
     def get_all_keys_status(self, model_type: str = 'image') -> List[Dict]:
@@ -209,6 +228,8 @@ class ApiKeyManager:
         for i, s in enumerate(status):
             if s.get('is_free_tier'):
                 logger.error(f"  Key #{i + 1} ({s['key_id']}): FREE TIER (no billing)")
+            elif s.get('is_daily_exhausted'):
+                logger.error(f"  Key #{i + 1} ({s['key_id']}): DAILY LIMIT (resets at midnight PT)")
             else:
                 logger.error(f"  Key #{i + 1} ({s['key_id']}): "
                             f"RPM {s['rpm_used']}/{s['rpm_limit']}, "
@@ -248,7 +269,7 @@ class ApiKeyManager:
     def record_failure(self, key: str, model_type: str = 'image', is_rate_limit: bool = False):
         """
         Record that a request failed.
-        If rate limit error, mark this key as temporarily exhausted for that model.
+        If rate limit error, mark this key as temporarily exhausted for that model (60s RPM cooldown).
 
         Args:
             key: The API key that failed
@@ -262,7 +283,29 @@ class ApiKeyManager:
             rpm_key = f"{KEY_PREFIX}{key_id}:{model_type}:rpm"
             self.redis.set(rpm_key, limits['rpm'])
             self.redis.expire(rpm_key, 60)
-            logger.warning(f"Key {key_id} hit rate limit for {model_type}, marked exhausted for 60s")
+            logger.warning(f"Key {key_id} hit RPM limit for {model_type}, marked exhausted for 60s")
+
+    def record_daily_exhaustion(self, key: str, model_type: str = 'image'):
+        """
+        Mark a key as daily-exhausted (hit daily quota limit).
+        Key will be unavailable until midnight Pacific Time.
+
+        Args:
+            key: The API key that hit daily limit
+            model_type: 'text' or 'image' (default: 'image')
+        """
+        key_id = self._get_key_id(key)
+        daily_exhausted_key = f"{KEY_PREFIX}{key_id}:{model_type}:daily_exhausted"
+        seconds_until_midnight = self._get_seconds_until_midnight_pt()
+        self.redis.set(daily_exhausted_key, "true", ex=seconds_until_midnight)
+        logger.warning(f"Key {key_id} hit DAILY limit for {model_type}, "
+                      f"marked unavailable for {seconds_until_midnight // 3600}h {(seconds_until_midnight % 3600) // 60}m")
+
+    def is_daily_exhausted(self, key: str, model_type: str = 'image') -> bool:
+        """Check if a key is marked as daily-exhausted."""
+        key_id = self._get_key_id(key)
+        daily_exhausted_key = f"{KEY_PREFIX}{key_id}:{model_type}:daily_exhausted"
+        return self.redis.get(daily_exhausted_key) == "true"
 
     def get_summary(self, model_type: str = None) -> Dict:
         """

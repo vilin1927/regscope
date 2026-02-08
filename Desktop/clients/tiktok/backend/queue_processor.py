@@ -88,6 +88,7 @@ except ImportError:
 BATCH_SIZE = QueueConfig.BATCH_SIZE
 BATCH_INTERVAL = QueueConfig.BATCH_INTERVAL
 BATCH_TIMEOUT = QueueConfig.BATCH_TIMEOUT
+MAX_WORKERS = QueueConfig.MAX_WORKERS
 PAUSE_ON_RATE_LIMIT = QueueConfig.PAUSE_ON_RATE_LIMIT
 RATE_LIMIT_PAUSE_DEFAULT = QueueConfig.RATE_LIMIT_PAUSE_DEFAULT
 CLEANUP_INTERVAL = QueueConfig.CLEANUP_INTERVAL
@@ -99,7 +100,7 @@ class BatchProcessor:
     Processes image generation tasks in batches.
 
     Configuration is loaded from QueueConfig (config.py).
-    Default: pull up to 18 tasks every 60 seconds.
+    Default: pull up to 10 tasks every 60 seconds (5 keys × 2 RPM = 10/min).
     """
 
     # Circuit breaker settings (from config)
@@ -255,10 +256,10 @@ class BatchProcessor:
         failed = 0
 
         # Submit tasks to thread pool with staggered delays to avoid rate limit bursts
-        # With 5 API keys at 18 RPM each, we can do ~1.5 requests/second sustained
+        # With 5 API keys at 2 RPM each = 10 requests/minute, stagger 6s between each
         stagger_delay = QueueConfig.STAGGER_DELAY
 
-        with ThreadPoolExecutor(max_workers=BATCH_SIZE) as executor:
+        with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
             # Submit tasks with delay between each to stagger API calls
             futures = {}
             task_start_times = {}
@@ -400,7 +401,6 @@ class BatchProcessor:
                 if 'free_tier' in error_str or 'limit: 0' in error_str:
                     logger.error(f"Key {api_key[:8]} is FREE TIER - no quota for image model! Skipping this key.")
                     _record_api_usage(api_key, success=False, is_rate_limit=True, model_type='image')
-                    # Mark as free tier in Redis (permanent until fixed)
                     try:
                         manager.redis.set(f"gemini:key:{api_key[:8]}:image:free_tier", "true")
                     except (ConnectionError, TimeoutError) as redis_err:
@@ -409,17 +409,28 @@ class BatchProcessor:
 
                 # Check for rate limit / quota error
                 if '429' in error_str or 'resource_exhausted' in error_str or 'rate' in error_str or 'quota' in error_str:
-                    # Record rate limit failure for image model - marks this key as exhausted
-                    _record_api_usage(api_key, success=False, is_rate_limit=True, model_type='image')
-                    logger.warning(f"Key {api_key[:8]} rate limited, trying next key... (attempt {attempt+1}/{num_keys})")
-                    continue
+                    # Detect DAILY limit vs RPM limit
+                    is_daily = ('daily' in error_str or 'per day' in error_str or
+                               'quota' in error_str or 'generatecontent' in error_str)
+
+                    if is_daily:
+                        # Daily limit — mark key unavailable until midnight PT, try next key
+                        manager.record_daily_exhaustion(api_key, model_type='image')
+                        logger.warning(f"Key {api_key[:8]} hit DAILY limit, marked until midnight PT. Trying next key... (attempt {attempt+1}/{num_keys})")
+                        continue
+                    else:
+                        # RPM limit — don't try other keys (they're likely near limit too with RPM 2)
+                        # Record the RPM failure and let the task be re-queued
+                        _record_api_usage(api_key, success=False, is_rate_limit=True, model_type='image')
+                        logger.warning(f"Key {api_key[:8]} hit RPM limit (2 RPM). Re-queuing task instead of trying other keys.")
+                        raise RateLimitError(f"Key {api_key[:8]} RPM limit hit. Re-queuing.", RATE_LIMIT_PAUSE_DEFAULT)
 
                 # Non-rate-limit error - don't retry with other keys
                 _record_api_usage(api_key, success=False, model_type='image')
                 raise
 
-        # All keys exhausted
-        raise RateLimitError(f"All {num_keys} Gemini API keys exhausted for image. RPM resets in <60s, daily resets at midnight PT.", RATE_LIMIT_PAUSE_DEFAULT)
+        # All keys exhausted (daily limits on all keys)
+        raise ApiKeyExhaustedError(f"All {num_keys} Gemini API keys daily-exhausted for image. Resets at midnight PT.")
 
     def _handle_rate_limit(self, error: 'RateLimitError'):
         """
