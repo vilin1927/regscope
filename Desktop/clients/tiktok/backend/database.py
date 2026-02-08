@@ -1191,6 +1191,73 @@ def get_tiktok_copy_batches_count() -> int:
         return cursor.fetchone()['count']
 
 
+# ============ Today's Processing Stats ============
+
+def get_today_processing_stats() -> Dict[str, Any]:
+    """Get today's link and job processing statistics for admin dashboard."""
+    from datetime import date
+    today_str = date.today().isoformat()  # YYYY-MM-DD
+
+    with get_db() as conn:
+        cursor = conn.cursor()
+
+        # Jobs processed today (single + batch)
+        cursor.execute('''
+            SELECT
+                COUNT(*) as total,
+                SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) as completed,
+                SUM(CASE WHEN status = 'processing' THEN 1 ELSE 0 END) as processing,
+                SUM(CASE WHEN status = 'failed' THEN 1 ELSE 0 END) as failed,
+                SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) as pending
+            FROM jobs
+            WHERE DATE(created_at) = ?
+        ''', (today_str,))
+        jobs_row = cursor.fetchone()
+
+        # Batch links processed today
+        cursor.execute('''
+            SELECT
+                COUNT(*) as total,
+                SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) as completed,
+                SUM(CASE WHEN status = 'processing' THEN 1 ELSE 0 END) as processing,
+                SUM(CASE WHEN status = 'failed' THEN 1 ELSE 0 END) as failed,
+                SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) as pending
+            FROM batch_links
+            WHERE DATE(created_at) = ?
+        ''', (today_str,))
+        links_row = cursor.fetchone()
+
+        # All-time totals
+        cursor.execute('SELECT COUNT(*) as total FROM jobs WHERE status = ?', ('completed',))
+        total_jobs_completed = cursor.fetchone()['total']
+
+        cursor.execute('SELECT COUNT(*) as total FROM batch_links WHERE status = ?', ('completed',))
+        total_links_completed = cursor.fetchone()['total']
+
+        return {
+            'today': {
+                'jobs': {
+                    'total': jobs_row['total'] or 0,
+                    'completed': jobs_row['completed'] or 0,
+                    'processing': jobs_row['processing'] or 0,
+                    'failed': jobs_row['failed'] or 0,
+                    'pending': jobs_row['pending'] or 0,
+                },
+                'links': {
+                    'total': links_row['total'] or 0,
+                    'completed': links_row['completed'] or 0,
+                    'processing': links_row['processing'] or 0,
+                    'failed': links_row['failed'] or 0,
+                    'pending': links_row['pending'] or 0,
+                }
+            },
+            'all_time': {
+                'jobs_completed': total_jobs_completed,
+                'links_completed': total_links_completed,
+            }
+        }
+
+
 # Initialize database on import
 init_db()
 init_tiktok_copy_tables()

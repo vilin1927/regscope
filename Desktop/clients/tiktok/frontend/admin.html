@@ -144,10 +144,10 @@
                     </p>
                 </div>
 
-                <!-- Gemini API Key Status -->
+                <!-- Gemini API Key Status & Usage Dashboard -->
                 <div class="bg-gray-800/50 backdrop-blur rounded-xl p-6 shadow-xl mt-6">
                     <div class="flex justify-between items-center mb-4">
-                        <h2 class="text-xl font-semibold">Gemini API Key Status</h2>
+                        <h2 class="text-xl font-semibold">Usage Dashboard</h2>
                         <div class="flex items-center space-x-2">
                             <button
                                 @click="resetApiKeyCounters()"
@@ -165,82 +165,203 @@
 
                     <!-- Loading State -->
                     <div x-show="!apiKeyStatus" class="text-center text-gray-500 py-4">
-                        Loading API key status...
+                        Loading usage data...
                     </div>
 
-                    <!-- Summary Stats -->
+                    <!-- ===== TODAY'S OVERVIEW ===== -->
                     <div x-show="apiKeyStatus" class="mb-6">
+                        <h3 class="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-3">Today's Overview</h3>
+
+                        <!-- Big stat cards -->
                         <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
                             <div class="bg-gray-700/50 rounded-lg p-3 text-center">
-                                <div class="text-2xl font-bold text-pink-400" x-text="apiKeyStatus?.total_keys || 0"></div>
-                                <div class="text-xs text-gray-400">Total Keys</div>
+                                <div class="text-2xl font-bold text-pink-400" x-text="apiKeyStatus?.image_stats?.total_images_today || 0"></div>
+                                <div class="text-xs text-gray-400">Images Generated</div>
                             </div>
                             <div class="bg-gray-700/50 rounded-lg p-3 text-center">
                                 <div class="text-2xl font-bold"
-                                     :class="apiKeyStatus?.available_keys > 0 ? 'text-green-400' : 'text-red-400'"
-                                     x-text="apiKeyStatus?.available_keys || 0"></div>
-                                <div class="text-xs text-gray-400">Available</div>
+                                     :class="(apiKeyStatus?.image_stats?.total_images_remaining || 0) > 100 ? 'text-green-400' : ((apiKeyStatus?.image_stats?.total_images_remaining || 0) > 0 ? 'text-yellow-400' : 'text-red-400')"
+                                     x-text="apiKeyStatus?.image_stats?.total_images_remaining || 0"></div>
+                                <div class="text-xs text-gray-400">Images Remaining</div>
                             </div>
                             <div class="bg-gray-700/50 rounded-lg p-3 text-center">
-                                <div class="text-2xl font-bold text-blue-400" x-text="apiKeyStatus?.total_rpm_available || 0"></div>
-                                <div class="text-xs text-gray-400">RPM Available</div>
+                                <div class="text-2xl font-bold text-blue-400"
+                                     x-text="(apiKeyStatus?.processing_stats?.today?.links?.completed || 0) + (apiKeyStatus?.processing_stats?.today?.jobs?.completed || 0)"></div>
+                                <div class="text-xs text-gray-400">Links Completed</div>
                             </div>
                             <div class="bg-gray-700/50 rounded-lg p-3 text-center">
-                                <div class="text-2xl font-bold text-purple-400" x-text="apiKeyStatus?.total_daily_available || 0"></div>
-                                <div class="text-xs text-gray-400">Daily Available</div>
+                                <div class="text-2xl font-bold text-purple-400"
+                                     x-text="'~' + (apiKeyStatus?.image_stats?.estimated_links_remaining || 0)"></div>
+                                <div class="text-xs text-gray-400">Links Capacity Left</div>
                             </div>
                         </div>
 
-                        <!-- Daily Reset Timer -->
-                        <div class="text-center text-sm text-gray-400 mb-4">
-                            Daily quota resets in: <span class="text-yellow-400 font-mono" x-text="formatResetTime(apiKeyStatus?.seconds_until_daily_reset)"></span>
+                        <!-- Overall image progress bar -->
+                        <div class="mb-3">
+                            <div class="flex justify-between text-xs text-gray-400 mb-1">
+                                <span>Daily Image Budget</span>
+                                <span x-text="(apiKeyStatus?.image_stats?.total_images_today || 0) + ' / ' + (apiKeyStatus?.image_stats?.total_daily_capacity || 0) + ' images'"></span>
+                            </div>
+                            <div class="w-full bg-gray-600 rounded-full h-3">
+                                <div class="h-3 rounded-full transition-all duration-500"
+                                     :class="(() => { const pct = ((apiKeyStatus?.image_stats?.total_images_today || 0) / (apiKeyStatus?.image_stats?.total_daily_capacity || 1)) * 100; return pct >= 90 ? 'bg-red-500' : (pct >= 60 ? 'bg-yellow-500' : 'bg-gradient-to-r from-green-500 to-emerald-400'); })()"
+                                     :style="'width: ' + Math.min(100, ((apiKeyStatus?.image_stats?.total_images_today || 0) / (apiKeyStatus?.image_stats?.total_daily_capacity || 1)) * 100) + '%'">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Today's link processing breakdown -->
+                        <div x-show="apiKeyStatus?.processing_stats?.today" class="grid grid-cols-2 md:grid-cols-5 gap-2 mb-3">
+                            <div class="bg-gray-700/30 rounded px-3 py-2 text-center">
+                                <div class="text-sm font-bold text-gray-300" x-text="apiKeyStatus?.processing_stats?.today?.links?.total || 0"></div>
+                                <div class="text-xs text-gray-500">Total Links</div>
+                            </div>
+                            <div class="bg-gray-700/30 rounded px-3 py-2 text-center">
+                                <div class="text-sm font-bold text-green-400" x-text="apiKeyStatus?.processing_stats?.today?.links?.completed || 0"></div>
+                                <div class="text-xs text-gray-500">Completed</div>
+                            </div>
+                            <div class="bg-gray-700/30 rounded px-3 py-2 text-center">
+                                <div class="text-sm font-bold text-blue-400" x-text="apiKeyStatus?.processing_stats?.today?.links?.processing || 0"></div>
+                                <div class="text-xs text-gray-500">Processing</div>
+                            </div>
+                            <div class="bg-gray-700/30 rounded px-3 py-2 text-center">
+                                <div class="text-sm font-bold text-yellow-400" x-text="apiKeyStatus?.processing_stats?.today?.links?.pending || 0"></div>
+                                <div class="text-xs text-gray-500">Pending</div>
+                            </div>
+                            <div class="bg-gray-700/30 rounded px-3 py-2 text-center">
+                                <div class="text-sm font-bold text-red-400" x-text="apiKeyStatus?.processing_stats?.today?.links?.failed || 0"></div>
+                                <div class="text-xs text-gray-500">Failed</div>
+                            </div>
+                        </div>
+
+                        <!-- Daily Reset Timer + Key availability -->
+                        <div class="flex items-center justify-between text-sm text-gray-400">
+                            <span>
+                                Keys: <span class="font-mono" :class="apiKeyStatus?.available_keys > 0 ? 'text-green-400' : 'text-red-400'"
+                                    x-text="(apiKeyStatus?.available_keys || 0) + '/' + (apiKeyStatus?.total_keys || 0) + ' active'"></span>
+                                &middot; RPM: <span class="font-mono text-blue-400" x-text="apiKeyStatus?.total_rpm_available || 0"></span>
+                            </span>
+                            <span>
+                                Resets in: <span class="text-yellow-400 font-mono" x-text="formatResetTime(apiKeyStatus?.seconds_until_daily_reset)"></span>
+                            </span>
                         </div>
                     </div>
 
-                    <!-- Individual Key Cards -->
-                    <div x-show="apiKeyStatus" class="space-y-3">
-                        <template x-for="(key, index) in (apiKeyStatus?.keys || [])" :key="key.key_id">
-                            <div class="bg-gray-700/30 rounded-lg p-4 border"
-                                 :class="key.is_available ? 'border-green-500/30' : 'border-red-500/30'">
-                                <div class="flex items-center justify-between mb-3">
-                                    <div class="flex items-center space-x-3">
-                                        <span class="text-sm font-medium text-gray-300">Key #<span x-text="index + 1"></span></span>
-                                        <span class="font-mono text-xs text-gray-500" x-text="key.key_id + '...'"></span>
-                                        <span class="px-2 py-0.5 rounded text-xs"
-                                              :class="key.is_available ? 'bg-green-500/30 text-green-400' : 'bg-red-500/30 text-red-400'"
-                                              x-text="key.is_available ? 'Available' : 'Exhausted'"></span>
-                                    </div>
+                    <!-- ===== STUCK JOBS CLEANUP ===== -->
+                    <div x-show="apiKeyStatus" class="mb-6">
+                        <div class="flex items-center justify-between mb-2">
+                            <h3 class="text-sm font-semibold text-gray-400 uppercase tracking-wider">Stuck Jobs</h3>
+                            <div class="flex items-center space-x-2">
+                                <button
+                                    @click="scanStuckJobs()"
+                                    class="text-xs px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded"
+                                    :disabled="cleaningStuck"
+                                >
+                                    Scan
+                                </button>
+                                <button
+                                    x-show="stuckJobsResult && stuckJobsResult.total_stuck > 0"
+                                    @click="cleanupStuckJobs('fail')"
+                                    class="text-xs px-3 py-1 bg-red-600 hover:bg-red-700 rounded"
+                                    :disabled="cleaningStuck"
+                                >
+                                    <span x-show="!cleaningStuck">Mark Failed</span>
+                                    <span x-show="cleaningStuck">Cleaning...</span>
+                                </button>
+                                <button
+                                    x-show="stuckJobsResult && stuckJobsResult.total_stuck > 0"
+                                    @click="cleanupStuckJobs('reset')"
+                                    class="text-xs px-3 py-1 bg-yellow-600 hover:bg-yellow-700 rounded"
+                                    :disabled="cleaningStuck"
+                                >
+                                    Retry
+                                </button>
+                            </div>
+                        </div>
+                        <div x-show="stuckJobsResult" class="bg-gray-700/30 rounded-lg p-3">
+                            <div x-show="stuckJobsResult?.total_stuck === 0" class="text-sm text-green-400 text-center">
+                                No stuck jobs found
+                            </div>
+                            <div x-show="stuckJobsResult?.total_stuck > 0" class="text-sm">
+                                <div class="text-yellow-400 mb-2">
+                                    Found <span class="font-bold" x-text="stuckJobsResult?.total_stuck"></span> stuck items
+                                    (processing > 15 min)
                                 </div>
-
-                                <!-- RPM Progress Bar -->
-                                <div class="mb-2">
-                                    <div class="flex justify-between text-xs text-gray-400 mb-1">
-                                        <span>RPM (per minute)</span>
-                                        <span x-text="key.rpm_used + '/' + key.rpm_limit"></span>
+                                <template x-for="job in (stuckJobsResult?.stuck_jobs || [])" :key="job.id">
+                                    <div class="text-xs text-gray-400 mb-1">
+                                        Job <span class="font-mono text-gray-300" x-text="job.id?.substring(0,8)"></span>
+                                        - <span x-text="job.tiktok_url || job.folder_name || 'batch'"></span>
+                                        <span class="text-gray-500"> (since <span x-text="job.started_at || job.created_at"></span>)</span>
                                     </div>
-                                    <div class="w-full bg-gray-600 rounded-full h-2">
-                                        <div class="h-2 rounded-full transition-all duration-300"
-                                             :class="key.rpm_used >= key.rpm_limit ? 'bg-red-500' : (key.rpm_used > key.rpm_limit * 0.7 ? 'bg-yellow-500' : 'bg-green-500')"
-                                             :style="'width: ' + Math.min(100, (key.rpm_used / key.rpm_limit) * 100) + '%'">
-                                        </div>
+                                </template>
+                                <template x-for="link in (stuckJobsResult?.stuck_links || [])" :key="link.id">
+                                    <div class="text-xs text-gray-400 mb-1">
+                                        Link <span class="font-mono text-gray-300" x-text="link.id?.substring(0,8)"></span>
+                                        - <span x-text="link.link_url"></span>
                                     </div>
-                                </div>
-
-                                <!-- Daily Progress Bar -->
-                                <div>
-                                    <div class="flex justify-between text-xs text-gray-400 mb-1">
-                                        <span>Daily Quota</span>
-                                        <span x-text="key.daily_used + '/' + key.daily_limit"></span>
-                                    </div>
-                                    <div class="w-full bg-gray-600 rounded-full h-2">
-                                        <div class="h-2 rounded-full transition-all duration-300"
-                                             :class="key.daily_used >= key.daily_limit ? 'bg-red-500' : (key.daily_used > key.daily_limit * 0.7 ? 'bg-yellow-500' : 'bg-blue-500')"
-                                             :style="'width: ' + Math.min(100, (key.daily_used / key.daily_limit) * 100) + '%'">
-                                        </div>
-                                    </div>
+                                </template>
+                                <div x-show="stuckJobsResult?.cleaned && !stuckJobsResult?.dry_run" class="mt-2 text-green-400 text-xs">
+                                    Cleaned: <span x-text="stuckJobsResult.cleaned.jobs"></span> jobs,
+                                    <span x-text="stuckJobsResult.cleaned.links"></span> links,
+                                    <span x-text="stuckJobsResult.cleaned.batches"></span> batches
                                 </div>
                             </div>
-                        </template>
+                        </div>
+                    </div>
+
+                    <!-- ===== PER-KEY BREAKDOWN ===== -->
+                    <div x-show="apiKeyStatus">
+                        <h3 class="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-3">Per-Key Breakdown</h3>
+                        <div class="space-y-3">
+                            <template x-for="(key, index) in (apiKeyStatus?.keys || [])" :key="key.key_id">
+                                <div class="bg-gray-700/30 rounded-lg p-4 border"
+                                     :class="key.is_available ? 'border-green-500/30' : (key.is_daily_exhausted ? 'border-orange-500/30' : 'border-red-500/30')">
+                                    <div class="flex items-center justify-between mb-3">
+                                        <div class="flex items-center space-x-3">
+                                            <span class="text-sm font-medium text-gray-300">Key #<span x-text="index + 1"></span></span>
+                                            <span class="font-mono text-xs text-gray-500" x-text="key.key_id + '...'"></span>
+                                            <span class="px-2 py-0.5 rounded text-xs"
+                                                  :class="key.is_available ? 'bg-green-500/30 text-green-400' : (key.is_daily_exhausted ? 'bg-orange-500/30 text-orange-400' : 'bg-red-500/30 text-red-400')"
+                                                  x-text="key.is_available ? 'Active' : (key.is_daily_exhausted ? 'Daily Exhausted' : 'Exhausted')"></span>
+                                        </div>
+                                        <div class="text-right">
+                                            <span class="text-xs text-gray-500">Images left: </span>
+                                            <span class="text-sm font-bold"
+                                                  :class="(key.daily_limit - key.daily_used) > 50 ? 'text-green-400' : ((key.daily_limit - key.daily_used) > 0 ? 'text-yellow-400' : 'text-red-400')"
+                                                  x-text="Math.max(0, key.daily_limit - key.daily_used)"></span>
+                                        </div>
+                                    </div>
+
+                                    <!-- Images Generated Progress Bar -->
+                                    <div class="mb-2">
+                                        <div class="flex justify-between text-xs text-gray-400 mb-1">
+                                            <span>Images Generated Today</span>
+                                            <span x-text="key.daily_used + ' / ' + key.daily_limit"></span>
+                                        </div>
+                                        <div class="w-full bg-gray-600 rounded-full h-2.5">
+                                            <div class="h-2.5 rounded-full transition-all duration-300"
+                                                 :class="key.daily_used >= key.daily_limit ? 'bg-red-500' : (key.daily_used > key.daily_limit * 0.7 ? 'bg-yellow-500' : 'bg-gradient-to-r from-blue-500 to-cyan-400')"
+                                                 :style="'width: ' + Math.min(100, (key.daily_used / key.daily_limit) * 100) + '%'">
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- RPM (smaller, secondary) -->
+                                    <div>
+                                        <div class="flex justify-between text-xs text-gray-500 mb-1">
+                                            <span>RPM</span>
+                                            <span x-text="key.rpm_used + '/' + key.rpm_limit"></span>
+                                        </div>
+                                        <div class="w-full bg-gray-600 rounded-full h-1.5">
+                                            <div class="h-1.5 rounded-full transition-all duration-300"
+                                                 :class="key.rpm_used >= key.rpm_limit ? 'bg-red-500' : (key.rpm_used > key.rpm_limit * 0.7 ? 'bg-yellow-500' : 'bg-green-500')"
+                                                 :style="'width: ' + Math.min(100, (key.rpm_used / key.rpm_limit) * 100) + '%'">
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
                     </div>
 
                     <!-- No Keys State -->
@@ -732,6 +853,8 @@
                 // API Key Status state
                 apiKeyStatus: null,
                 resettingKeys: false,
+                stuckJobsResult: null,
+                cleaningStuck: false,
 
                 init() {
                     const storedToken = localStorage.getItem('adminToken');
@@ -988,6 +1111,50 @@
                         this.messageType = 'error';
                     }
                     this.resettingKeys = false;
+                    setTimeout(() => { this.message = ''; }, 4000);
+                },
+
+                // Stuck Jobs methods
+                async scanStuckJobs() {
+                    this.cleaningStuck = true;
+                    try {
+                        const res = await fetch(`${API_BASE}/api/admin/cleanup-stuck`, {
+                            method: 'POST',
+                            headers: { 'X-Admin-Token': this.token, 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ dry_run: true, threshold_minutes: 15 })
+                        });
+                        if (res.ok) {
+                            this.stuckJobsResult = await res.json();
+                        }
+                    } catch (e) {
+                        console.error('Failed to scan stuck jobs:', e);
+                    }
+                    this.cleaningStuck = false;
+                },
+
+                async cleanupStuckJobs(action) {
+                    const label = action === 'fail' ? 'mark as failed' : 'reset to pending for retry';
+                    if (!confirm(`${action === 'fail' ? 'Mark' : 'Reset'} ${this.stuckJobsResult?.total_stuck || 0} stuck items? This will ${label}.`)) return;
+
+                    this.cleaningStuck = true;
+                    try {
+                        const res = await fetch(`${API_BASE}/api/admin/cleanup-stuck`, {
+                            method: 'POST',
+                            headers: { 'X-Admin-Token': this.token, 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ action: action, threshold_minutes: 15, dry_run: false })
+                        });
+                        if (res.ok) {
+                            this.stuckJobsResult = await res.json();
+                            this.message = `Cleanup complete: ${action === 'fail' ? 'marked as failed' : 'reset for retry'}`;
+                            this.messageType = 'success';
+                            this.refreshJobs();
+                            this.fetchApiKeyStatus();
+                        }
+                    } catch (e) {
+                        this.message = 'Cleanup failed: ' + e.message;
+                        this.messageType = 'error';
+                    }
+                    this.cleaningStuck = false;
                     setTimeout(() => { this.message = ''; }, 4000);
                 },
 

@@ -528,6 +528,36 @@ def get_api_keys_status():
         from api_key_manager import get_api_key_manager
         manager = get_api_key_manager()
         summary = manager.get_summary()
+
+        # Add image generation totals from key data
+        image_data = summary.get('image', {})
+        keys = image_data.get('keys', [])
+        total_images_today = sum(k.get('daily_used', 0) for k in keys)
+        total_daily_capacity = sum(k.get('daily_limit', 0) for k in keys)
+        total_images_remaining = total_daily_capacity - total_images_today
+
+        summary['image_stats'] = {
+            'total_images_today': total_images_today,
+            'total_daily_capacity': total_daily_capacity,
+            'total_images_remaining': max(0, total_images_remaining),
+            'estimated_links_remaining': max(0, total_images_remaining) // 8,  # ~8 images per link avg
+        }
+
+        # Add link processing stats from SQLite
+        try:
+            from database import get_today_processing_stats
+            summary['processing_stats'] = get_today_processing_stats()
+        except Exception as db_err:
+            logger.warning(f"Could not get processing stats: {db_err}")
+            summary['processing_stats'] = None
+
+        # Flatten image keys to top-level for backwards compat
+        if 'image' in summary and 'keys' in summary['image']:
+            summary['keys'] = summary['image']['keys']
+            summary['available_keys'] = summary['image']['available_keys']
+            summary['total_rpm_available'] = summary['image']['total_rpm_available']
+            summary['total_daily_available'] = summary['image']['total_daily_available']
+
         return jsonify(summary)
     except ImportError:
         # Manager not available, return single-key status
@@ -589,4 +619,135 @@ def reset_api_keys():
         return jsonify({'error': 'API key manager not available'}), 500
     except Exception as e:
         logger.error(f"Failed to reset API keys: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+# ============ Stuck Jobs Cleanup ============
+
+@admin_bp.route('/cleanup-stuck', methods=['POST'])
+@require_auth
+def cleanup_stuck_jobs():
+    """
+    Find and clean up jobs stuck in 'processing' state.
+
+    Expected JSON (optional):
+    - action: 'fail' (default), 'reset', or 'delete'
+    - threshold_minutes: Minutes to consider stuck (default: 15)
+    - dry_run: If true, only report what would be cleaned (default: false)
+
+    Returns:
+    - stuck_jobs: list of stuck job summaries
+    - stuck_batches: list of stuck batch summaries
+    - action_taken: what was done
+    """
+    try:
+        from database import get_db
+        from datetime import datetime, timedelta
+
+        data = request.get_json() or {}
+        action = data.get('action', 'fail')
+        threshold = data.get('threshold_minutes', 15)
+        dry_run = data.get('dry_run', False)
+
+        threshold_time = datetime.utcnow() - timedelta(minutes=threshold)
+        threshold_str = threshold_time.strftime('%Y-%m-%dT%H:%M:%S')
+
+        with get_db() as conn:
+            cursor = conn.cursor()
+
+            # Find stuck jobs
+            cursor.execute("""
+                SELECT id, job_type, status, tiktok_url, folder_name, created_at, started_at
+                FROM jobs
+                WHERE status = 'processing'
+                AND (started_at < ? OR (started_at IS NULL AND created_at < ?))
+            """, (threshold_str, threshold_str))
+            stuck_jobs = [dict(row) for row in cursor.fetchall()]
+
+            # Find stuck batch links
+            cursor.execute("""
+                SELECT id, batch_id, link_url, status, created_at, started_at
+                FROM batch_links
+                WHERE status = 'processing'
+                AND (started_at < ? OR (started_at IS NULL AND created_at < ?))
+            """, (threshold_str, threshold_str))
+            stuck_links = [dict(row) for row in cursor.fetchall()]
+
+            # Find stuck batches
+            cursor.execute("""
+                SELECT id, status, total_links, created_at, started_at
+                FROM batches
+                WHERE status = 'processing'
+                AND (started_at < ? OR (started_at IS NULL AND created_at < ?))
+            """, (threshold_str, threshold_str))
+            stuck_batches = [dict(row) for row in cursor.fetchall()]
+
+            cleaned = {'jobs': 0, 'links': 0, 'batches': 0}
+
+            if not dry_run and (stuck_jobs or stuck_links or stuck_batches):
+                now_str = datetime.utcnow().isoformat()
+
+                if action == 'fail':
+                    cursor.execute("""
+                        UPDATE jobs SET status = 'failed',
+                            error_message = 'Auto-cleaned: stuck in processing',
+                            completed_at = ?
+                        WHERE status = 'processing'
+                        AND (started_at < ? OR (started_at IS NULL AND created_at < ?))
+                    """, (now_str, threshold_str, threshold_str))
+                    cleaned['jobs'] = cursor.rowcount
+
+                    cursor.execute("""
+                        UPDATE batch_links SET status = 'failed',
+                            error_message = 'Auto-cleaned: stuck in processing',
+                            completed_at = ?
+                        WHERE status = 'processing'
+                        AND (started_at < ? OR (started_at IS NULL AND created_at < ?))
+                    """, (now_str, threshold_str, threshold_str))
+                    cleaned['links'] = cursor.rowcount
+
+                    cursor.execute("""
+                        UPDATE batches SET status = 'failed',
+                            error_message = 'Auto-cleaned: stuck in processing',
+                            completed_at = ?
+                        WHERE status = 'processing'
+                        AND (started_at < ? OR (started_at IS NULL AND created_at < ?))
+                    """, (now_str, threshold_str, threshold_str))
+                    cleaned['batches'] = cursor.rowcount
+
+                elif action == 'reset':
+                    cursor.execute("""
+                        UPDATE jobs SET status = 'pending', started_at = NULL
+                        WHERE status = 'processing'
+                        AND (started_at < ? OR (started_at IS NULL AND created_at < ?))
+                    """, (threshold_str, threshold_str))
+                    cleaned['jobs'] = cursor.rowcount
+
+                    cursor.execute("""
+                        UPDATE batch_links SET status = 'pending', started_at = NULL
+                        WHERE status = 'processing'
+                        AND (started_at < ? OR (started_at IS NULL AND created_at < ?))
+                    """, (threshold_str, threshold_str))
+                    cleaned['links'] = cursor.rowcount
+
+                    cursor.execute("""
+                        UPDATE batches SET status = 'pending', started_at = NULL
+                        WHERE status = 'processing'
+                        AND (started_at < ? OR (started_at IS NULL AND created_at < ?))
+                    """, (threshold_str, threshold_str))
+                    cleaned['batches'] = cursor.rowcount
+
+        return jsonify({
+            'stuck_jobs': stuck_jobs,
+            'stuck_links': stuck_links,
+            'stuck_batches': stuck_batches,
+            'total_stuck': len(stuck_jobs) + len(stuck_links) + len(stuck_batches),
+            'dry_run': dry_run,
+            'action': action,
+            'threshold_minutes': threshold,
+            'cleaned': cleaned
+        })
+
+    except Exception as e:
+        logger.error(f"Failed to cleanup stuck jobs: {e}")
         return jsonify({'error': str(e)}), 500
