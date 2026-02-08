@@ -650,7 +650,7 @@ def cleanup_stuck_jobs():
         dry_run = data.get('dry_run', False)
 
         threshold_time = datetime.utcnow() - timedelta(minutes=threshold)
-        threshold_str = threshold_time.strftime('%Y-%m-%dT%H:%M:%S')
+        threshold_str = threshold_time.isoformat()
 
         with get_db() as conn:
             cursor = conn.cursor()

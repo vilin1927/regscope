@@ -156,7 +156,7 @@ class ApiKeyManager:
         if is_daily_exhausted:
             # Read actual daily counter for accurate reporting
             daily_key = f"{KEY_PREFIX}{key_id}:{model_type}:daily"
-            actual_daily_used = int(self.redis.get(daily_key) or limits['daily'])
+            actual_daily_used = int(self.redis.get(daily_key) or 0)
             return {
                 'key_id': key_id,
                 'model_type': model_type,
