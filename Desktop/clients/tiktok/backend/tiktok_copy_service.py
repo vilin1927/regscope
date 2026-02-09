@@ -10,6 +10,8 @@ import uuid
 from typing import Optional
 from dotenv import load_dotenv
 
+from image_transforms import transform_single_image_file
+
 load_dotenv()
 
 from logging_config import get_logger, get_request_logger
@@ -107,6 +109,9 @@ def assemble_video(
         # We'll use the concat demuxer with a file list for more control
         file_list_path = os.path.join(temp_dir, 'files.txt')
 
+        # Variation key for transforms: use request_id or generate unique one
+        var_key = request_id or str(uuid.uuid4())[:8]
+
         with open(file_list_path, 'w') as f:
             for i, img in enumerate(images):
                 # Normalize all images to JPEG for concat demuxer compatibility
@@ -120,6 +125,9 @@ def assemble_video(
                     )
                 else:
                     shutil.copy2(img, temp_img)
+
+                # Apply uniqueness transforms to defeat TikTok fingerprinting
+                transform_single_image_file(temp_img, variation_key=var_key, image_index=i)
 
                 # Write to concat file list (duration in seconds)
                 f.write(f"file '{temp_img}'\n")

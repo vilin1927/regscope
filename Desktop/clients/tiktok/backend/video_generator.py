@@ -9,6 +9,7 @@ import tempfile
 import shutil
 from typing import List, Optional
 
+from image_transforms import transform_images_for_variation
 from logging_config import get_logger
 
 logger = get_logger('video_generator')
@@ -346,10 +347,13 @@ def create_videos_for_variations(
         video_filename = f"slideshow_{var_key}.mp4"
         video_path = os.path.join(output_dir, video_filename)
 
+        # Apply uniqueness transforms per variation
+        transform_dir = tempfile.mkdtemp(prefix=f'transform_{var_key}_')
         try:
-            logger.info(f"{log_prefix}Creating video for variation {var_key} ({len(sorted_images)} slides)")
+            transformed_images = transform_images_for_variation(sorted_images, var_key, transform_dir)
+            logger.info(f"{log_prefix}Creating video for variation {var_key} ({len(transformed_images)} slides)")
             create_video(
-                image_paths=sorted_images,
+                image_paths=transformed_images,
                 audio_path=audio_path,
                 output_path=video_path,
                 request_id=request_id
@@ -358,6 +362,11 @@ def create_videos_for_variations(
         except VideoGeneratorError as e:
             logger.error(f"{log_prefix}Failed to create video for {var_key}: {e}")
             # Continue with other variations
+        finally:
+            try:
+                shutil.rmtree(transform_dir)
+            except Exception as e:
+                logger.warning(f"{log_prefix}Failed to cleanup transform dir: {e}")
 
     return video_paths
 
