@@ -166,6 +166,9 @@ def assemble_video(
                 '-i', audio_path,
                 '-vf', vf_filter,
                 '-c:v', VIDEO_CODEC,
+                '-preset', 'veryfast',
+                '-crf', '23',
+                '-threads', '1',
                 '-r', str(VIDEO_FPS),
                 '-c:a', AUDIO_CODEC,
                 '-t', str(video_duration),  # Set exact output duration
@@ -182,6 +185,9 @@ def assemble_video(
                 '-i', file_list_path,
                 '-vf', vf_filter,
                 '-c:v', VIDEO_CODEC,
+                '-preset', 'veryfast',
+                '-crf', '23',
+                '-threads', '1',
                 '-r', str(VIDEO_FPS),
                 '-an',  # No audio
                 '-movflags', '+faststart',

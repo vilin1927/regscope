@@ -4,6 +4,7 @@ Uses RapidAPI TikTok Scraper to extract slideshow images and audio
 """
 import os
 import time
+import random
 import requests
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dotenv import load_dotenv
@@ -16,6 +17,50 @@ from logging_config import get_logger, get_request_logger
 logger = get_logger('scraper')
 
 RAPIDAPI_HOST = 'tiktok-scraper7.p.rapidapi.com'
+
+# Rate limiter: max 1 request per second to RapidAPI (Redis token bucket)
+_RATE_LIMIT_KEY = 'rapidapi:last_request_ts'
+_MIN_INTERVAL = 1.0  # seconds between requests
+
+
+def _acquire_rate_limit_token(log=None):
+    """
+    Redis-based rate limiter. Ensures at least _MIN_INTERVAL seconds between
+    RapidAPI calls across all Celery workers. Uses a Lua script for atomicity.
+    """
+    log = log or logger
+    try:
+        import redis
+        r = redis.Redis(host='localhost', port=6379, db=0)
+
+        # Lua script: atomically check last timestamp and claim slot if enough time passed
+        lua_script = """
+        local last_ts = tonumber(redis.call('GET', KEYS[1]) or '0')
+        local now = tonumber(ARGV[1])
+        local interval = tonumber(ARGV[2])
+        if (now - last_ts) >= interval then
+            redis.call('SET', KEYS[1], ARGV[1])
+            return 1
+        end
+        return 0
+        """
+        claim_slot = r.register_script(lua_script)
+
+        while True:
+            now = time.time()
+            acquired = claim_slot(keys=[_RATE_LIMIT_KEY], args=[str(now), str(_MIN_INTERVAL)])
+            if acquired:
+                return
+            # Check how long to wait
+            last_ts = r.get(_RATE_LIMIT_KEY)
+            last_ts = float(last_ts) if last_ts else 0.0
+            wait = _MIN_INTERVAL - (now - last_ts) + random.uniform(0.05, 0.15)
+            if wait > 0:
+                log.debug(f"Rate limiter: waiting {wait:.2f}s")
+                time.sleep(wait)
+    except ImportError:
+        # No Redis available — fallback to simple sleep
+        time.sleep(_MIN_INTERVAL)
 
 
 class TikTokScraperError(Exception):
@@ -58,7 +103,8 @@ def _get_headers() -> dict:
 
 def extract_video_data(tiktok_url: str, request_id: str = None) -> dict:
     """
-    Extract full video/slideshow data from TikTok URL
+    Extract full video/slideshow data from TikTok URL.
+    Rate-limited to 1 req/sec via Redis. Retries 429s with exponential backoff.
 
     Args:
         tiktok_url: Full TikTok video/slideshow URL
@@ -71,28 +117,51 @@ def extract_video_data(tiktok_url: str, request_id: str = None) -> dict:
     url = f'https://{RAPIDAPI_HOST}/'
     params = {'url': tiktok_url, 'hd': '1'}
 
-    log.debug(f"RapidAPI request: {tiktok_url[:60]}...")
-    start_time = time.time()
+    max_retries = 3
+    base_backoff = 2  # seconds
 
-    try:
-        response = requests.get(url, headers=_get_headers(), params=params, timeout=30)
-        elapsed = time.time() - start_time
-        log.debug(f"RapidAPI response: status={response.status_code}, time={elapsed:.2f}s")
+    for attempt in range(max_retries + 1):
+        # Acquire rate limit token before each request
+        _acquire_rate_limit_token(log)
 
-        response.raise_for_status()
-        data = response.json()
+        log.debug(f"RapidAPI request (attempt {attempt+1}): {tiktok_url[:60]}...")
+        start_time = time.time()
 
-        if data.get('code') != 0:
-            log.error(f"RapidAPI error: {data.get('msg', 'Unknown error')}")
-            raise TikTokScraperError(f"API error: {data.get('msg', 'Unknown error')}")
+        try:
+            response = requests.get(url, headers=_get_headers(), params=params, timeout=30)
+            elapsed = time.time() - start_time
+            log.debug(f"RapidAPI response: status={response.status_code}, time={elapsed:.2f}s")
 
-        video_data = data.get('data', {})
-        log.debug(f"Video data keys: {list(video_data.keys())}")
-        return video_data
+            # Handle 429 with exponential backoff + jitter
+            if response.status_code == 429:
+                if attempt < max_retries:
+                    backoff = base_backoff * (2 ** attempt) + random.uniform(0.5, 2.0)
+                    log.warning(f"RapidAPI 429 (attempt {attempt+1}/{max_retries+1}), backing off {backoff:.1f}s")
+                    time.sleep(backoff)
+                    continue
+                else:
+                    log.error(f"RapidAPI 429 after {max_retries+1} attempts, giving up")
+                    raise TikTokScraperError(f'RapidAPI rate limited (429) after {max_retries+1} attempts')
 
-    except requests.exceptions.RequestException as e:
-        log.error(f"RapidAPI request failed: {str(e)}")
-        raise TikTokScraperError(f'Request failed: {str(e)}')
+            response.raise_for_status()
+            data = response.json()
+
+            if data.get('code') != 0:
+                log.error(f"RapidAPI error: {data.get('msg', 'Unknown error')}")
+                raise TikTokScraperError(f"API error: {data.get('msg', 'Unknown error')}")
+
+            video_data = data.get('data', {})
+            log.debug(f"Video data keys: {list(video_data.keys())}")
+            return video_data
+
+        except requests.exceptions.RequestException as e:
+            if '429' in str(e) and attempt < max_retries:
+                backoff = base_backoff * (2 ** attempt) + random.uniform(0.5, 2.0)
+                log.warning(f"RapidAPI request error with 429 (attempt {attempt+1}), backing off {backoff:.1f}s")
+                time.sleep(backoff)
+                continue
+            log.error(f"RapidAPI request failed: {str(e)}")
+            raise TikTokScraperError(f'Request failed: {str(e)}')
 
 
 def extract_slideshow_images(tiktok_url: str) -> list[str]:

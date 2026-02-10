@@ -558,18 +558,16 @@ def process_tiktok_copy_batch(self, batch_id: str):
             update_tiktok_copy_batch(batch_id, status='failed')
             return {'status': 'error', 'message': str(e)}
 
-        logger.info(f"[TikTokCopy {batch_id[:8]}] Dispatching {len(jobs)} job tasks")
+        logger.info(f"[TikTokCopy {batch_id[:8]}] Dispatching {len(jobs)} job tasks (rate-limited to 12/min)")
 
-        # Dispatch job processing tasks (per-job settings are read from database)
+        # Dispatch job processing tasks
+        # rate_limit='12/m' on the task prevents thundering herd (max 12 tasks started/min)
+        # Combined with Redis rate limiter in scraper (1 req/sec), RapidAPI 429s are avoided
         job_tasks = []
         for job in jobs:
-            task = process_tiktok_copy_job.s(
-                job['id'],
-                drive_folder_id
-            )
+            task = process_tiktok_copy_job.s(job['id'], drive_folder_id)
             job_tasks.append(task)
 
-        # Execute all job tasks as a group, then call finalize
         workflow = group(job_tasks) | finalize_tiktok_copy_batch.s(batch_id)
         workflow.apply_async()
 
@@ -586,7 +584,7 @@ def process_tiktok_copy_batch(self, batch_id: str):
         return {'status': 'error', 'message': str(e)}
 
 
-@celery_app.task(bind=True, max_retries=2, default_retry_delay=30)
+@celery_app.task(bind=True, max_retries=3, rate_limit='12/m')
 def process_tiktok_copy_job(
     self,
     job_id: str,
@@ -731,11 +729,12 @@ def process_tiktok_copy_job(
         error_msg = str(e)
         logger.error(f"[TikTokCopy Job {job_id[:8]}] Scraping failed: {e}")
 
-        # Retry on rate limit
+        # Retry on rate limit with exponential backoff (60s, 120s, 240s)
         if '429' in error_msg or 'rate' in error_msg.lower():
             try:
-                logger.info(f"[TikTokCopy Job {job_id[:8]}] Retrying due to rate limit...")
-                raise self.retry(exc=e, countdown=60)
+                backoff = 60 * (2 ** self.request.retries)  # 60s, 120s, 240s
+                logger.info(f"[TikTokCopy Job {job_id[:8]}] Retrying due to rate limit (attempt {self.request.retries + 1}, backoff {backoff}s)...")
+                raise self.retry(exc=e, countdown=backoff)
             except MaxRetriesExceededError:
                 pass
 
@@ -762,6 +761,7 @@ def process_tiktok_copy_job(
 def finalize_tiktok_copy_batch(self, job_results: list, batch_id: str):
     """
     Called after all TikTok copy jobs complete. Updates batch status.
+    Also recovers zombie jobs (None results from crashed tasks) by marking them failed in DB.
 
     Args:
         job_results: List of results from process_tiktok_copy_job tasks
@@ -775,7 +775,22 @@ def finalize_tiktok_copy_batch(self, job_results: list, batch_id: str):
         total = len(job_results)
         failed = total - completed
 
-        logger.info(f"[TikTokCopy {batch_id[:8]}] Results: {completed}/{total} completed, {failed} failed")
+        # Auto-recover zombie jobs: any result that is None means the Celery task
+        # crashed without updating the DB. Mark these as failed so they don't stay
+        # "processing" forever.
+        zombie_count = sum(1 for r in job_results if r is None)
+        if zombie_count > 0:
+            logger.warning(f"[TikTokCopy {batch_id[:8]}] Detected {zombie_count} zombie jobs (crashed tasks), marking as failed")
+            jobs = get_tiktok_copy_jobs(batch_id)
+            for job in jobs:
+                if job.get('status') == 'processing':
+                    update_tiktok_copy_job(
+                        job['id'], 'failed',
+                        error_message='Task crashed (zombie recovery)'
+                    )
+                    logger.info(f"[TikTokCopy {batch_id[:8]}] Recovered zombie job {job['id'][:8]}")
+
+        logger.info(f"[TikTokCopy {batch_id[:8]}] Results: {completed}/{total} completed, {failed} failed (zombies: {zombie_count})")
 
         # Determine final status
         if completed == 0:
@@ -792,7 +807,8 @@ def finalize_tiktok_copy_batch(self, job_results: list, batch_id: str):
             'status': final_status,
             'total': total,
             'completed': completed,
-            'failed': failed
+            'failed': failed,
+            'zombies_recovered': zombie_count
         }
 
     except Exception as e:
