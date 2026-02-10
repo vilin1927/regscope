@@ -1,249 +1,8 @@
-// Proposal data for Orgonic-Art (Raphael) - EU Regulation Discovery Tool
+// RegScope — EU Regulation Discovery Tool (Investor Demo Data)
 
-export const proposalDataV1 = {
-  stats: [
-    { value: "$540", label: "Fixed Price" },
-    { value: "5-7", label: "Days Delivery" },
-  ],
-  pricing: {
-    amount: "$540",
-    hours: "fixed price",
-    deliverables: [
-      "Complete source code (Next.js + Supabase)",
-      "Working questionnaire with validation",
-      "GPT-5.2 business profile generation",
-      "Live EUR-Lex regulation search",
-      "AI-powered relevance matching",
-      "Clean results dashboard",
-      "Single-user authentication",
-      "Vercel deployment + handoff docs",
-    ],
-  },
-  timeline: [
-    {
-      phase: "Days 1-2",
-      title: "Foundation",
-      tasks: [
-        "Next.js project setup",
-        "Supabase Auth integration",
-        "Questionnaire UI & validation",
-        "Database schema (minimal)",
-      ],
-    },
-    {
-      phase: "Days 3-4",
-      title: "AI + EUR-Lex",
-      tasks: [
-        "OpenAI GPT-5.2 profiling",
-        "EUR-Lex REST API search",
-        "AI regulation matching",
-        "Summary generation",
-      ],
-    },
-    {
-      phase: "Days 5-7",
-      title: "Dashboard & Deploy",
-      tasks: [
-        "Results dashboard UI",
-        "Mobile responsiveness",
-        "Vercel deployment",
-        "Testing & handoff",
-      ],
-    },
-  ],
-};
-
-export const proposalDataV2 = {
-  stats: [
-    { value: "$810", label: "Fixed Price" },
-    { value: "7", label: "Days Deadline" },
-    { value: "9", label: "Days Redline" },
-  ],
-  pricing: {
-    amount: "$810",
-    hours: "fixed price",
-    breakdown: [
-      { item: "Core MVP foundation", price: "$540" },
-      { item: "Newsletter (manual trigger)", price: "$150" },
-      { item: "Company analysis fallback", price: "$60" },
-      { item: "Legal risk analysis", price: "$60" },
-    ],
-    deliverables: [
-      "Everything in Version 1, plus:",
-      "Legal risk analysis & severity categorization",
-      "Company analysis with web search fallback",
-      "Actionable recommendations engine",
-      "Newsletter email system (Resend)",
-      "Extended questionnaire for better matching",
-    ],
-  },
-  timeline: [
-    {
-      phase: "Days 1-2",
-      title: "Foundation",
-      tasks: [
-        "Next.js project setup",
-        "Supabase Auth integration",
-        "Questionnaire UI & validation",
-        "Database schema",
-      ],
-    },
-    {
-      phase: "Days 3-4",
-      title: "AI + EUR-Lex + Enhanced",
-      tasks: [
-        "OpenAI GPT-5.2 profiling",
-        "EUR-Lex REST API search",
-        "AI regulation matching",
-        "Legal risk analysis prompt",
-        "Company analysis fallback logic",
-        "Recommendations engine",
-      ],
-    },
-    {
-      phase: "Days 5-6",
-      title: "Dashboard & Newsletter",
-      tasks: [
-        "Results dashboard UI",
-        "Newsletter email system (Resend)",
-        "Scheduled Edge Function (cron)",
-        "Mobile responsiveness",
-      ],
-    },
-    {
-      phase: "Day 7",
-      title: "Deploy & Handoff",
-      tasks: [
-        "Vercel deployment",
-        "Testing & QA",
-        "Documentation & handoff",
-      ],
-    },
-  ],
-  newFeatures: [
-    {
-      id: "legal-risk",
-      title: "Legal Risk Analysis",
-      icon: "shield-alert",
-      tag: "$60",
-      tagColor: "blue",
-      description: "Automatically identifies potential legal problems and compliance risks specific to your business type and EU market.",
-      howItWorks: "GPT-5.2 analyzes your business profile against each matched regulation, identifying specific compliance gaps, deadline requirements, and potential penalty exposure. Results are categorized by severity (high/medium/low) with clear explanations.",
-    },
-    {
-      id: "newsletter",
-      title: "Regulation Newsletter",
-      icon: "mail",
-      tag: "$150",
-      tagColor: "blue",
-      description: "Personalized email digest with new regulations matched to each user's saved profile. Manual trigger for MVP — scalable to automated later.",
-      howItWorks: "Admin triggers newsletter via dashboard button. System fetches recent EUR-Lex updates, matches against each opted-in user's profile (industry, countries, data types), generates personalized digest, and sends via Resend. Includes double opt-in consent flow. Future upgrade path: automated weekly/monthly cron scheduling.",
-      requirement: "Requires your own domain for email sending (e.g., regscope.eu). DNS verification needed for Resend. I can help set it up.",
-    },
-    {
-      id: "company-analysis",
-      title: "Company Analysis (Fallback)",
-      icon: "building",
-      tag: "$60",
-      tagColor: "blue",
-      description: "When EUR-Lex has no clear match, the system provides industry insights, expert recommendations, and what similar companies report about the topic.",
-      howItWorks: "If EUR-Lex returns few/no results, the system activates OpenAI Web Search to find industry reports, compliance guides, and expert opinions. GPT synthesizes this into actionable context: 'Companies like yours typically face X, Y, Z...'",
-    },
-    {
-      id: "recommendations",
-      title: "Actionable Recommendations",
-      icon: "lightbulb",
-      tag: "Bundled Free",
-      tagColor: "green",
-      description: "Practical next steps including relevant insurance types, broker suggestions, and compliance action items tailored to your business. Included free with Legal Risk Analysis.",
-      howItWorks: "Based on matched regulations and risk analysis, GPT generates a prioritized action list: specific compliance steps, recommended insurance coverage types, suggested timeline, and where to find specialized help (e.g., 'Consider professional indemnity insurance for GDPR liability').",
-    },
-  ],
-  apiCosts: [
-    { component: "AI Analysis", model: "GPT-5.2", cost: "~$0.05 - $0.08" },
-    { component: "Web Search", model: "OpenAI Search", cost: "~$0.03 per call" },
-    { component: "EUR-Lex API", model: "SPARQL", cost: "Free" },
-    { component: "Email sending", model: "Resend", cost: "Free (3,000/mo, requires your domain)", url: "https://resend.com/pricing" },
-  ],
-};
-
-export const proposalData = {
-  client: {
-    name: "Orgonic-Art",
-    contact: "Raphael",
-    location: "Germany",
-  },
-  project: {
-    title: "EU Regulation Discovery Tool",
-    subtitle: "AI-powered compliance scanning for EU businesses",
-    description:
-      "A smart tool that analyzes your business profile and automatically identifies potentially relevant EU regulations, complete with summaries and direct links to official sources.",
-  },
-  approach: [
-    {
-      title: "Smart Questionnaire",
-      description:
-        "Intuitive onboarding form that captures business details, operations, and compliance focus areas.",
-      icon: "clipboard-list",
-    },
-    {
-      title: "AI Business Profiling",
-      description:
-        "OpenAI GPT-5.2 analyzes your inputs to build a comprehensive understanding of your regulatory landscape.",
-      icon: "brain",
-    },
-    {
-      title: "EUR-Lex Integration",
-      description:
-        "Direct connection to the official EU law database for accurate, up-to-date regulation data.",
-      icon: "database",
-    },
-    {
-      title: "Web Search Integration",
-      description:
-        "Real-time web search ensures regulation data is current beyond GPT's training cutoff, filling gaps with industry insights and expert sources.",
-      icon: "globe",
-    },
-    {
-      title: "AI Matching & Summary",
-      description:
-        "Intelligent matching algorithm identifies relevant regulations and generates plain-language summaries.",
-      icon: "sparkles",
-    },
-    {
-      title: "Clean Dashboard",
-      description:
-        "Results displayed in a professional, easy-to-navigate interface with export capabilities.",
-      icon: "layout-dashboard",
-    },
-  ],
-  techStack: [
-    { name: "Next.js 14", category: "Frontend" },
-    { name: "React", category: "Frontend" },
-    { name: "Tailwind CSS", category: "Styling" },
-    { name: "Supabase", category: "Backend + Auth" },
-    { name: "OpenAI GPT-5.2", category: "AI" },
-    { name: "OpenAI Web Search", category: "Fresh Data" },
-    { name: "EUR-Lex REST API", category: "Data Source" },
-    { name: "Resend", category: "Email", url: "https://resend.com/pricing" },
-    { name: "Vercel", category: "Hosting" },
-  ],
-  cherryPick: [
-    { scope: "Core MVP only", price: "$540" },
-    { scope: "MVP + 1 add-on", price: "from $600" },
-    { scope: "MVP + 2 add-ons", price: "from $660" },
-    { scope: "Full V2 (all features)", price: "$810" },
-  ],
-};
-
-// Demo data for RegScope
 export const demoData = {
   appName: "RegScope",
   tagline: "EU Regulation Discovery",
-  user: {
-    email: "demo@company.com",
-    company: "Demo Company",
-  },
   industries: [
     { value: "technology", label: "Technology / Software" },
     { value: "healthcare", label: "Healthcare / Medical" },
@@ -265,6 +24,23 @@ export const demoData = {
     { value: "SE", label: "Sweden" },
     { value: "OTHER", label: "Other EU" },
   ],
+  companySizes: [
+    { value: "1-10", label: "1–10" },
+    { value: "11-50", label: "11–50" },
+    { value: "51-200", label: "51–200" },
+    { value: "200+", label: "200+" },
+  ],
+  targetMarkets: [
+    { value: "B2B", label: "B2B" },
+    { value: "B2C", label: "B2C" },
+    { value: "B2G", label: "B2G" },
+  ],
+  complianceStatuses: [
+    { value: "not_started", label: "Not started" },
+    { value: "in_progress", label: "In progress" },
+    { value: "partial", label: "Partially compliant" },
+    { value: "certified", label: "Certified" },
+  ],
   dataProcessingOptions: [
     { value: "customer_data", label: "Customer personal data" },
     { value: "employee_data", label: "Employee data" },
@@ -275,7 +51,7 @@ export const demoData = {
   ],
 };
 
-// EUR-Lex regulation data with real links
+// Regulation data with fixed scores, key requirements, penalties
 export const regulations = [
   {
     id: "gdpr",
@@ -287,6 +63,12 @@ export const regulations = [
     eurLexUrl: "https://eur-lex.europa.eu/eli/reg/2016/679/oj",
     triggers: ["customer_data", "employee_data", "health_data", "location_data"],
     industries: ["all"],
+    keyRequirements: [
+      "Appoint a Data Protection Officer (DPO)",
+      "Maintain records of processing activities",
+      "Conduct Data Protection Impact Assessments (DPIA)",
+    ],
+    potentialPenalty: "Up to €20M or 4% of annual global turnover",
   },
   {
     id: "dsa",
@@ -298,6 +80,12 @@ export const regulations = [
     eurLexUrl: "https://eur-lex.europa.eu/eli/reg/2022/2065/oj",
     triggers: ["sellsOnline"],
     industries: ["technology", "retail"],
+    keyRequirements: [
+      "Publish transparency reports on content moderation",
+      "Implement notice-and-action mechanisms",
+      "Provide clear terms of service",
+    ],
+    potentialPenalty: "Up to 6% of annual global turnover",
   },
   {
     id: "nis2",
@@ -309,6 +97,12 @@ export const regulations = [
     eurLexUrl: "https://eur-lex.europa.eu/eli/dir/2022/2555/oj",
     triggers: ["hasEmployees"],
     industries: ["technology", "energy", "healthcare", "finance"],
+    keyRequirements: [
+      "Implement cybersecurity risk management measures",
+      "Report significant incidents within 24 hours",
+      "Ensure supply chain security",
+    ],
+    potentialPenalty: "Up to €10M or 2% of annual global turnover",
   },
   {
     id: "ai_act",
@@ -320,6 +114,12 @@ export const regulations = [
     eurLexUrl: "https://eur-lex.europa.eu/eli/reg/2024/1689/oj",
     triggers: ["ai_processing"],
     industries: ["technology", "healthcare", "finance"],
+    keyRequirements: [
+      "Classify AI systems by risk level",
+      "Implement human oversight for high-risk AI",
+      "Maintain technical documentation and logging",
+    ],
+    potentialPenalty: "Up to €35M or 7% of annual global turnover",
   },
   {
     id: "dora",
@@ -331,6 +131,12 @@ export const regulations = [
     eurLexUrl: "https://eur-lex.europa.eu/eli/reg/2022/2554/oj",
     triggers: ["financial_data"],
     industries: ["finance"],
+    keyRequirements: [
+      "Establish ICT risk management framework",
+      "Test digital operational resilience regularly",
+      "Report major ICT-related incidents",
+    ],
+    potentialPenalty: "Up to €5M or 1% of average daily turnover",
   },
   {
     id: "product_safety",
@@ -342,6 +148,12 @@ export const regulations = [
     eurLexUrl: "https://eur-lex.europa.eu/eli/reg/2023/988/oj",
     triggers: [],
     industries: ["manufacturing", "retail"],
+    keyRequirements: [
+      "Ensure products meet EU safety standards",
+      "Maintain product traceability throughout supply chain",
+      "Report dangerous products to authorities",
+    ],
+    potentialPenalty: "Varies by member state — product recall + fines",
   },
   {
     id: "eprivacy",
@@ -353,6 +165,12 @@ export const regulations = [
     eurLexUrl: "https://eur-lex.europa.eu/eli/dir/2002/58/oj",
     triggers: ["sellsOnline", "location_data"],
     industries: ["all"],
+    keyRequirements: [
+      "Obtain consent for cookies and tracking",
+      "Provide opt-out for direct marketing",
+      "Ensure confidentiality of communications",
+    ],
+    potentialPenalty: "Varies by member state — typically up to €500K",
   },
   {
     id: "mdr",
@@ -364,10 +182,16 @@ export const regulations = [
     eurLexUrl: "https://eur-lex.europa.eu/eli/reg/2017/745/oj",
     triggers: ["health_data"],
     industries: ["healthcare"],
+    keyRequirements: [
+      "Obtain CE marking through conformity assessment",
+      "Implement post-market surveillance system",
+      "Register devices in EUDAMED database",
+    ],
+    potentialPenalty: "Varies by member state — product withdrawal + fines",
   },
 ];
 
-// Helper function to calculate relevance score
+// Fixed relevance scoring — produces realistic scores per the action plan
 export function calculateRelevance(
   regulation: (typeof regulations)[0],
   formData: {
@@ -378,34 +202,28 @@ export function calculateRelevance(
   }
 ): number {
   let score = 0;
-  const maxScore = 100;
 
   // Industry match
-  if (
-    regulation.industries.includes("all") ||
-    regulation.industries.includes(formData.industry)
-  ) {
-    score += 40;
+  if (regulation.industries.includes("all") || regulation.industries.includes(formData.industry)) {
+    score += 45;
   }
 
-  // Data processing triggers
-  const matchingTriggers = regulation.triggers.filter((trigger) =>
-    formData.dataProcessing.includes(trigger)
-  );
-  score += matchingTriggers.length * 15;
+  // Data processing triggers — higher weight
+  const matchingTriggers = regulation.triggers.filter((t) => formData.dataProcessing.includes(t));
+  score += matchingTriggers.length * 18;
 
   // Boolean triggers
-  if (regulation.triggers.includes("sellsOnline") && formData.sellsOnline) {
-    score += 20;
-  }
-  if (regulation.triggers.includes("hasEmployees") && formData.hasEmployees) {
-    score += 10;
-  }
+  if (regulation.triggers.includes("sellsOnline") && formData.sellsOnline) score += 25;
+  if (regulation.triggers.includes("hasEmployees") && formData.hasEmployees) score += 13;
 
-  return Math.min(score, maxScore);
+  // Boost known high-relevance regs when conditions clearly met
+  if (regulation.id === "gdpr" && matchingTriggers.length >= 2) score += 11;
+  if (regulation.id === "eprivacy" && formData.sellsOnline) score += 15;
+
+  return Math.min(score, 100);
 }
 
-// Generate "why applies" text based on form data
+// Specific, professional "why applies" text
 export function generateWhyApplies(
   regulation: (typeof regulations)[0],
   formData: {
@@ -417,39 +235,27 @@ export function generateWhyApplies(
     countries: string[];
   }
 ): string {
-  const reasons: string[] = [];
+  const n = formData.countries.length;
+  const countryText = n === 1 ? "1 EU country" : `${n} EU countries`;
 
-  if (regulation.id === "gdpr") {
-    if (formData.dataProcessing.includes("customer_data")) {
-      reasons.push("processes customer personal data");
-    }
-    if (formData.dataProcessing.includes("employee_data")) {
-      reasons.push("handles employee information");
-    }
-    if (formData.countries.length > 0) {
-      reasons.push(`operates in ${formData.countries.length} EU countries`);
-    }
+  switch (regulation.id) {
+    case "gdpr":
+      return `You process customer personal data and operate in ${countryText} with employees. GDPR applies directly to your data processing activities.`;
+    case "eprivacy":
+      return `As an online business in the EU, cookie consent and electronic communications rules apply to your digital presence.`;
+    case "dsa":
+      return `Digital service providers in the EU must comply with transparency and content moderation obligations under the DSA.`;
+    case "ai_act":
+      return `Your technology includes AI/ML processing — the EU AI Act's risk classification requirements may apply to your systems.`;
+    case "nis2":
+      return `Tech companies with employees and IT infrastructure in the EU are within scope of NIS2 cybersecurity requirements.`;
+    case "dora":
+      return `Financial entities must comply with DORA's ICT risk management and operational resilience requirements.`;
+    case "product_safety":
+      return `Products placed on the EU market must meet the General Product Safety Regulation's safety and traceability requirements.`;
+    case "mdr":
+      return `Processing health/medical data brings your operations into scope of the Medical Devices Regulation and related compliance.`;
+    default:
+      return `Your business operates within the EU market, making this regulation potentially applicable.`;
   }
-
-  if (regulation.id === "dsa" && formData.sellsOnline) {
-    reasons.push("operates an online platform/service");
-  }
-
-  if (regulation.id === "ai_act" && formData.dataProcessing.includes("ai_processing")) {
-    reasons.push("uses AI/ML in business processes");
-  }
-
-  if (regulation.id === "dora" && formData.industry === "finance") {
-    reasons.push("operates in the financial services sector");
-  }
-
-  if (regulation.id === "nis2" && formData.hasEmployees) {
-    reasons.push("has employees and IT infrastructure");
-  }
-
-  if (reasons.length === 0) {
-    reasons.push("operates within the EU market");
-  }
-
-  return `Your business ${reasons.join(", ")}, making this regulation potentially applicable.`;
 }
