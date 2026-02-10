@@ -11,7 +11,7 @@ import {
 import { demoData, regulations, calculateRelevance, generateWhyApplies } from "@/data/regscope-data";
 
 // ── Types ────────────────────────────────────────────────────────
-type Screen = "dashboard" | "questionnaire" | "processing" | "results" | "risk-analysis" | "newsletter" | "recommendations" | "regulations-browse" | "settings";
+type Screen = "dashboard" | "questionnaire" | "processing" | "results" | "risk-analysis" | "newsletter" | "recommendations" | "settings";
 type QuestionnaireStep = 1 | 2 | 3;
 type Regulation = (typeof regulations)[0];
 type MatchedRegulation = Regulation & { relevanceScore: number; whyApplies: string };
@@ -146,7 +146,6 @@ export default function RegScopePage() {
           <NavItem icon={Mail} label="Newsletter" badge="V2" active={currentScreen === "newsletter"} onClick={() => setCurrentScreen("newsletter")} />
 
           <p className="px-3 pt-4 pb-1 text-[10px] font-bold uppercase tracking-widest text-gray-400">Library</p>
-          <NavItem icon={FileText} label="Regulations" active={currentScreen === "regulations-browse"} onClick={() => setCurrentScreen("regulations-browse")} />
           <NavItem icon={Settings} label="Settings" active={currentScreen === "settings"} onClick={() => setCurrentScreen("settings")} />
         </nav>
 
@@ -174,7 +173,6 @@ export default function RegScopePage() {
             {currentScreen === "risk-analysis" && "Risk Analysis"}
             {currentScreen === "newsletter" && "Newsletter"}
             {currentScreen === "recommendations" && "Recommendations"}
-            {currentScreen === "regulations-browse" && "Regulations"}
             {currentScreen === "settings" && "Settings"}
           </span>
         </header>
@@ -188,7 +186,6 @@ export default function RegScopePage() {
             {currentScreen === "risk-analysis" && <InPrepScreen key="ra" icon={ShieldAlert} color="red" title="Legal Risk Analysis" badge="In Preparation — Coming in V2" description="GPT-5.2 analyzes your business profile against each matched regulation, identifying specific compliance gaps, deadline requirements, and potential penalty exposure. Results are categorized by severity." mockup={<RiskAnalysisMockup />} />}
             {currentScreen === "newsletter" && <InPrepScreen key="nl" icon={Mail} color="blue" title="Regulation Newsletter" badge="In Preparation — Coming in V2" description="The system fetches recent EUR-Lex updates, matches them against your saved profile, generates a personalized digest, and sends it via email. Manual trigger for MVP, automated scheduling planned." mockup={<NewsletterMockup />} />}
             {currentScreen === "recommendations" && <InPrepScreen key="rc" icon={Lightbulb} color="amber" title="Actionable Recommendations" badge="In Preparation — Coming in V2" description="Based on matched regulations and risk analysis, GPT generates a prioritized action list: specific compliance steps, recommended insurance coverage types, suggested timeline, and where to find specialized help." mockup={<RecommendationsMockup />} />}
-            {currentScreen === "regulations-browse" && <InPrepScreen key="rb" icon={FileText} color="gray" title="Regulations Database" badge="In Preparation" description="A searchable database of EU regulations relevant to your industry, with direct links to official EUR-Lex sources and AI-generated summaries." />}
             {currentScreen === "settings" && <InPrepScreen key="st" icon={Settings} color="gray" title="Settings" badge="In Preparation" description="Customize your compliance focus areas, notification preferences, and email digest frequency." />}
           </AnimatePresence>
         </div>
