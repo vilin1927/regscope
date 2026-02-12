@@ -1,0 +1,191 @@
+{
+  "App": {
+    "name": "ComplyRadar",
+    "tagline": "Compliance for Trade Businesses"
+  },
+  "Nav": {
+    "compliance": "COMPLIANCE",
+    "dashboard": "Dashboard",
+    "newScan": "New Scan",
+    "scanHistory": "Scan History",
+    "analysis": "ANALYSIS",
+    "riskAnalysis": "Risk Analysis",
+    "recommendations": "Recommendations",
+    "newsletter": "Newsletter",
+    "system": "SYSTEM",
+    "settings": "Settings",
+    "inPreparation": "In Preparation"
+  },
+  "Dashboard": {
+    "welcome": "Welcome to ComplyRadar",
+    "subtitle": "Discover which regulations apply to your trade business",
+    "startScan": "Start Compliance Scan",
+    "startScanDesc": "Answer a few questions about your business and we'll identify the relevant regulations.",
+    "regulationsFound": "Regulations Found",
+    "scansCompleted": "Scans Completed",
+    "lastScan": "Last Scan",
+    "noScansYet": "No scans yet"
+  },
+  "Questionnaire": {
+    "stepOf": "Step {step} of {total}",
+    "back": "Back",
+    "next": "Next",
+    "skip": "Skip",
+    "analyze": "Analyze Business",
+    "analyzePrelaunch": "Generate Pre-launch Checklist",
+    "required": "Required",
+    "optional": "Optional",
+    "selectPlaceholder": "Please select...",
+    "noCompanyYet": "I don't have a company yet (planning stage)",
+    "layer1": {
+      "title": "Company Information",
+      "subtitle": "Basic details about your business"
+    },
+    "layer2": {
+      "title": "Employees & Organization",
+      "subtitle": "Employment and workplace safety details"
+    },
+    "layer3": {
+      "title": "Premises & Safety",
+      "subtitle": "Workshop and operational safety"
+    },
+    "layer4": {
+      "title": "Products & Sales",
+      "subtitle": "Products, customers, and sales activities"
+    },
+    "layer5": {
+      "title": "Procurement & Supply Chain",
+      "subtitle": "Purchasing and supplier management"
+    },
+    "layer6": {
+      "title": "Environment & Waste",
+      "subtitle": "Environmental protection and waste management"
+    },
+    "layer7": {
+      "title": "Insurance & Liability",
+      "subtitle": "Insurance coverage and risk protection"
+    }
+  },
+  "Processing": {
+    "title": "Analyzing Your Business",
+    "subtitle": "Please wait while we scan regulations...",
+    "step1": "Building business profile...",
+    "step2": "Scanning EU regulations...",
+    "step3": "Scanning federal laws...",
+    "step4": "Scanning state & industry rules...",
+    "step5": "Creating compliance overview..."
+  },
+  "Results": {
+    "title": "Compliance Scan Results",
+    "regulationsFound": "{count} relevant regulations found",
+    "totalRegulations": "Total Regulations",
+    "highPriority": "High Priority",
+    "categoriesCovered": "Categories",
+    "complianceScore": "Compliance Score",
+    "businessProfile": "Business Profile",
+    "relevantRegulations": "Relevant Regulations",
+    "newScan": "New Scan",
+    "exportReport": "Export Report",
+    "whyApplies": "Why this applies to you",
+    "keyRequirements": "Key Requirements",
+    "potentialPenalty": "Potential Penalty",
+    "viewSource": "Official Source",
+    "disclaimer": "This is not legal advice. Consult a qualified attorney.",
+    "status": {
+      "fulfilled": "Fulfilled",
+      "review": "Review Needed",
+      "missing": "Missing"
+    },
+    "risk": {
+      "high": "High",
+      "medium": "Medium",
+      "low": "Low"
+    },
+    "jurisdiction": {
+      "eu": "EU",
+      "bund": "Federal",
+      "land": "State",
+      "branche": "Industry"
+    },
+    "category": {
+      "arbeitssicherheit": "Workplace Safety",
+      "arbeitsrecht": "Employment Law",
+      "gewerberecht": "Commercial Law",
+      "umweltrecht": "Environmental Law",
+      "produktsicherheit": "Product Safety",
+      "datenschutz": "Data Protection",
+      "versicherungspflichten": "Insurance Requirements"
+    }
+  },
+  "ScanHistory": {
+    "title": "Scan History",
+    "subtitle": "Your previous compliance scans",
+    "noScans": "No scans yet",
+    "noScansDesc": "Start your first compliance scan to see results.",
+    "regulations": "Regulations",
+    "score": "Score",
+    "rerun": "Re-run Scan",
+    "view": "View Results"
+  },
+  "Auth": {
+    "signIn": "Sign In",
+    "signUp": "Sign Up",
+    "signOut": "Sign Out",
+    "email": "Email Address",
+    "password": "Password",
+    "guestMode": "Continue as Guest",
+    "guestNote": "As a guest you can complete one scan, but results won't be saved.",
+    "noAccount": "Don't have an account?",
+    "hasAccount": "Already have an account?",
+    "welcomeTitle": "Welcome to ComplyRadar",
+    "welcomeSubtitle": "Compliance overview for trade businesses"
+  },
+  "Settings": {
+    "title": "Settings",
+    "language": "Language",
+    "account": "Account",
+    "german": "Deutsch",
+    "english": "English"
+  },
+  "Mockups": {
+    "inPreparation": "In Preparation",
+    "comingInV2": "Available in Version 2",
+    "riskAnalysis": {
+      "title": "Risk Analysis",
+      "description": "AI-powered analysis of your business profile against each matched regulation. Compliance gaps, deadlines, and penalty exposure categorized by severity.",
+      "regulation": "Regulation",
+      "severity": "Severity",
+      "gap": "Compliance Gap",
+      "deadline": "Deadline",
+      "penalty": "Potential Penalty"
+    },
+    "newsletter": {
+      "title": "Regulation Newsletter",
+      "description": "Personalized email digest with changes to regulations relevant to your business.",
+      "weeklyUpdate": "Your Weekly Regulation Update",
+      "weekly": "Weekly",
+      "monthly": "Monthly",
+      "frequency": "Frequency",
+      "sendTest": "Send Test Newsletter"
+    },
+    "recommendations": {
+      "title": "Recommendations",
+      "description": "Prioritized action list based on your scan results. Compliance steps, recommended insurance, and timeline.",
+      "immediate": "Immediate",
+      "soon": "Soon",
+      "planned": "Planned",
+      "insurance": "Insurance"
+    }
+  },
+  "Mobile": {
+    "title": "Desktop View Recommended",
+    "description": "ComplyRadar is optimized as a dashboard experience. Please open on a larger screen."
+  },
+  "Common": {
+    "yes": "Yes",
+    "no": "No",
+    "save": "Save",
+    "cancel": "Cancel",
+    "loading": "Loading..."
+  }
+}

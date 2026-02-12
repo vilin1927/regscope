@@ -1,0 +1,191 @@
+{
+  "App": {
+    "name": "ComplyRadar",
+    "tagline": "Compliance für Handwerksbetriebe"
+  },
+  "Nav": {
+    "compliance": "COMPLIANCE",
+    "dashboard": "Dashboard",
+    "newScan": "Neuer Scan",
+    "scanHistory": "Scan-Verlauf",
+    "analysis": "ANALYSE",
+    "riskAnalysis": "Risikoanalyse",
+    "recommendations": "Empfehlungen",
+    "newsletter": "Newsletter",
+    "system": "SYSTEM",
+    "settings": "Einstellungen",
+    "inPreparation": "In Vorbereitung"
+  },
+  "Dashboard": {
+    "welcome": "Willkommen bei ComplyRadar",
+    "subtitle": "Finden Sie heraus, welche Vorschriften für Ihren Handwerksbetrieb gelten",
+    "startScan": "Compliance-Scan starten",
+    "startScanDesc": "Beantworten Sie einige Fragen zu Ihrem Betrieb und wir identifizieren die relevanten Vorschriften.",
+    "regulationsFound": "Vorschriften gefunden",
+    "scansCompleted": "Scans durchgeführt",
+    "lastScan": "Letzter Scan",
+    "noScansYet": "Noch keine Scans"
+  },
+  "Questionnaire": {
+    "stepOf": "Schritt {step} von {total}",
+    "back": "Zurück",
+    "next": "Weiter",
+    "skip": "Überspringen",
+    "analyze": "Betrieb analysieren",
+    "analyzePrelaunch": "Vorab-Checkliste erstellen",
+    "required": "Pflichtfeld",
+    "optional": "Optional",
+    "selectPlaceholder": "Bitte wählen...",
+    "noCompanyYet": "Ich habe noch kein Unternehmen (Planungsphase)",
+    "layer1": {
+      "title": "Unternehmensdaten",
+      "subtitle": "Grundlegende Angaben zu Ihrem Betrieb"
+    },
+    "layer2": {
+      "title": "Mitarbeiter & Organisation",
+      "subtitle": "Angaben zu Beschäftigten und Arbeitsschutz"
+    },
+    "layer3": {
+      "title": "Werkstatt & Sicherheit",
+      "subtitle": "Betriebsstätte und betriebliche Sicherheit"
+    },
+    "layer4": {
+      "title": "Produkte & Vertrieb",
+      "subtitle": "Produkte, Kunden und Verkaufsaktivitäten"
+    },
+    "layer5": {
+      "title": "Einkauf & Lieferkette",
+      "subtitle": "Beschaffung und Lieferantenmanagement"
+    },
+    "layer6": {
+      "title": "Umwelt & Entsorgung",
+      "subtitle": "Umweltschutz und Abfallmanagement"
+    },
+    "layer7": {
+      "title": "Versicherung & Haftung",
+      "subtitle": "Versicherungsschutz und Risikoabsicherung"
+    }
+  },
+  "Processing": {
+    "title": "Ihr Betrieb wird analysiert",
+    "subtitle": "Bitte warten Sie, während wir die Vorschriften durchsuchen...",
+    "step1": "Unternehmensprofil wird erstellt...",
+    "step2": "Durchsuche EU-Vorschriften...",
+    "step3": "Durchsuche Bundesgesetze...",
+    "step4": "Durchsuche Landesrecht & Branchenregeln...",
+    "step5": "Erstelle Compliance-Übersicht..."
+  },
+  "Results": {
+    "title": "Compliance-Scan Ergebnisse",
+    "regulationsFound": "{count} relevante Vorschriften gefunden",
+    "totalRegulations": "Vorschriften gesamt",
+    "highPriority": "Hohe Priorität",
+    "categoriesCovered": "Kategorien",
+    "complianceScore": "Compliance-Score",
+    "businessProfile": "Unternehmensprofil",
+    "relevantRegulations": "Relevante Vorschriften",
+    "newScan": "Neuer Scan",
+    "exportReport": "Bericht exportieren",
+    "whyApplies": "Warum betrifft Sie das",
+    "keyRequirements": "Wesentliche Anforderungen",
+    "potentialPenalty": "Mögliche Sanktion",
+    "viewSource": "Offizielle Quelle",
+    "disclaimer": "Dies ist keine Rechtsberatung. Konsultieren Sie einen Fachanwalt.",
+    "status": {
+      "fulfilled": "Erfüllt",
+      "review": "Prüfung nötig",
+      "missing": "Fehlend"
+    },
+    "risk": {
+      "high": "Hoch",
+      "medium": "Mittel",
+      "low": "Niedrig"
+    },
+    "jurisdiction": {
+      "eu": "EU",
+      "bund": "Bund",
+      "land": "Land",
+      "branche": "Branche"
+    },
+    "category": {
+      "arbeitssicherheit": "Arbeitssicherheit",
+      "arbeitsrecht": "Arbeitsrecht",
+      "gewerberecht": "Gewerberecht",
+      "umweltrecht": "Umweltrecht",
+      "produktsicherheit": "Produktsicherheit",
+      "datenschutz": "Datenschutz",
+      "versicherungspflichten": "Versicherungspflichten"
+    }
+  },
+  "ScanHistory": {
+    "title": "Scan-Verlauf",
+    "subtitle": "Ihre bisherigen Compliance-Scans",
+    "noScans": "Noch keine Scans durchgeführt",
+    "noScansDesc": "Starten Sie Ihren ersten Compliance-Scan, um Ergebnisse zu sehen.",
+    "regulations": "Vorschriften",
+    "score": "Score",
+    "rerun": "Erneut scannen",
+    "view": "Ergebnisse ansehen"
+  },
+  "Auth": {
+    "signIn": "Anmelden",
+    "signUp": "Registrieren",
+    "signOut": "Abmelden",
+    "email": "E-Mail-Adresse",
+    "password": "Passwort",
+    "guestMode": "Als Gast fortfahren",
+    "guestNote": "Als Gast können Sie einen Scan durchführen, aber Ergebnisse werden nicht gespeichert.",
+    "noAccount": "Noch kein Konto?",
+    "hasAccount": "Bereits registriert?",
+    "welcomeTitle": "Willkommen bei ComplyRadar",
+    "welcomeSubtitle": "Compliance-Übersicht für Handwerksbetriebe"
+  },
+  "Settings": {
+    "title": "Einstellungen",
+    "language": "Sprache",
+    "account": "Konto",
+    "german": "Deutsch",
+    "english": "English"
+  },
+  "Mockups": {
+    "inPreparation": "In Vorbereitung",
+    "comingInV2": "Verfügbar in Version 2",
+    "riskAnalysis": {
+      "title": "Risikoanalyse",
+      "description": "KI-gestützte Analyse Ihres Unternehmensprofils gegen jede relevante Vorschrift. Compliance-Lücken, Fristen und Bußgeldrisiken werden nach Schweregrad kategorisiert.",
+      "regulation": "Vorschrift",
+      "severity": "Schweregrad",
+      "gap": "Compliance-Lücke",
+      "deadline": "Frist",
+      "penalty": "Mögliches Bußgeld"
+    },
+    "newsletter": {
+      "title": "Vorschriften-Newsletter",
+      "description": "Personalisierter E-Mail-Digest mit Änderungen an Vorschriften, die für Ihren Betrieb relevant sind.",
+      "weeklyUpdate": "Ihr wöchentliches Vorschriften-Update",
+      "weekly": "Wöchentlich",
+      "monthly": "Monatlich",
+      "frequency": "Häufigkeit",
+      "sendTest": "Test-Newsletter senden"
+    },
+    "recommendations": {
+      "title": "Empfehlungen",
+      "description": "Priorisierte Maßnahmenliste basierend auf Ihren Scan-Ergebnissen. Compliance-Schritte, empfohlene Versicherungen und Zeitplan.",
+      "immediate": "Sofort",
+      "soon": "Bald",
+      "planned": "Geplant",
+      "insurance": "Versicherung"
+    }
+  },
+  "Mobile": {
+    "title": "Desktop-Ansicht empfohlen",
+    "description": "ComplyRadar ist als Dashboard optimiert. Bitte öffnen Sie die Anwendung auf einem größeren Bildschirm."
+  },
+  "Common": {
+    "yes": "Ja",
+    "no": "Nein",
+    "save": "Speichern",
+    "cancel": "Abbrechen",
+    "loading": "Wird geladen..."
+  }
+}
