@@ -7,54 +7,63 @@ interface FieldRendererProps {
   field: QuestionField;
   value: unknown;
   onChange: (value: unknown) => void;
+  error?: string;
 }
 
-export function FieldRenderer({ field, value, onChange }: FieldRendererProps) {
+export function FieldRenderer({ field, value, onChange, error }: FieldRendererProps) {
   switch (field.type) {
     case "text":
       return (
-        <div>
+        <div id={`field-${field.id}`}>
           <label className="block text-sm font-medium text-gray-700 mb-2">
             {field.label}
-            {field.required && <span className="text-red-500 ml-1">*</span>}
+            {field.required && <span className="text-red-500 ml-1 text-xs font-bold" title="Pflichtfeld">*</span>}
           </label>
           <input
             type="text"
             value={(value as string) || ""}
             onChange={(e) => onChange(e.target.value)}
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+            className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none ${
+              error ? "border-red-500 bg-red-50" : "border-gray-300"
+            }`}
             placeholder={field.placeholder || ""}
           />
+          {error && <p className="mt-1 text-sm text-red-600">{error}</p>}
         </div>
       );
 
     case "date":
       return (
-        <div>
+        <div id={`field-${field.id}`}>
           <label className="block text-sm font-medium text-gray-700 mb-2">
             {field.label}
-            {field.required && <span className="text-red-500 ml-1">*</span>}
+            {field.required && <span className="text-red-500 ml-1 text-xs font-bold" title="Pflichtfeld">*</span>}
           </label>
           <input
             type="date"
             value={(value as string) || ""}
             onChange={(e) => onChange(e.target.value)}
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+            className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none ${
+              error ? "border-red-500 bg-red-50" : "border-gray-300"
+            }`}
           />
+          {error && <p className="mt-1 text-sm text-red-600">{error}</p>}
         </div>
       );
 
     case "select":
       return (
-        <div>
+        <div id={`field-${field.id}`}>
           <label className="block text-sm font-medium text-gray-700 mb-2">
             {field.label}
-            {field.required && <span className="text-red-500 ml-1">*</span>}
+            {field.required && <span className="text-red-500 ml-1 text-xs font-bold" title="Pflichtfeld">*</span>}
           </label>
           <select
             value={(value as string) || ""}
             onChange={(e) => onChange(e.target.value)}
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none bg-white"
+            className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none bg-white ${
+              error ? "border-red-500 bg-red-50" : "border-gray-300"
+            }`}
           >
             <option value="">Bitte wählen...</option>
             {field.options?.map((opt) => (
@@ -63,18 +72,21 @@ export function FieldRenderer({ field, value, onChange }: FieldRendererProps) {
               </option>
             ))}
           </select>
+          {error && <p className="mt-1 text-sm text-red-600">{error}</p>}
         </div>
       );
 
     case "multiselect": {
       const selected = (value as string[]) || [];
       return (
-        <div>
+        <div id={`field-${field.id}`}>
           <label className="block text-sm font-medium text-gray-700 mb-3">
             {field.label}
-            {field.required && <span className="text-red-500 ml-1">*</span>}
+            {field.required && <span className="text-red-500 ml-1 text-xs font-bold" title="Pflichtfeld">*</span>}
           </label>
-          <div className="flex flex-wrap gap-2">
+          <div className={`flex flex-wrap gap-2 ${
+            error ? "rounded-lg border-2 border-red-500 p-2" : ""
+          }`}>
             {field.options?.map((opt) => (
               <button
                 key={opt.value}
@@ -95,18 +107,21 @@ export function FieldRenderer({ field, value, onChange }: FieldRendererProps) {
               </button>
             ))}
           </div>
+          {error && <p className="mt-1 text-sm text-red-600">{error}</p>}
         </div>
       );
     }
 
     case "toggle":
       return (
-        <Toggle
-          label={field.label}
-          checked={(value as boolean) || false}
-          onChange={(v) => onChange(v)}
-          isComplianceCheck={field.isComplianceCheck}
-        />
+        <div id={`field-${field.id}`}>
+          <Toggle
+            label={field.label}
+            checked={(value as boolean) || false}
+            onChange={(v) => onChange(v)}
+            isComplianceCheck={field.isComplianceCheck}
+          />
+        </div>
       );
 
     default:

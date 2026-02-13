@@ -36,6 +36,13 @@
     "required": "Required",
     "optional": "Optional",
     "selectPlaceholder": "Please select...",
+    "validation": {
+      "textRequired": "Please fill in this field",
+      "dateRequired": "Please enter a date",
+      "selectRequired": "Please select an option",
+      "multiselectRequired": "Please select at least one option",
+      "fixErrors": "Please fix the highlighted fields"
+    },
     "noCompanyYet": "I don't have a company yet (planning stage)",
     "layer1": {
       "title": "Company Information",
@@ -138,7 +145,13 @@
     "noAccount": "Don't have an account?",
     "hasAccount": "Already have an account?",
     "welcomeTitle": "Welcome to ComplyRadar",
-    "welcomeSubtitle": "Compliance overview for trade businesses"
+    "welcomeSubtitle": "Compliance overview for trade businesses",
+    "emailRequired": "Please enter an email address",
+    "emailInvalid": "Please enter a valid email address",
+    "passwordRequired": "Please enter a password",
+    "passwordTooShort": "Password must be at least {min} characters",
+    "passwordNeedsUppercase": "Password must contain at least one uppercase letter",
+    "passwordNeedsNumber": "Password must contain at least one number"
   },
   "Settings": {
     "title": "Settings",
@@ -180,6 +193,48 @@
   "Mobile": {
     "title": "Desktop View Recommended",
     "description": "ComplyRadar is optimized as a dashboard experience. Please open on a larger screen."
+  },
+  "Legal": {
+    "impressum": "Legal Notice",
+    "datenschutz": "Privacy Policy",
+    "back": "Back",
+    "impressumContent": {
+      "title": "Legal Notice",
+      "subtitle": "Information pursuant to § 5 TMG",
+      "company": "ComplyRadar",
+      "represented": "Represented by",
+      "representedName": "[Name of Managing Director]",
+      "address": "[Street No.]\n[Postal Code City]\nGermany",
+      "contact": "Contact",
+      "email": "Email: info@complyradar.de",
+      "register": "Commercial Register",
+      "registerInfo": "[Local Court], [HRB Number]",
+      "vatId": "VAT ID",
+      "vatIdInfo": "VAT identification number pursuant to § 27a UStG: [DE Number]",
+      "liability": "Disclaimer",
+      "liabilityText": "The contents of this application have been created with the utmost care. However, we cannot guarantee the accuracy, completeness, or timeliness of the content. Use of the content is at the user's own risk. The information provided does not constitute legal advice.",
+      "copyright": "Copyright",
+      "copyrightText": "The content and works created by the site operators on these pages are subject to German copyright law."
+    },
+    "datenschutzContent": {
+      "title": "Privacy Policy",
+      "subtitle": "Information pursuant to Art. 13 GDPR",
+      "responsible": "Data Controller",
+      "responsibleText": "ComplyRadar\n[Address]\nEmail: datenschutz@complyradar.de",
+      "dataCollection": "Collection and Processing of Personal Data",
+      "dataCollectionText": "When using ComplyRadar, the following personal data is collected and processed:",
+      "dataPoints": "Email address (upon registration)\nPassword (stored encrypted)\nBusiness data (as part of the compliance scan)\nUsage data (time and frequency of scans)",
+      "purpose": "Purpose of Data Processing",
+      "purposeText": "Your data is processed exclusively for providing the ComplyRadar service. The legal basis is Art. 6(1)(b) GDPR (performance of a contract).",
+      "storage": "Data Storage",
+      "storageText": "Your data is stored on Supabase servers (EU region). Data is stored for the duration of your account usage. Upon account deletion, all personal data will be deleted within 30 days.",
+      "rights": "Your Rights",
+      "rightsText": "You have the right to access, rectification, erasure, restriction of processing, data portability, and objection. Contact us at datenschutz@complyradar.de.",
+      "cookies": "Cookies",
+      "cookiesText": "ComplyRadar uses only technically necessary cookies for authentication. No tracking or marketing cookies are used.",
+      "changes": "Changes",
+      "changesText": "We reserve the right to update this privacy policy to reflect changes in legal requirements or modifications to the service."
+    }
   },
   "Common": {
     "yes": "Yes",

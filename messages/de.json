@@ -36,6 +36,13 @@
     "required": "Pflichtfeld",
     "optional": "Optional",
     "selectPlaceholder": "Bitte wählen...",
+    "validation": {
+      "textRequired": "Bitte füllen Sie dieses Feld aus",
+      "dateRequired": "Bitte geben Sie ein Datum ein",
+      "selectRequired": "Bitte wählen Sie eine Option",
+      "multiselectRequired": "Bitte wählen Sie mindestens eine Option",
+      "fixErrors": "Bitte korrigieren Sie die markierten Felder"
+    },
     "noCompanyYet": "Ich habe noch kein Unternehmen (Planungsphase)",
     "layer1": {
       "title": "Unternehmensdaten",
@@ -138,7 +145,13 @@
     "noAccount": "Noch kein Konto?",
     "hasAccount": "Bereits registriert?",
     "welcomeTitle": "Willkommen bei ComplyRadar",
-    "welcomeSubtitle": "Compliance-Übersicht für Handwerksbetriebe"
+    "welcomeSubtitle": "Compliance-Übersicht für Handwerksbetriebe",
+    "emailRequired": "Bitte geben Sie eine E-Mail-Adresse ein",
+    "emailInvalid": "Bitte geben Sie eine gültige E-Mail-Adresse ein",
+    "passwordRequired": "Bitte geben Sie ein Passwort ein",
+    "passwordTooShort": "Passwort muss mindestens {min} Zeichen lang sein",
+    "passwordNeedsUppercase": "Passwort muss mindestens einen Großbuchstaben enthalten",
+    "passwordNeedsNumber": "Passwort muss mindestens eine Zahl enthalten"
   },
   "Settings": {
     "title": "Einstellungen",
@@ -180,6 +193,48 @@
   "Mobile": {
     "title": "Desktop-Ansicht empfohlen",
     "description": "ComplyRadar ist als Dashboard optimiert. Bitte öffnen Sie die Anwendung auf einem größeren Bildschirm."
+  },
+  "Legal": {
+    "impressum": "Impressum",
+    "datenschutz": "Datenschutzerklärung",
+    "back": "Zurück",
+    "impressumContent": {
+      "title": "Impressum",
+      "subtitle": "Angaben gemäß § 5 TMG",
+      "company": "ComplyRadar",
+      "represented": "Vertreten durch",
+      "representedName": "[Name des Geschäftsführers]",
+      "address": "[Straße Nr.]\n[PLZ Stadt]\nDeutschland",
+      "contact": "Kontakt",
+      "email": "E-Mail: info@complyradar.de",
+      "register": "Handelsregister",
+      "registerInfo": "[Amtsgericht], [HRB-Nummer]",
+      "vatId": "Umsatzsteuer-ID",
+      "vatIdInfo": "Umsatzsteuer-Identifikationsnummer gemäß § 27a UStG: [DE-Nummer]",
+      "liability": "Haftungsausschluss",
+      "liabilityText": "Die Inhalte dieser Anwendung wurden mit größter Sorgfalt erstellt. Für die Richtigkeit, Vollständigkeit und Aktualität der Inhalte können wir jedoch keine Gewähr übernehmen. Die Nutzung der Inhalte erfolgt auf eigene Gefahr des Nutzers. Die bereitgestellten Informationen stellen keine Rechtsberatung dar.",
+      "copyright": "Urheberrecht",
+      "copyrightText": "Die durch die Seitenbetreiber erstellten Inhalte und Werke auf diesen Seiten unterliegen dem deutschen Urheberrecht."
+    },
+    "datenschutzContent": {
+      "title": "Datenschutzerklärung",
+      "subtitle": "Informationen gemäß Art. 13 DSGVO",
+      "responsible": "Verantwortlicher",
+      "responsibleText": "ComplyRadar\n[Adresse]\nE-Mail: datenschutz@complyradar.de",
+      "dataCollection": "Erhebung und Verarbeitung personenbezogener Daten",
+      "dataCollectionText": "Bei der Nutzung von ComplyRadar werden folgende personenbezogene Daten erhoben und verarbeitet:",
+      "dataPoints": "E-Mail-Adresse (bei Registrierung)\nPasswort (verschlüsselt gespeichert)\nUnternehmensdaten (im Rahmen des Compliance-Scans)\nNutzungsdaten (Zeitpunkt und Häufigkeit der Scans)",
+      "purpose": "Zweck der Datenverarbeitung",
+      "purposeText": "Ihre Daten werden ausschließlich zur Bereitstellung des ComplyRadar-Dienstes verarbeitet. Die Rechtsgrundlage ist Art. 6 Abs. 1 lit. b DSGVO (Vertragserfüllung).",
+      "storage": "Datenspeicherung",
+      "storageText": "Ihre Daten werden auf Servern von Supabase (EU-Region) gespeichert. Die Speicherung erfolgt für die Dauer Ihrer Kontonutzung. Bei Kontolöschung werden alle personenbezogenen Daten innerhalb von 30 Tagen gelöscht.",
+      "rights": "Ihre Rechte",
+      "rightsText": "Sie haben das Recht auf Auskunft, Berichtigung, Löschung, Einschränkung der Verarbeitung, Datenübertragbarkeit und Widerspruch. Kontaktieren Sie uns unter datenschutz@complyradar.de.",
+      "cookies": "Cookies",
+      "cookiesText": "ComplyRadar verwendet ausschließlich technisch notwendige Cookies für die Authentifizierung. Es werden keine Tracking- oder Marketing-Cookies eingesetzt.",
+      "changes": "Änderungen",
+      "changesText": "Wir behalten uns vor, diese Datenschutzerklärung anzupassen, um sie an geänderte Rechtslagen oder bei Änderungen des Dienstes anzupassen."
+    }
   },
   "Common": {
     "yes": "Ja",

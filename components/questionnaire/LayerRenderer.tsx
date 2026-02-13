@@ -11,6 +11,7 @@ interface LayerRendererProps {
   layer: QuestionnaireLayer;
   answers: BusinessProfile;
   onUpdate: (fieldId: string, value: unknown) => void;
+  errors?: Record<string, string>;
 }
 
 function evaluateCondition(
@@ -43,6 +44,7 @@ export function LayerRenderer({
   layer,
   answers,
   onUpdate,
+  errors = {},
 }: LayerRendererProps) {
   // Split fields: regular fields and compliance-check toggles
   const regularFields = layer.fields.filter((f) => !f.isComplianceCheck);
@@ -69,6 +71,7 @@ export function LayerRenderer({
           field={field}
           value={answers[field.id]}
           onChange={(value) => onUpdate(field.id, value)}
+          error={errors[field.id]}
         />
       ))}
 
@@ -85,6 +88,7 @@ export function LayerRenderer({
                 field={field}
                 value={answers[field.id]}
                 onChange={(value) => onUpdate(field.id, value)}
+                error={errors[field.id]}
               />
             ))}
           </div>
@@ -100,6 +104,7 @@ export function LayerRenderer({
             field={cf.field}
             value={answers[cf.field.id]}
             onChange={(value) => onUpdate(cf.field.id, value)}
+            error={errors[cf.field.id]}
           />
         );
       })}

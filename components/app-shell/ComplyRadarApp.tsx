@@ -14,6 +14,7 @@ import { ResultsScreen } from "../results/ResultsScreen";
 import { ScanHistoryScreen } from "../scan-history/ScanHistoryScreen";
 import { AuthScreen } from "../auth/AuthScreen";
 import { SettingsScreen } from "../settings/SettingsScreen";
+import { LegalScreen } from "../legal/LegalScreen";
 import { InPrepScreen } from "../mockups/InPrepScreen";
 import { RiskAnalysisMockup } from "../mockups/RiskAnalysisMockup";
 import { NewsletterMockup } from "../mockups/NewsletterMockup";
@@ -106,8 +107,26 @@ export function ComplyRadarApp() {
       <AuthScreen
         onAuth={auth.handleAuth}
         onGuest={() => { auth.handleGuest(); setCurrentScreen("dashboard"); }}
+        onLegal={(page) => setCurrentScreen(page)}
         error={auth.authError}
       />
+    );
+  }
+
+  if (
+    (currentScreen === "impressum" || currentScreen === "datenschutz") &&
+    !auth.userId &&
+    !auth.isGuest
+  ) {
+    return (
+      <div className="min-h-screen bg-[#f8fafc] flex items-center justify-center p-6">
+        <div className="w-full max-w-3xl">
+          <LegalScreen
+            page={currentScreen}
+            onBack={() => setCurrentScreen("auth")}
+          />
+        </div>
+      </div>
     );
   }
 
@@ -208,6 +227,16 @@ export function ComplyRadarApp() {
                 userEmail={auth.userEmail}
                 isGuest={auth.isGuest}
                 onSignOut={handleSignOut}
+                onLegal={(page) => setCurrentScreen(page)}
+              />
+            )}
+
+            {(currentScreen === "impressum" ||
+              currentScreen === "datenschutz") && (
+              <LegalScreen
+                key={currentScreen}
+                page={currentScreen}
+                onBack={() => setCurrentScreen("settings")}
               />
             )}
           </AnimatePresence>

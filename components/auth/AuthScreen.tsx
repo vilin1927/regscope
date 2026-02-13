@@ -9,12 +9,14 @@ import { AuthForm } from "./AuthForm";
 interface AuthScreenProps {
   onAuth: (email: string, password: string, mode: "signin" | "signup") => Promise<void>;
   onGuest: () => void;
+  onLegal: (page: "impressum" | "datenschutz") => void;
   error?: string;
 }
 
-export function AuthScreen({ onAuth, onGuest, error }: AuthScreenProps) {
+export function AuthScreen({ onAuth, onGuest, onLegal, error }: AuthScreenProps) {
   const [mode, setMode] = useState<"signin" | "signup">("signin");
   const t = useTranslations("Auth");
+  const tLegal = useTranslations("Legal");
 
   return (
     <div className="min-h-screen bg-[#f8fafc] flex items-center justify-center p-6">
@@ -74,6 +76,22 @@ export function AuthScreen({ onAuth, onGuest, error }: AuthScreenProps) {
               {t("guestNote")}
             </p>
           </div>
+        </div>
+
+        <div className="flex items-center justify-center gap-3 mt-6 text-xs text-gray-400">
+          <button
+            onClick={() => onLegal("impressum")}
+            className="hover:text-gray-600 transition-colors"
+          >
+            {tLegal("impressum")}
+          </button>
+          <span>·</span>
+          <button
+            onClick={() => onLegal("datenschutz")}
+            className="hover:text-gray-600 transition-colors"
+          >
+            {tLegal("datenschutz")}
+          </button>
         </div>
       </motion.div>
     </div>

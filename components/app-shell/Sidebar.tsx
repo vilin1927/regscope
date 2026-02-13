@@ -11,18 +11,7 @@ import {
 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { NavItem } from "./NavItem";
-
-type Screen =
-  | "auth"
-  | "dashboard"
-  | "questionnaire"
-  | "processing"
-  | "results"
-  | "scan-history"
-  | "risk-analysis"
-  | "newsletter"
-  | "recommendations"
-  | "settings";
+import type { Screen } from "@/types";
 
 interface SidebarProps {
   currentScreen: Screen;

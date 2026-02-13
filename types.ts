@@ -8,7 +8,9 @@ export type Screen =
   | "risk-analysis"
   | "newsletter"
   | "recommendations"
-  | "settings";
+  | "settings"
+  | "impressum"
+  | "datenschutz";
 
 export interface ScanRecord {
   id: string;

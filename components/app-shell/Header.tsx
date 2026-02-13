@@ -3,18 +3,7 @@
 import { useTranslations } from "next-intl";
 import { useRouter, usePathname } from "@/src/i18n/navigation";
 import { useLocale } from "next-intl";
-
-type Screen =
-  | "auth"
-  | "dashboard"
-  | "questionnaire"
-  | "processing"
-  | "results"
-  | "scan-history"
-  | "risk-analysis"
-  | "newsletter"
-  | "recommendations"
-  | "settings";
+import type { Screen } from "@/types";
 
 interface HeaderProps {
   currentScreen: Screen;
@@ -31,6 +20,8 @@ const screenTitleKeys: Record<Screen, string> = {
   newsletter: "Mockups.newsletter.title",
   recommendations: "Mockups.recommendations.title",
   settings: "Settings.title",
+  impressum: "Legal.impressum",
+  datenschutz: "Legal.datenschutz",
 };
 
 export function Header({ currentScreen }: HeaderProps) {

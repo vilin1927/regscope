@@ -8,15 +8,18 @@ interface SettingsScreenProps {
   userEmail?: string;
   isGuest?: boolean;
   onSignOut?: () => void;
+  onLegal?: (page: "impressum" | "datenschutz") => void;
 }
 
 export function SettingsScreen({
   userEmail,
   isGuest,
   onSignOut,
+  onLegal,
 }: SettingsScreenProps) {
   const t = useTranslations("Settings");
   const tAuth = useTranslations("Auth");
+  const tLegal = useTranslations("Legal");
   const locale = useLocale();
   const router = useRouter();
   const pathname = usePathname();
@@ -85,6 +88,28 @@ export function SettingsScreen({
           </div>
         )}
       </div>
+
+      {/* Legal */}
+      {onLegal && (
+        <div className="bg-white rounded-xl border border-gray-200 p-6 mt-4">
+          <h2 className="font-semibold text-gray-900 mb-4">Rechtliches</h2>
+          <div className="flex gap-3">
+            <button
+              onClick={() => onLegal("impressum")}
+              className="text-sm text-blue-600 hover:text-blue-800 font-medium transition-colors"
+            >
+              {tLegal("impressum")}
+            </button>
+            <span className="text-gray-300">·</span>
+            <button
+              onClick={() => onLegal("datenschutz")}
+              className="text-sm text-blue-600 hover:text-blue-800 font-medium transition-colors"
+            >
+              {tLegal("datenschutz")}
+            </button>
+          </div>
+        </div>
+      )}
     </motion.div>
   );
 }
