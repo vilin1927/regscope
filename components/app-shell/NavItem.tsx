@@ -14,17 +14,19 @@ export function NavItem({ icon: Icon, label, active, badge, onClick }: NavItemPr
   return (
     <button
       onClick={onClick}
-      className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+      className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors relative ${
         active
           ? "bg-blue-50 text-blue-700"
-          : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+          : badge
+            ? "text-gray-400 hover:bg-gray-50 hover:text-gray-500"
+            : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
       }`}
     >
       <Icon className="w-5 h-5 shrink-0" />
-      <span className="flex-1 text-left">{label}</span>
+      <span className="text-left truncate">{label}</span>
       {badge && (
-        <span className="text-[10px] font-bold uppercase px-1.5 py-0.5 rounded bg-purple-100 text-purple-600">
-          {badge}
+        <span className="ml-auto shrink-0 text-[9px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded-md bg-blue-50 text-blue-400 border border-blue-100">
+          Soon
         </span>
       )}
     </button>
