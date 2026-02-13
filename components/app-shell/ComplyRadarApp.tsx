@@ -65,11 +65,22 @@ export function ComplyRadarApp() {
   });
 
   // Navigate to dashboard once auth resolves
+  // Fix #19: Also reset to dashboard if screen requires data we don't have
   useEffect(() => {
-    if (!auth.isLoading && (auth.userId || auth.isGuest)) {
-      if (currentScreen === "auth") setCurrentScreen("dashboard");
+    if (auth.isLoading) return;
+    if (auth.userId || auth.isGuest) {
+      if (currentScreen === "auth") {
+        setCurrentScreen("dashboard");
+      } else if (
+        (currentScreen === "results" && scans.matchedRegulations.length === 0) ||
+        (currentScreen === "processing" && !processing.isProcessing)
+      ) {
+        setCurrentScreen("dashboard");
+      }
+    } else if (currentScreen !== "impressum" && currentScreen !== "datenschutz") {
+      setCurrentScreen("auth");
     }
-  }, [auth.isLoading, auth.userId, auth.isGuest, currentScreen]);
+  }, [auth.isLoading, auth.userId, auth.isGuest]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Mobile check
   useEffect(() => {
@@ -84,18 +95,19 @@ export function ComplyRadarApp() {
     setCurrentScreen("questionnaire");
   };
 
+  // Fix #17: Remove duplicate setBusinessProfile call
   const handleQuestionnaireComplete = (answers: BusinessProfile) => {
     setProcessingError(undefined);
-    scans.setBusinessProfile(answers);
     scans.resetScan();
     scans.setBusinessProfile(answers);
     processing.startProcessing(answers);
     setCurrentScreen("processing");
   };
 
+  // Fix #9: Clear all scan data on sign out (prevents guest/auth data mixing)
   const handleSignOut = async () => {
     await auth.handleSignOut();
-    scans.resetScan();
+    scans.clearHistory();
     setCurrentScreen("auth");
   };
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { calculateComplianceScore } from "@/data/regulations/utils";
 import type { MatchedRegulation } from "@/data/regulations/types";
@@ -12,6 +12,8 @@ interface ScanHistoryState {
   matchedRegulations: MatchedRegulation[];
   businessProfile: BusinessProfile;
   complianceChecks: Record<string, boolean>;
+  currentScanId: string | null;
+  scanLoadError?: string;
 }
 
 interface ScanHistoryActions {
@@ -22,6 +24,7 @@ interface ScanHistoryActions {
   setBusinessProfile: (profile: BusinessProfile) => void;
   handleComplianceChange: (regulationId: string, checked: boolean) => Promise<void>;
   resetScan: () => void;
+  clearHistory: () => void;
 }
 
 export function useScanHistory(
@@ -32,8 +35,11 @@ export function useScanHistory(
   const [matchedRegulations, setMatchedRegulations] = useState<MatchedRegulation[]>([]);
   const [businessProfile, setBusinessProfile] = useState<BusinessProfile>({});
   const [complianceChecks, setComplianceChecks] = useState<Record<string, boolean>>({});
+  const [currentScanId, setCurrentScanId] = useState<string | null>(null);
+  const [scanLoadError, setScanLoadError] = useState<string>();
 
-  const supabase = createClient();
+  const supabaseRef = useRef(createClient());
+  const supabase = supabaseRef.current;
 
   // Load scan history when userId changes
   useEffect(() => {
@@ -41,12 +47,19 @@ export function useScanHistory(
 
     const load = async () => {
       try {
-        const { data } = await supabase
+        setScanLoadError(undefined);
+        const { data, error } = await supabase
           .from("scans")
           .select("*")
           .eq("user_id", userId)
           .order("created_at", { ascending: false })
           .limit(50);
+
+        if (error) {
+          console.error("Failed to load scan history:", error.message);
+          setScanLoadError("Failed to load scan history");
+          return;
+        }
 
         if (data) {
           setScanHistory(
@@ -65,13 +78,38 @@ export function useScanHistory(
             }))
           );
         }
-      } catch {
-        // Supabase not configured
+      } catch (err) {
+        console.error("Failed to load scan history:", err);
+        setScanLoadError("Failed to load scan history");
       }
     };
     load();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId, isGuest]);
+
+  // Fix #4: Load compliance checks for a specific scan
+  const loadComplianceChecks = useCallback(
+    async (scanId: string) => {
+      if (!userId || isGuest) return;
+      try {
+        const { data } = await supabase
+          .from("compliance_checks")
+          .select("regulation_id, checked")
+          .eq("scan_id", scanId);
+
+        if (data) {
+          const checks: Record<string, boolean> = {};
+          for (const row of data) {
+            checks[row.regulation_id] = row.checked;
+          }
+          setComplianceChecks(checks);
+        }
+      } catch {
+        // compliance_checks table may not exist yet — that's ok
+      }
+    },
+    [userId, isGuest, supabase]
+  );
 
   const saveScan = async (profile: BusinessProfile, matched: MatchedRegulation[]) => {
     const localScan: ScanRecord = {
@@ -87,11 +125,12 @@ export function useScanHistory(
 
     if (isGuest || !userId) {
       setScanHistory((prev) => [localScan, ...prev]);
+      setCurrentScanId(localScan.id);
       return;
     }
 
     try {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from("scans")
         .insert({
           user_id: userId,
@@ -102,26 +141,34 @@ export function useScanHistory(
         .select()
         .single();
 
-      if (data) {
+      if (error) {
+        console.error("Failed to save scan:", error.message);
+        // Still keep local scan so user sees results
+      } else if (data) {
         localScan.id = data.id;
         localScan.complianceScore = Number(data.compliance_score) || 0;
       }
-    } catch {
-      // Supabase not configured — keep local scan
+    } catch (err) {
+      console.error("Failed to save scan:", err);
     }
 
     setScanHistory((prev) => [localScan, ...prev]);
+    setCurrentScanId(localScan.id);
   };
 
   const handleViewScan = (scanId: string) => {
     const scan = scanHistory.find((s) => s.id === scanId);
     if (!scan) return;
     setBusinessProfile(scan.businessProfile);
+    setCurrentScanId(scanId);
 
     // Load full regulations from stored data
     if (scan.matchedRegulations && scan.matchedRegulations.length > 0) {
       setMatchedRegulations(scan.matchedRegulations);
     }
+
+    // Fix #4: Load compliance checks for this specific scan
+    loadComplianceChecks(scanId);
   };
 
   const handleRerunScan = (scanId: string): BusinessProfile | undefined => {
@@ -129,16 +176,16 @@ export function useScanHistory(
     return scan?.businessProfile;
   };
 
+  // Fix #3: Save compliance check to the currently viewed scan, not always [0]
   const handleComplianceChange = useCallback(
     async (regulationId: string, checked: boolean) => {
       setComplianceChecks((prev) => ({ ...prev, [regulationId]: checked }));
 
-      if (userId && scanHistory.length > 0) {
+      if (userId && currentScanId) {
         try {
-          const scanId = scanHistory[0].id;
           if (checked) {
             await supabase.from("compliance_checks").upsert({
-              scan_id: scanId,
+              scan_id: currentScanId,
               regulation_id: regulationId,
               checked: true,
               checked_at: new Date().toISOString(),
@@ -147,21 +194,28 @@ export function useScanHistory(
             await supabase
               .from("compliance_checks")
               .delete()
-              .eq("scan_id", scanId)
+              .eq("scan_id", currentScanId)
               .eq("regulation_id", regulationId);
           }
-        } catch {
-          // Supabase not configured
+        } catch (err) {
+          console.error("Failed to save compliance check:", err);
         }
       }
     },
-    [userId, scanHistory, supabase]
+    [userId, currentScanId, supabase]
   );
 
   const resetScan = () => {
     setBusinessProfile({});
     setMatchedRegulations([]);
     setComplianceChecks({});
+    setCurrentScanId(null);
+  };
+
+  // Fix #9 (partial): Clear local history for guest→auth transitions
+  const clearHistory = () => {
+    setScanHistory([]);
+    resetScan();
   };
 
   return {
@@ -169,6 +223,8 @@ export function useScanHistory(
     matchedRegulations,
     businessProfile,
     complianceChecks,
+    currentScanId,
+    scanLoadError,
     saveScan,
     handleViewScan,
     handleRerunScan,
@@ -176,5 +232,6 @@ export function useScanHistory(
     setBusinessProfile,
     handleComplianceChange,
     resetScan,
+    clearHistory,
   };
 }

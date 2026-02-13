@@ -37,16 +37,15 @@ export function AuthForm({ mode, onSubmit, error }: AuthFormProps) {
 
     if (!password) {
       errors.password = t("passwordRequired");
+    } else if (password.length < 8) {
+      // Fix #22: Same minimum length for both signin and signup
+      errors.password = t("passwordTooShort", { min: 8 });
     } else if (mode === "signup") {
-      if (password.length < 8) {
-        errors.password = t("passwordTooShort", { min: 8 });
-      } else if (!/[A-Z]/.test(password)) {
+      if (!/[A-Z]/.test(password)) {
         errors.password = t("passwordNeedsUppercase");
       } else if (!/\d/.test(password)) {
         errors.password = t("passwordNeedsNumber");
       }
-    } else if (password.length < 6) {
-      errors.password = t("passwordTooShort", { min: 6 });
     }
 
     setFieldErrors(errors);

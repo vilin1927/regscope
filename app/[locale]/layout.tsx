@@ -7,11 +7,31 @@ export function generateStaticParams() {
   return routing.locales.map((locale) => ({ locale }));
 }
 
-export const metadata: Metadata = {
-  title: "ComplyRadar — Compliance für Handwerksbetriebe",
-  description:
-    "Finden Sie heraus, welche Vorschriften für Ihren Handwerksbetrieb gelten. Compliance-Scan für Tischlereien und Schreinereien.",
-};
+// Fix #13: Dynamic metadata per locale
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}): Promise<Metadata> {
+  const { locale } = await params;
+  const isGerman = locale === "de";
+
+  return {
+    title: isGerman
+      ? "ComplyRadar — Compliance für Handwerksbetriebe"
+      : "ComplyRadar — Compliance for Trade Businesses",
+    description: isGerman
+      ? "Finden Sie heraus, welche Vorschriften für Ihren Handwerksbetrieb gelten. Compliance-Scan für Tischlereien und Schreinereien."
+      : "Discover which regulations apply to your trade business. Compliance scanner for carpentry and joinery workshops.",
+    // Fix #26: hreflang alternates
+    alternates: {
+      languages: {
+        de: "/de",
+        en: "/en",
+      },
+    },
+  };
+}
 
 export default async function LocaleLayout({
   children,

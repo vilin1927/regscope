@@ -36,7 +36,33 @@ export function QuestionnaireScreen({
     isOptionalLayer || Object.keys(validateLayer(layer, answers)).length === 0;
 
   const updateAnswer = (fieldId: string, value: unknown) => {
-    setAnswers((prev) => ({ ...prev, [fieldId]: value }));
+    setAnswers((prev) => {
+      const next = { ...prev, [fieldId]: value };
+      // Fix #14: Clear conditional field values when their condition becomes false
+      for (const l of layers) {
+        if (!l.conditionalFields) continue;
+        for (const cf of l.conditionalFields) {
+          if (cf.showWhen.field === fieldId) {
+            // The triggering field changed — check if condition is still met
+            const conditionMet = (() => {
+              const fv = next[cf.showWhen.field];
+              switch (cf.showWhen.operator) {
+                case "eq": return fv === cf.showWhen.value;
+                case "in": return (cf.showWhen.value as unknown[]).includes(fv);
+                case "gt": return Number(fv) > Number(cf.showWhen.value);
+                case "includes": return ((fv as string[]) || []).includes(cf.showWhen.value as string);
+                case "true": return fv === true;
+                default: return false;
+              }
+            })();
+            if (!conditionMet) {
+              delete next[cf.field.id];
+            }
+          }
+        }
+      }
+      return next;
+    });
     setErrors((prev) => {
       if (prev[fieldId]) {
         const next = { ...prev };

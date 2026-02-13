@@ -13,7 +13,7 @@ export function BusinessProfileSummary({
   const t = useTranslations("Results");
 
   const companyName =
-    (profile.companyName as string) || "Ihr Betrieb";
+    (profile.companyName as string) || t("profileYourBusiness");
   const industry = (profile.industry as string) || "Tischlerei";
   const bundesland = (profile.bundesland as string) || "";
   const employeeCount = (profile.employeeCount as string) || "0";
@@ -25,20 +25,20 @@ export function BusinessProfileSummary({
       <h2 className="text-lg font-bold mb-3">{t("businessProfile")}</h2>
       <p className="text-gray-300 leading-relaxed">
         <strong className="text-white">{companyName}</strong>{" "}
-        {isPlanning ? "plant eine" : "ist eine"}{" "}
+        {isPlanning ? t("profilePlansA") : t("profileIsA")}{" "}
         <strong className="text-white">{industry}</strong>
         {legalForm && ` (${legalForm})`}
         {bundesland && (
           <>
             {" "}
-            in <strong className="text-white">{bundesland}</strong>
+            {t("profileIn")} <strong className="text-white">{bundesland}</strong>
           </>
         )}
         {employeeCount !== "0" && (
           <>
             {" "}
-            mit <strong className="text-white">{employeeCount}</strong>{" "}
-            Mitarbeitern
+            {t("profileWith")} <strong className="text-white">{employeeCount}</strong>{" "}
+            {t("profileEmployees")}
           </>
         )}
         .

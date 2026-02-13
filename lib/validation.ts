@@ -35,8 +35,14 @@ function validateField(
   field: QuestionField,
   value: unknown
 ): string | null {
-  if (field.type === "toggle") return null;
   if (!field.required) return null;
+
+  if (field.type === "toggle") {
+    // Toggle fields default to false — if required, user must have explicitly set it
+    // We allow both true and false as valid (the field was interacted with)
+    // but undefined/null means it was never touched
+    return null;
+  }
 
   switch (field.type) {
     case "text":

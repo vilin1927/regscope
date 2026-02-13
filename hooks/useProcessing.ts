@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import type { MatchedRegulation } from "@/data/regulations/types";
 import type { BusinessProfile } from "@/data/questionnaire/types";
 
@@ -9,10 +9,22 @@ interface UseProcessingOptions {
   onError: (message: string) => void;
 }
 
+const TOTAL_STEPS = 5;
+
 export function useProcessing({ onComplete, onError }: UseProcessingOptions) {
   const [isProcessing, setIsProcessing] = useState(false);
   const [processingStep, setProcessingStep] = useState(0);
   const abortRef = useRef<AbortController | null>(null);
+  const mountedRef = useRef(true);
+
+  // Fix #18: Track mounted state to prevent updates after unmount
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+      abortRef.current?.abort();
+    };
+  }, []);
 
   const startProcessing = useCallback(
     (profile: BusinessProfile) => {
@@ -29,9 +41,13 @@ export function useProcessing({ onComplete, onError }: UseProcessingOptions) {
         let step = 0;
         const interval = setInterval(() => {
           step++;
+          if (!mountedRef.current) {
+            clearInterval(interval);
+            return;
+          }
           setProcessingStep(step);
-          if (step >= 4) {
-            // Stop at step 4 (0-indexed: steps 0-4 done), last step waits for API
+          // Fix #21: Stop at step TOTAL_STEPS - 1 (4), last step set on API complete
+          if (step >= TOTAL_STEPS - 1) {
             clearInterval(interval);
             resolve();
           }
@@ -54,14 +70,17 @@ export function useProcessing({ onComplete, onError }: UseProcessingOptions) {
       // Wait for both animation minimum and API response
       Promise.all([animationDone, apiCall])
         .then(([, regulations]) => {
-          setProcessingStep(5); // Mark final step as complete
+          if (!mountedRef.current) return;
+          setProcessingStep(TOTAL_STEPS); // Mark final step as complete
           setTimeout(() => {
+            if (!mountedRef.current) return;
             onComplete(regulations);
             setIsProcessing(false);
           }, 500);
         })
         .catch((err) => {
           if (err.name === "AbortError") return;
+          if (!mountedRef.current) return;
           setIsProcessing(false);
           onError(err.message || "Ein Fehler ist aufgetreten");
         });

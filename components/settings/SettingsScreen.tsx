@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { motion } from "framer-motion";
 import { useTranslations, useLocale } from "next-intl";
 import { useRouter, usePathname } from "@/src/i18n/navigation";
@@ -20,9 +21,11 @@ export function SettingsScreen({
   const t = useTranslations("Settings");
   const tAuth = useTranslations("Auth");
   const tLegal = useTranslations("Legal");
+  const tCommon = useTranslations("Common");
   const locale = useLocale();
   const router = useRouter();
   const pathname = usePathname();
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
   const setLocale = (next: string) => {
     router.replace(pathname, { locale: next });
@@ -77,13 +80,32 @@ export function SettingsScreen({
                 {userEmail || "—"}
               </p>
             </div>
-            {onSignOut && (
+            {onSignOut && !showLogoutConfirm && (
               <button
-                onClick={onSignOut}
+                onClick={() => setShowLogoutConfirm(true)}
                 className="px-4 py-2 bg-red-50 text-red-700 rounded-lg text-sm font-medium hover:bg-red-100 transition-colors"
               >
                 {tAuth("signOut")}
               </button>
+            )}
+            {showLogoutConfirm && (
+              <div className="flex items-center gap-3 p-3 bg-red-50 rounded-lg border border-red-200">
+                <p className="text-sm text-red-700 font-medium flex-1">
+                  {t("confirmLogout")}
+                </p>
+                <button
+                  onClick={() => { setShowLogoutConfirm(false); onSignOut?.(); }}
+                  className="px-3 py-1.5 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 transition-colors"
+                >
+                  {tAuth("signOut")}
+                </button>
+                <button
+                  onClick={() => setShowLogoutConfirm(false)}
+                  className="px-3 py-1.5 bg-white text-gray-700 rounded-lg text-sm font-medium border border-gray-200 hover:bg-gray-50 transition-colors"
+                >
+                  {tCommon("cancel")}
+                </button>
+              </div>
             )}
           </div>
         )}

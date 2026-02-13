@@ -248,6 +248,12 @@
     "categoriesCovered": "Kategorien",
     "complianceScore": "Compliance-Score",
     "businessProfile": "Unternehmensprofil",
+    "profileIsA": "ist eine",
+    "profilePlansA": "plant eine",
+    "profileIn": "in",
+    "profileWith": "mit",
+    "profileEmployees": "Mitarbeitern",
+    "profileYourBusiness": "Ihr Betrieb",
     "relevantRegulations": "Relevante Vorschriften",
     "newScan": "Neuer Scan",
     "exportReport": "Bericht exportieren",
@@ -318,7 +324,8 @@
     "account": "Konto",
     "german": "Deutsch",
     "english": "English",
-    "legal": "Rechtliches"
+    "legal": "Rechtliches",
+    "confirmLogout": "Möchten Sie sich wirklich abmelden?"
   },
   "Mockups": {
     "inPreparation": "In Vorbereitung",

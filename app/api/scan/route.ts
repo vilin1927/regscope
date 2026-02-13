@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+import { createServerClient } from "@supabase/ssr";
+import { cookies } from "next/headers";
 import { carpentryRegulations } from "@/data/regulations/carpentry-regulations";
 import type {
   Regulation,
@@ -8,6 +10,22 @@ import type {
   RegulationCategory,
   RiskLevel,
 } from "@/data/regulations/types";
+
+// Simple in-memory rate limiter (per-IP, resets on cold start)
+const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
+const RATE_LIMIT = 10; // max requests
+const RATE_WINDOW = 60_000; // per 60 seconds
+
+function isRateLimited(ip: string): boolean {
+  const now = Date.now();
+  const entry = rateLimitMap.get(ip);
+  if (!entry || now > entry.resetAt) {
+    rateLimitMap.set(ip, { count: 1, resetAt: now + RATE_WINDOW });
+    return false;
+  }
+  entry.count++;
+  return entry.count > RATE_LIMIT;
+}
 
 // Compact regulations for the prompt — strip matching-engine fields the AI doesn't need
 function compactRegulations(regulations: Regulation[]) {
@@ -38,6 +56,11 @@ const VALID_CATEGORIES: RegulationCategory[] = [
 ];
 const VALID_RISK_LEVELS: RiskLevel[] = ["hoch", "mittel", "niedrig"];
 const VALID_STATUSES: ComplianceStatus[] = ["erfuellt", "pruefung", "fehlend"];
+
+const REQUIRED_PROFILE_FIELDS = [
+  "industry",
+  "employeeCount",
+];
 
 function validateResponse(
   parsed: unknown,
@@ -86,6 +109,27 @@ function validateResponse(
 
 export async function POST(request: Request) {
   try {
+    // Rate limiting
+    const ip = request.headers.get("x-forwarded-for") ?? request.headers.get("x-real-ip") ?? "unknown";
+    if (isRateLimited(ip)) {
+      return NextResponse.json(
+        { error: "Too many requests. Please try again later." },
+        { status: 429 }
+      );
+    }
+
+    // Auth check — allow both authenticated users and guests
+    const cookieStore = await cookies();
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      { cookies: { getAll: () => cookieStore.getAll() } }
+    );
+    const { data: { session } } = await supabase.auth.getSession();
+    // Allow guests (no session) but log for monitoring
+    const userId = session?.user?.id ?? "guest";
+    console.info(`Scan request from user: ${userId}`);
+
     const apiKey = process.env.OPENAI_API_KEY;
     const model = process.env.OPENAI_MODEL || "gpt-4o";
 
@@ -96,11 +140,31 @@ export async function POST(request: Request) {
       );
     }
 
-    const { profile } = await request.json();
+    let body: { profile?: unknown };
+    try {
+      body = await request.json();
+    } catch {
+      return NextResponse.json(
+        { error: "Invalid JSON in request body" },
+        { status: 400 }
+      );
+    }
+
+    const { profile } = body;
 
     if (!profile || typeof profile !== "object") {
       return NextResponse.json(
         { error: "Missing business profile" },
+        { status: 400 }
+      );
+    }
+
+    // Validate required fields exist
+    const profileObj = profile as Record<string, unknown>;
+    const missingFields = REQUIRED_PROFILE_FIELDS.filter((f) => !profileObj[f]);
+    if (missingFields.length > 0) {
+      return NextResponse.json(
+        { error: `Missing required fields: ${missingFields.join(", ")}` },
         { status: 400 }
       );
     }
@@ -152,22 +216,40 @@ ${JSON.stringify(profile, null, 2)}
 
 ${JSON.stringify(compactRegs, null, 2)}`;
 
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model,
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userPrompt },
-        ],
-        response_format: { type: "json_object" },
-        temperature: 0.2,
-      }),
-    });
+    // Fetch with timeout
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 60_000);
+
+    let response: Response;
+    try {
+      response = await fetch("https://api.openai.com/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({
+          model,
+          messages: [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: userPrompt },
+          ],
+          response_format: { type: "json_object" },
+          temperature: 0.2,
+        }),
+        signal: controller.signal,
+      });
+    } catch (err) {
+      if (err instanceof Error && err.name === "AbortError") {
+        return NextResponse.json(
+          { error: "OpenAI request timed out. Please try again." },
+          { status: 504 }
+        );
+      }
+      throw err;
+    } finally {
+      clearTimeout(timeout);
+    }
 
     if (!response.ok) {
       const errorBody = await response.text();
@@ -188,7 +270,17 @@ ${JSON.stringify(compactRegs, null, 2)}`;
       );
     }
 
-    const parsed = JSON.parse(content);
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(content);
+    } catch {
+      console.error("Failed to parse OpenAI response:", content.slice(0, 200));
+      return NextResponse.json(
+        { error: "Invalid response format from AI" },
+        { status: 502 }
+      );
+    }
+
     const regulations = validateResponse(parsed, regulationMap);
 
     return NextResponse.json({ regulations });
