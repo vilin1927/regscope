@@ -26,20 +26,41 @@ import type { Screen } from "@/types";
 import type { BusinessProfile } from "@/data/questionnaire/types";
 
 export function ComplyRadarApp() {
-  const [currentScreen, setCurrentScreen] = useState<Screen>("auth");
+  const [currentScreen, setCurrentScreenState] = useState<Screen>(() => {
+    if (typeof window !== "undefined") {
+      const saved = sessionStorage.getItem("complyradar_screen");
+      if (saved) return saved as Screen;
+    }
+    return "auth";
+  });
   const [prefillAnswers, setPrefillAnswers] = useState<BusinessProfile>();
   const [isMobile, setIsMobile] = useState(false);
+  const [processingError, setProcessingError] = useState<string>();
+
+  const setCurrentScreen = (screen: Screen) => {
+    setCurrentScreenState(screen);
+    if (typeof window !== "undefined") {
+      if (screen === "auth") {
+        sessionStorage.removeItem("complyradar_screen");
+      } else {
+        sessionStorage.setItem("complyradar_screen", screen);
+      }
+    }
+  };
 
   const t = useTranslations("Mockups");
   const auth = useAuth();
   const scans = useScanHistory(auth.userId, auth.isGuest);
 
   const processing = useProcessing({
-    runMatching: scans.runMatching,
     onComplete: (matched) => {
+      setProcessingError(undefined);
       scans.setMatchedRegulations(matched);
       scans.saveScan(scans.businessProfile, matched);
       setCurrentScreen("results");
+    },
+    onError: (message) => {
+      setProcessingError(message);
     },
   });
 
@@ -64,6 +85,7 @@ export function ComplyRadarApp() {
   };
 
   const handleQuestionnaireComplete = (answers: BusinessProfile) => {
+    setProcessingError(undefined);
     scans.setBusinessProfile(answers);
     scans.resetScan();
     scans.setBusinessProfile(answers);
@@ -164,7 +186,19 @@ export function ComplyRadarApp() {
             )}
 
             {currentScreen === "processing" && (
-              <ProcessingScreen key="processing" currentStep={processing.processingStep} />
+              <ProcessingScreen
+                key="processing"
+                currentStep={processing.processingStep}
+                error={processingError}
+                onRetry={() => {
+                  setProcessingError(undefined);
+                  if (Object.keys(scans.businessProfile).length > 0) {
+                    processing.startProcessing(scans.businessProfile);
+                  } else {
+                    setCurrentScreen("questionnaire");
+                  }
+                }}
+              />
             )}
 
             {currentScreen === "results" && (

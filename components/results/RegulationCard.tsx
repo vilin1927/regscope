@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 import { Check, AlertTriangle, ExternalLink } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { ComplianceCheckbox } from "../ui/ComplianceCheckbox";
-import type { MatchedRegulation } from "@/data/regulations/matching-engine";
+import type { MatchedRegulation } from "@/data/regulations/types";
 
 interface RegulationCardProps {
   regulation: MatchedRegulation;
@@ -58,7 +58,7 @@ export function RegulationCard({
         <span
           className={`px-2 py-1 rounded-full text-xs font-medium ${riskColors[regulation.riskLevel]}`}
         >
-          {t(`risk.${regulation.riskLevel}`)}
+          {t(`risk.${regulation.riskLevel === "hoch" ? "high" : regulation.riskLevel === "mittel" ? "medium" : "low"}`)}
         </span>
         <span
           className={`px-2 py-1 rounded-full text-xs font-medium ${statusColors[regulation.status]}`}

@@ -32,3 +32,8 @@ export interface Regulation {
   niche: string;
   whyAppliesTemplate: string;
 }
+
+export interface MatchedRegulation extends Regulation {
+  status: ComplianceStatus;
+  whyApplies: string;
+}

@@ -92,7 +92,7 @@ export function AuthForm({ mode, onSubmit, error }: AuthFormProps) {
               ? "border-red-500 bg-red-50"
               : "border-gray-300"
           }`}
-          placeholder="name@beispiel.de"
+          placeholder={t("emailPlaceholder")}
         />
         {fieldErrors.email && (
           <p className="text-sm text-red-600 mt-1">{fieldErrors.email}</p>

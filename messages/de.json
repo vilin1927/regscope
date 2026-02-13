@@ -71,6 +71,161 @@
     "layer7": {
       "title": "Versicherung & Haftung",
       "subtitle": "Versicherungsschutz und Risikoabsicherung"
+    },
+    "complianceChecksSection": "Compliance-Checks",
+    "fields": {
+      "companyName": { "label": "Firmenname", "placeholder": "z.B. Tischlerei Müller GmbH" },
+      "industry": {
+        "label": "Branche",
+        "options": { "tischlerei": "Tischlerei", "schreinerei": "Schreinerei" }
+      },
+      "legalForm": {
+        "label": "Rechtsform",
+        "options": {
+          "einzelunternehmen": "Einzelunternehmen",
+          "gmbh": "GmbH",
+          "ug": "UG (haftungsbeschränkt)",
+          "gbr": "GbR",
+          "kg": "KG",
+          "ohg": "OHG",
+          "sonstige": "Sonstige"
+        }
+      },
+      "noCompanyYet": { "label": "Unternehmen noch nicht gegründet" },
+      "establishmentDate": { "label": "Gründungsdatum", "placeholder": "TT.MM.JJJJ" },
+      "bundesland": {
+        "label": "Bundesland",
+        "options": {
+          "baden-wuerttemberg": "Baden-Württemberg",
+          "bayern": "Bayern",
+          "berlin": "Berlin",
+          "brandenburg": "Brandenburg",
+          "bremen": "Bremen",
+          "hamburg": "Hamburg",
+          "hessen": "Hessen",
+          "mecklenburg-vorpommern": "Mecklenburg-Vorpommern",
+          "niedersachsen": "Niedersachsen",
+          "nordrhein-westfalen": "Nordrhein-Westfalen",
+          "rheinland-pfalz": "Rheinland-Pfalz",
+          "saarland": "Saarland",
+          "sachsen": "Sachsen",
+          "sachsen-anhalt": "Sachsen-Anhalt",
+          "schleswig-holstein": "Schleswig-Holstein",
+          "thueringen": "Thüringen"
+        }
+      },
+      "businessLocation": { "label": "Betriebsstandort(e)", "placeholder": "Adresse oder Anzahl der Standorte" },
+      "handelsregister": { "label": "Eintragung im Handelsregister vorhanden?" },
+      "handwerksrolle": { "label": "Eintragung in die Handwerksrolle vorhanden?" },
+      "employeeCount": {
+        "label": "Anzahl der Mitarbeiter",
+        "options": {
+          "0": "0 (Soloselbständig)",
+          "1-5": "1–5",
+          "6-10": "6–10",
+          "11-20": "11–20",
+          "20+": "Mehr als 20"
+        }
+      },
+      "employeeTypes": {
+        "label": "Art der Beschäftigten",
+        "options": {
+          "vollzeit": "Vollzeit",
+          "teilzeit": "Teilzeit",
+          "lehrlinge": "Lehrlinge",
+          "minijobber": "Minijobber",
+          "leiharbeiter": "Leiharbeiter"
+        }
+      },
+      "writtenContracts": { "label": "Schriftliche Arbeitsverträge vorhanden?" },
+      "riskAssessment": { "label": "Gefährdungsbeurteilung durchgeführt?" },
+      "ppeProvided": { "label": "Persönliche Schutzausrüstung bereitgestellt?" },
+      "safetyInstructions": { "label": "Sicherheitsunterweisungen dokumentiert?" },
+      "firstAidPersonnel": { "label": "Ersthelfer im Betrieb vorhanden?" },
+      "certifications": {
+        "label": "Vorhandene Qualifikationen",
+        "options": {
+          "meisterbrief": "Meisterbrief",
+          "gesellenbrief": "Gesellenbrief",
+          "staplerschein": "Staplerschein",
+          "erste-hilfe-schein": "Erste-Hilfe-Schein"
+        }
+      },
+      "safetyOfficer": { "label": "Sicherheitsbeauftragter bestellt?" },
+      "occupationalPhysician": { "label": "Betriebsarzt vorhanden?" },
+      "workshopPresent": { "label": "Werkstatt vorhanden?" },
+      "premisesType": {
+        "label": "Eigentum oder Miete",
+        "options": { "eigentum": "Eigentum", "miete": "Miete" }
+      },
+      "machines": {
+        "label": "Eingesetzte Maschinen",
+        "options": {
+          "kreissaege": "Kreissäge",
+          "cnc-fraese": "CNC-Fräse",
+          "hobelmaschine": "Hobelmaschine",
+          "lackierkabine": "Lackierkabine",
+          "absauganlage": "Absauganlage"
+        }
+      },
+      "dustExtraction": { "label": "Absauganlage für Holzstaub installiert?" },
+      "emergencyExits": { "label": "Notausgänge gekennzeichnet?" },
+      "fireExtinguishers": { "label": "Feuerlöscher vorhanden und geprüft?" },
+      "escapeRoutePlan": { "label": "Flucht- und Rettungsplan vorhanden?" },
+      "hazardousStorage": { "label": "Lagerung von Lacken oder Lösungsmitteln?" },
+      "productTypes": {
+        "label": "Art der Produkte",
+        "options": {
+          "moebel": "Möbel",
+          "kuechen": "Küchen",
+          "fenster-tueren": "Fenster/Türen",
+          "treppen": "Treppen",
+          "innenausbau": "Innenausbau",
+          "restaurierung": "Restaurierung"
+        }
+      },
+      "customerTypes": {
+        "label": "Kundentypen",
+        "options": {
+          "b2c": "B2C (Privatkunden)",
+          "b2b": "B2B (Gewerbekunden)",
+          "beide": "Beide"
+        }
+      },
+      "customMade": { "label": "Einzelanfertigung / Maßarbeit?" },
+      "seriesProduction": { "label": "Serienfertigung?" },
+      "onlineSales": { "label": "Online-Verkauf?" },
+      "website": { "label": "Eigene Website oder Online-Shop vorhanden?" },
+      "exportsOutsideGermany": { "label": "Export außerhalb Deutschlands?" },
+      "agbAvailable": { "label": "Allgemeine Geschäftsbedingungen (AGB) vorhanden?" },
+      "widerrufsbelehrung": { "label": "Widerrufsbelehrung vorhanden?" },
+      "datenschutzerklaerung": { "label": "Datenschutzerklärung vorhanden?" },
+      "materialSources": {
+        "label": "Herkunft der Materialien",
+        "options": { "deutschland": "Deutschland", "eu": "EU", "nicht-eu": "Nicht-EU" }
+      },
+      "supplierCertificates": {
+        "label": "Lieferantenzertifikate",
+        "options": {
+          "fsc-pefc": "FSC/PEFC",
+          "ce-kennzeichnung": "CE-Kennzeichnung",
+          "reach-konform": "REACH-konform"
+        }
+      },
+      "usesSubcontractors": { "label": "Einsatz von Subunternehmern?" },
+      "protectedWoodTypes": { "label": "Verwendung geschützter Holzarten?" },
+      "eoriNumber": { "label": "EORI-Nummer vorhanden?" },
+      "freightForwarder": { "label": "Import über Spediteur abgewickelt?" },
+      "woodDustResidues": { "label": "Fallen Holzstaub oder Lackrückstände an?" },
+      "certifiedDisposal": { "label": "Entsorgung über zertifizierten Entsorgungsfachbetrieb?" },
+      "paintingActivities": { "label": "Regelmäßige Lackier- oder Beschichtungsarbeiten?" },
+      "vocEmissions": { "label": "VOC-Emissionen (flüchtige organische Verbindungen)?" },
+      "environmentalPermits": { "label": "BImSchG-Genehmigung vorhanden?" },
+      "publicLiability": { "label": "Betriebshaftpflichtversicherung vorhanden?" },
+      "machineryInsurance": { "label": "Maschinenversicherung vorhanden?" },
+      "disabilityInsurance": { "label": "Berufsunfähigkeitsversicherung vorhanden?" },
+      "productLiabilityInsurance": { "label": "Produkthaftpflichtversicherung vorhanden?" },
+      "bgBauMembership": { "label": "Mitgliedschaft bei der BG BAU?" }
     }
   },
   "Processing": {
@@ -80,7 +235,10 @@
     "step2": "Durchsuche EU-Vorschriften...",
     "step3": "Durchsuche Bundesgesetze...",
     "step4": "Durchsuche Landesrecht & Branchenregeln...",
-    "step5": "Erstelle Compliance-Übersicht..."
+    "step5": "Erstelle Compliance-Übersicht...",
+    "errorTitle": "Analyse fehlgeschlagen",
+    "errorSubtitle": "Bei der Analyse Ihres Betriebs ist ein Fehler aufgetreten.",
+    "retry": "Erneut versuchen"
   },
   "Results": {
     "title": "Compliance-Scan Ergebnisse",
@@ -151,14 +309,16 @@
     "passwordRequired": "Bitte geben Sie ein Passwort ein",
     "passwordTooShort": "Passwort muss mindestens {min} Zeichen lang sein",
     "passwordNeedsUppercase": "Passwort muss mindestens einen Großbuchstaben enthalten",
-    "passwordNeedsNumber": "Passwort muss mindestens eine Zahl enthalten"
+    "passwordNeedsNumber": "Passwort muss mindestens eine Zahl enthalten",
+    "emailPlaceholder": "name@beispiel.de"
   },
   "Settings": {
     "title": "Einstellungen",
     "language": "Sprache",
     "account": "Konto",
     "german": "Deutsch",
-    "english": "English"
+    "english": "English",
+    "legal": "Rechtliches"
   },
   "Mockups": {
     "inPreparation": "In Vorbereitung",

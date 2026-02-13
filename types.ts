@@ -12,6 +12,8 @@ export type Screen =
   | "impressum"
   | "datenschutz";
 
+import type { MatchedRegulation } from "@/data/regulations/types";
+
 export interface ScanRecord {
   id: string;
   companyName: string;
@@ -20,4 +22,5 @@ export interface ScanRecord {
   complianceScore: number;
   businessProfile: Record<string, unknown>;
   matchedRegulationIds: string[];
+  matchedRegulations?: MatchedRegulation[];
 }

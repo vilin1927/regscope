@@ -1,6 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
+import { useTranslations } from "next-intl";
 import { FieldRenderer } from "./FieldRenderer";
 import type {
   QuestionnaireLayer,
@@ -46,9 +47,13 @@ export function LayerRenderer({
   onUpdate,
   errors = {},
 }: LayerRendererProps) {
+  const t = useTranslations("Questionnaire");
+
   // Split fields: regular fields and compliance-check toggles
   const regularFields = layer.fields.filter((f) => !f.isComplianceCheck);
   const complianceFields = layer.fields.filter((f) => f.isComplianceCheck);
+
+  const layerKey = `layer${layer.id}` as const;
 
   return (
     <motion.div
@@ -60,8 +65,8 @@ export function LayerRenderer({
     >
       {/* Layer header */}
       <div className="mb-4">
-        <h2 className="text-lg font-bold text-gray-900">{layer.title}</h2>
-        <p className="text-sm text-gray-500">{layer.subtitle}</p>
+        <h2 className="text-lg font-bold text-gray-900">{t(`${layerKey}.title`)}</h2>
+        <p className="text-sm text-gray-500">{t(`${layerKey}.subtitle`)}</p>
       </div>
 
       {/* Regular fields */}
@@ -79,7 +84,7 @@ export function LayerRenderer({
       {complianceFields.length > 0 && (
         <div className="pt-4 border-t border-gray-200">
           <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">
-            Compliance-Checks
+            {t("complianceChecksSection")}
           </p>
           <div className="grid grid-cols-1 gap-3">
             {complianceFields.map((field) => (

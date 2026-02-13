@@ -71,6 +71,161 @@
     "layer7": {
       "title": "Insurance & Liability",
       "subtitle": "Insurance coverage and risk protection"
+    },
+    "complianceChecksSection": "Compliance Checks",
+    "fields": {
+      "companyName": { "label": "Company Name", "placeholder": "e.g. Müller Carpentry GmbH" },
+      "industry": {
+        "label": "Industry",
+        "options": { "tischlerei": "Carpentry (Tischlerei)", "schreinerei": "Carpentry (Schreinerei)" }
+      },
+      "legalForm": {
+        "label": "Legal Form",
+        "options": {
+          "einzelunternehmen": "Sole Proprietorship",
+          "gmbh": "GmbH",
+          "ug": "UG (limited liability)",
+          "gbr": "GbR",
+          "kg": "KG",
+          "ohg": "OHG",
+          "sonstige": "Other"
+        }
+      },
+      "noCompanyYet": { "label": "Company not yet established" },
+      "establishmentDate": { "label": "Date of Establishment", "placeholder": "DD.MM.YYYY" },
+      "bundesland": {
+        "label": "Federal State",
+        "options": {
+          "baden-wuerttemberg": "Baden-Württemberg",
+          "bayern": "Bavaria",
+          "berlin": "Berlin",
+          "brandenburg": "Brandenburg",
+          "bremen": "Bremen",
+          "hamburg": "Hamburg",
+          "hessen": "Hesse",
+          "mecklenburg-vorpommern": "Mecklenburg-Vorpommern",
+          "niedersachsen": "Lower Saxony",
+          "nordrhein-westfalen": "North Rhine-Westphalia",
+          "rheinland-pfalz": "Rhineland-Palatinate",
+          "saarland": "Saarland",
+          "sachsen": "Saxony",
+          "sachsen-anhalt": "Saxony-Anhalt",
+          "schleswig-holstein": "Schleswig-Holstein",
+          "thueringen": "Thuringia"
+        }
+      },
+      "businessLocation": { "label": "Business Location(s)", "placeholder": "Address or number of locations" },
+      "handelsregister": { "label": "Registered in the Commercial Register?" },
+      "handwerksrolle": { "label": "Registered in the Crafts Register?" },
+      "employeeCount": {
+        "label": "Number of Employees",
+        "options": {
+          "0": "0 (Self-employed)",
+          "1-5": "1–5",
+          "6-10": "6–10",
+          "11-20": "11–20",
+          "20+": "More than 20"
+        }
+      },
+      "employeeTypes": {
+        "label": "Types of Employees",
+        "options": {
+          "vollzeit": "Full-time",
+          "teilzeit": "Part-time",
+          "lehrlinge": "Apprentices",
+          "minijobber": "Mini-jobbers",
+          "leiharbeiter": "Temporary workers"
+        }
+      },
+      "writtenContracts": { "label": "Written employment contracts available?" },
+      "riskAssessment": { "label": "Risk assessment carried out?" },
+      "ppeProvided": { "label": "Personal protective equipment provided?" },
+      "safetyInstructions": { "label": "Safety instructions documented?" },
+      "firstAidPersonnel": { "label": "First aiders available on site?" },
+      "certifications": {
+        "label": "Existing Qualifications",
+        "options": {
+          "meisterbrief": "Master Craftsman Certificate",
+          "gesellenbrief": "Journeyman Certificate",
+          "staplerschein": "Forklift License",
+          "erste-hilfe-schein": "First Aid Certificate"
+        }
+      },
+      "safetyOfficer": { "label": "Safety officer appointed?" },
+      "occupationalPhysician": { "label": "Occupational physician available?" },
+      "workshopPresent": { "label": "Workshop available?" },
+      "premisesType": {
+        "label": "Ownership or Rental",
+        "options": { "eigentum": "Owned", "miete": "Rented" }
+      },
+      "machines": {
+        "label": "Machines in Use",
+        "options": {
+          "kreissaege": "Circular Saw",
+          "cnc-fraese": "CNC Router",
+          "hobelmaschine": "Planer",
+          "lackierkabine": "Paint Booth",
+          "absauganlage": "Dust Extraction System"
+        }
+      },
+      "dustExtraction": { "label": "Dust extraction system for wood dust installed?" },
+      "emergencyExits": { "label": "Emergency exits marked?" },
+      "fireExtinguishers": { "label": "Fire extinguishers available and inspected?" },
+      "escapeRoutePlan": { "label": "Escape and rescue plan available?" },
+      "hazardousStorage": { "label": "Storage of paints or solvents?" },
+      "productTypes": {
+        "label": "Type of Products",
+        "options": {
+          "moebel": "Furniture",
+          "kuechen": "Kitchens",
+          "fenster-tueren": "Windows/Doors",
+          "treppen": "Stairs",
+          "innenausbau": "Interior Fitting",
+          "restaurierung": "Restoration"
+        }
+      },
+      "customerTypes": {
+        "label": "Customer Types",
+        "options": {
+          "b2c": "B2C (Private customers)",
+          "b2b": "B2B (Business customers)",
+          "beide": "Both"
+        }
+      },
+      "customMade": { "label": "Custom-made / bespoke work?" },
+      "seriesProduction": { "label": "Series production?" },
+      "onlineSales": { "label": "Online sales?" },
+      "website": { "label": "Own website or online shop?" },
+      "exportsOutsideGermany": { "label": "Exports outside Germany?" },
+      "agbAvailable": { "label": "General Terms and Conditions (GTC) available?" },
+      "widerrufsbelehrung": { "label": "Cancellation policy available?" },
+      "datenschutzerklaerung": { "label": "Privacy policy available?" },
+      "materialSources": {
+        "label": "Origin of Materials",
+        "options": { "deutschland": "Germany", "eu": "EU", "nicht-eu": "Non-EU" }
+      },
+      "supplierCertificates": {
+        "label": "Supplier Certificates",
+        "options": {
+          "fsc-pefc": "FSC/PEFC",
+          "ce-kennzeichnung": "CE Marking",
+          "reach-konform": "REACH Compliant"
+        }
+      },
+      "usesSubcontractors": { "label": "Use of subcontractors?" },
+      "protectedWoodTypes": { "label": "Use of protected wood species?" },
+      "eoriNumber": { "label": "EORI number available?" },
+      "freightForwarder": { "label": "Import handled via freight forwarder?" },
+      "woodDustResidues": { "label": "Wood dust or paint residues produced?" },
+      "certifiedDisposal": { "label": "Disposal via certified waste management company?" },
+      "paintingActivities": { "label": "Regular painting or coating work?" },
+      "vocEmissions": { "label": "VOC emissions (volatile organic compounds)?" },
+      "environmentalPermits": { "label": "BImSchG permit available?" },
+      "publicLiability": { "label": "Public liability insurance?" },
+      "machineryInsurance": { "label": "Machinery insurance?" },
+      "disabilityInsurance": { "label": "Disability insurance?" },
+      "productLiabilityInsurance": { "label": "Product liability insurance?" },
+      "bgBauMembership": { "label": "BG BAU membership?" }
     }
   },
   "Processing": {
@@ -80,7 +235,10 @@
     "step2": "Scanning EU regulations...",
     "step3": "Scanning federal laws...",
     "step4": "Scanning state & industry rules...",
-    "step5": "Creating compliance overview..."
+    "step5": "Creating compliance overview...",
+    "errorTitle": "Analysis Failed",
+    "errorSubtitle": "An error occurred while analyzing your business.",
+    "retry": "Try Again"
   },
   "Results": {
     "title": "Compliance Scan Results",
@@ -151,14 +309,16 @@
     "passwordRequired": "Please enter a password",
     "passwordTooShort": "Password must be at least {min} characters",
     "passwordNeedsUppercase": "Password must contain at least one uppercase letter",
-    "passwordNeedsNumber": "Password must contain at least one number"
+    "passwordNeedsNumber": "Password must contain at least one number",
+    "emailPlaceholder": "name@example.com"
   },
   "Settings": {
     "title": "Settings",
     "language": "Language",
     "account": "Account",
     "german": "Deutsch",
-    "english": "English"
+    "english": "English",
+    "legal": "Legal"
   },
   "Mockups": {
     "inPreparation": "In Preparation",

@@ -4,7 +4,7 @@ import { useState } from "react";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { RegulationCard } from "./RegulationCard";
-import type { MatchedRegulation } from "@/data/regulations/matching-engine";
+import type { MatchedRegulation } from "@/data/regulations/types";
 import type { RegulationCategory } from "@/data/regulations/types";
 
 interface RegulationListProps {

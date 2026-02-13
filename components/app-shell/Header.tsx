@@ -42,9 +42,10 @@ export function Header({ currentScreen }: HeaderProps) {
       </span>
       <button
         onClick={toggleLocale}
-        className="text-xs font-bold px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors"
+        className="flex items-center gap-2 text-xs font-medium px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors"
       >
-        {locale === "de" ? "EN" : "DE"}
+        <span className="text-base leading-none">{locale === "de" ? "🇬🇧" : "🇩🇪"}</span>
+        <span>{locale === "de" ? "English" : "Deutsch"}</span>
       </button>
     </header>
   );

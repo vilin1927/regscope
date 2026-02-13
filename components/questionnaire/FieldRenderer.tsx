@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { Toggle } from "../ui/Toggle";
 import type { QuestionField } from "@/data/questionnaire/types";
 
@@ -11,13 +12,28 @@ interface FieldRendererProps {
 }
 
 export function FieldRenderer({ field, value, onChange, error }: FieldRendererProps) {
+  const t = useTranslations("Questionnaire");
+
+  const label = t.has(`fields.${field.id}.label`)
+    ? t(`fields.${field.id}.label`)
+    : field.label;
+
+  const placeholder = t.has(`fields.${field.id}.placeholder`)
+    ? t(`fields.${field.id}.placeholder`)
+    : field.placeholder || "";
+
+  const getOptionLabel = (optValue: string, fallback: string) => {
+    const key = `fields.${field.id}.options.${optValue}`;
+    return t.has(key) ? t(key) : fallback;
+  };
+
   switch (field.type) {
     case "text":
       return (
         <div id={`field-${field.id}`}>
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            {field.label}
-            {field.required && <span className="text-red-500 ml-1 text-xs font-bold" title="Pflichtfeld">*</span>}
+            {label}
+            {field.required && <span className="text-red-500 ml-1 text-xs font-bold" title={t("required")}>*</span>}
           </label>
           <input
             type="text"
@@ -26,7 +42,7 @@ export function FieldRenderer({ field, value, onChange, error }: FieldRendererPr
             className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none ${
               error ? "border-red-500 bg-red-50" : "border-gray-300"
             }`}
-            placeholder={field.placeholder || ""}
+            placeholder={placeholder}
           />
           {error && <p className="mt-1 text-sm text-red-600">{error}</p>}
         </div>
@@ -36,8 +52,8 @@ export function FieldRenderer({ field, value, onChange, error }: FieldRendererPr
       return (
         <div id={`field-${field.id}`}>
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            {field.label}
-            {field.required && <span className="text-red-500 ml-1 text-xs font-bold" title="Pflichtfeld">*</span>}
+            {label}
+            {field.required && <span className="text-red-500 ml-1 text-xs font-bold" title={t("required")}>*</span>}
           </label>
           <input
             type="date"
@@ -55,8 +71,8 @@ export function FieldRenderer({ field, value, onChange, error }: FieldRendererPr
       return (
         <div id={`field-${field.id}`}>
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            {field.label}
-            {field.required && <span className="text-red-500 ml-1 text-xs font-bold" title="Pflichtfeld">*</span>}
+            {label}
+            {field.required && <span className="text-red-500 ml-1 text-xs font-bold" title={t("required")}>*</span>}
           </label>
           <select
             value={(value as string) || ""}
@@ -65,10 +81,10 @@ export function FieldRenderer({ field, value, onChange, error }: FieldRendererPr
               error ? "border-red-500 bg-red-50" : "border-gray-300"
             }`}
           >
-            <option value="">Bitte wählen...</option>
+            <option value="">{t("selectPlaceholder")}</option>
             {field.options?.map((opt) => (
               <option key={opt.value} value={opt.value}>
-                {opt.label}
+                {getOptionLabel(opt.value, opt.label)}
               </option>
             ))}
           </select>
@@ -81,8 +97,8 @@ export function FieldRenderer({ field, value, onChange, error }: FieldRendererPr
       return (
         <div id={`field-${field.id}`}>
           <label className="block text-sm font-medium text-gray-700 mb-3">
-            {field.label}
-            {field.required && <span className="text-red-500 ml-1 text-xs font-bold" title="Pflichtfeld">*</span>}
+            {label}
+            {field.required && <span className="text-red-500 ml-1 text-xs font-bold" title={t("required")}>*</span>}
           </label>
           <div className={`flex flex-wrap gap-2 ${
             error ? "rounded-lg border-2 border-red-500 p-2" : ""
@@ -103,7 +119,7 @@ export function FieldRenderer({ field, value, onChange, error }: FieldRendererPr
                     : "bg-gray-100 text-gray-700 border-2 border-transparent hover:bg-gray-200"
                 }`}
               >
-                {opt.label}
+                {getOptionLabel(opt.value, opt.label)}
               </button>
             ))}
           </div>
@@ -116,7 +132,7 @@ export function FieldRenderer({ field, value, onChange, error }: FieldRendererPr
       return (
         <div id={`field-${field.id}`}>
           <Toggle
-            label={field.label}
+            label={label}
             checked={(value as boolean) || false}
             onChange={(v) => onChange(v)}
             isComplianceCheck={field.isComplianceCheck}

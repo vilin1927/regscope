@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import type { MatchedRegulation } from "@/data/regulations/matching-engine";
+import type { MatchedRegulation } from "@/data/regulations/types";
 
 interface RiskAnalysisMockupProps {
   regulations?: MatchedRegulation[];

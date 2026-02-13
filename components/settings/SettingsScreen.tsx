@@ -92,7 +92,7 @@ export function SettingsScreen({
       {/* Legal */}
       {onLegal && (
         <div className="bg-white rounded-xl border border-gray-200 p-6 mt-4">
-          <h2 className="font-semibold text-gray-900 mb-4">Rechtliches</h2>
+          <h2 className="font-semibold text-gray-900 mb-4">{t("legal")}</h2>
           <div className="flex gap-3">
             <button
               onClick={() => onLegal("impressum")}

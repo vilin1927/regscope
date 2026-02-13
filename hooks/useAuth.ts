@@ -18,11 +18,27 @@ interface AuthActions {
 }
 
 export function useAuth(): AuthState & AuthActions {
-  const [isGuest, setIsGuest] = useState(false);
+  const [isGuest, setIsGuestState] = useState(() => {
+    if (typeof window !== "undefined") {
+      return sessionStorage.getItem("complyradar_guest") === "true";
+    }
+    return false;
+  });
   const [userEmail, setUserEmail] = useState<string>();
   const [userId, setUserId] = useState<string>();
   const [authError, setAuthError] = useState<string>();
   const [isLoading, setIsLoading] = useState(true);
+
+  const setIsGuest = (value: boolean) => {
+    setIsGuestState(value);
+    if (typeof window !== "undefined") {
+      if (value) {
+        sessionStorage.setItem("complyradar_guest", "true");
+      } else {
+        sessionStorage.removeItem("complyradar_guest");
+      }
+    }
+  };
 
   const supabase = createClient();
 

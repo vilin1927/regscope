@@ -2,7 +2,7 @@
 
 import { ScanSearch } from "lucide-react";
 import { useTranslations } from "next-intl";
-import type { MatchedRegulation } from "@/data/regulations/matching-engine";
+import type { MatchedRegulation } from "@/data/regulations/types";
 
 interface NewsletterMockupProps {
   regulations?: MatchedRegulation[];

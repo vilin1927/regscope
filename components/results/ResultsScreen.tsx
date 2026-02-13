@@ -1,12 +1,12 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Download, RotateCcw, AlertTriangle } from "lucide-react";
+import { RotateCcw, AlertTriangle } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { StatsBar } from "./StatsBar";
 import { BusinessProfileSummary } from "./BusinessProfileSummary";
 import { RegulationList } from "./RegulationList";
-import type { MatchedRegulation } from "@/data/regulations/matching-engine";
+import type { MatchedRegulation } from "@/data/regulations/types";
 import type { BusinessProfile } from "@/data/questionnaire/types";
 
 interface ResultsScreenProps {
@@ -56,12 +56,6 @@ export function ResultsScreen({
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <button
-            onClick={() => window.print()}
-            className="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
-          >
-            <Download className="w-4 h-4" /> {t("exportReport")}
-          </button>
           <button
             onClick={onReset}
             className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"

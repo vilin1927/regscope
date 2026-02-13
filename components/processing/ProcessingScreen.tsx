@@ -1,14 +1,16 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Loader2, Check } from "lucide-react";
+import { Loader2, Check, AlertTriangle, RotateCcw } from "lucide-react";
 import { useTranslations } from "next-intl";
 
 interface ProcessingScreenProps {
   currentStep: number;
+  error?: string;
+  onRetry?: () => void;
 }
 
-export function ProcessingScreen({ currentStep }: ProcessingScreenProps) {
+export function ProcessingScreen({ currentStep, error, onRetry }: ProcessingScreenProps) {
   const t = useTranslations("Processing");
 
   const steps = [
@@ -18,6 +20,37 @@ export function ProcessingScreen({ currentStep }: ProcessingScreenProps) {
     t("step4"),
     t("step5"),
   ];
+
+  if (error) {
+    return (
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 0.95 }}
+        className="max-w-md mx-auto text-center py-12"
+      >
+        <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6">
+          <AlertTriangle className="w-10 h-10 text-red-600" />
+        </div>
+        <h2 className="text-xl font-bold text-gray-900 mb-2">
+          {t("errorTitle")}
+        </h2>
+        <p className="text-gray-500 mb-4">{t("errorSubtitle")}</p>
+        <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+          <p className="text-sm text-red-800">{error}</p>
+        </div>
+        {onRetry && (
+          <button
+            onClick={onRetry}
+            className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
+          >
+            <RotateCcw className="w-4 h-4" />
+            {t("retry")}
+          </button>
+        )}
+      </motion.div>
+    );
+  }
 
   return (
     <motion.div

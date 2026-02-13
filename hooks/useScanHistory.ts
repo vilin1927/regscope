@@ -2,12 +2,8 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { carpentryRegulations } from "@/data/regulations/carpentry-regulations";
-import {
-  matchRegulations,
-  calculateComplianceScore,
-} from "@/data/regulations/matching-engine";
-import type { MatchedRegulation } from "@/data/regulations/matching-engine";
+import { calculateComplianceScore } from "@/data/regulations/utils";
+import type { MatchedRegulation } from "@/data/regulations/types";
 import type { BusinessProfile } from "@/data/questionnaire/types";
 import type { ScanRecord } from "@/types";
 
@@ -22,7 +18,6 @@ interface ScanHistoryActions {
   saveScan: (profile: BusinessProfile, matched: MatchedRegulation[]) => Promise<void>;
   handleViewScan: (scanId: string) => void;
   handleRerunScan: (scanId: string) => BusinessProfile | undefined;
-  runMatching: (profile: BusinessProfile) => MatchedRegulation[];
   setMatchedRegulations: (regs: MatchedRegulation[]) => void;
   setBusinessProfile: (profile: BusinessProfile) => void;
   handleComplianceChange: (regulationId: string, checked: boolean) => Promise<void>;
@@ -66,6 +61,7 @@ export function useScanHistory(
               matchedRegulationIds: ((scan.matched_regulations as Array<{ id: string }>) || []).map(
                 (r) => r.id
               ),
+              matchedRegulations: scan.matched_regulations as MatchedRegulation[] | undefined,
             }))
           );
         }
@@ -86,6 +82,7 @@ export function useScanHistory(
       complianceScore: calculateComplianceScore(matched),
       businessProfile: profile,
       matchedRegulationIds: matched.map((r) => r.id),
+      matchedRegulations: matched,
     };
 
     if (isGuest || !userId) {
@@ -99,7 +96,7 @@ export function useScanHistory(
         .insert({
           user_id: userId,
           business_profile: profile,
-          matched_regulations: matched.map((r) => ({ id: r.id, status: r.status })),
+          matched_regulations: matched,
           compliance_score: calculateComplianceScore(matched),
         })
         .select()
@@ -120,17 +117,16 @@ export function useScanHistory(
     const scan = scanHistory.find((s) => s.id === scanId);
     if (!scan) return;
     setBusinessProfile(scan.businessProfile);
-    const matched = matchRegulations(scan.businessProfile, carpentryRegulations);
-    setMatchedRegulations(matched);
+
+    // Load full regulations from stored data
+    if (scan.matchedRegulations && scan.matchedRegulations.length > 0) {
+      setMatchedRegulations(scan.matchedRegulations);
+    }
   };
 
   const handleRerunScan = (scanId: string): BusinessProfile | undefined => {
     const scan = scanHistory.find((s) => s.id === scanId);
     return scan?.businessProfile;
-  };
-
-  const runMatching = (profile: BusinessProfile): MatchedRegulation[] => {
-    return matchRegulations(profile, carpentryRegulations);
   };
 
   const handleComplianceChange = useCallback(
@@ -176,7 +172,6 @@ export function useScanHistory(
     saveScan,
     handleViewScan,
     handleRerunScan,
-    runMatching,
     setMatchedRegulations,
     setBusinessProfile,
     handleComplianceChange,

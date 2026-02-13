@@ -5,11 +5,8 @@ export type {
   RiskLevel,
   ComplianceStatus,
   AppliesCondition,
+  MatchedRegulation,
 } from "./types";
 
 export { carpentryRegulations } from "./carpentry-regulations";
-export {
-  matchRegulations,
-  calculateComplianceScore,
-} from "./matching-engine";
-export type { MatchedRegulation } from "./matching-engine";
+export { calculateComplianceScore } from "./utils";
