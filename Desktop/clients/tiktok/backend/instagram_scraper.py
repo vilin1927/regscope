@@ -41,7 +41,8 @@ def download_reel(url: str, output_dir: str) -> str:
     cmd = [
         'yt-dlp',
         '--no-playlist',
-        '-f', 'best[ext=mp4]/best',
+        '-f', 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/bestvideo+bestaudio/best',
+        '--merge-output-format', 'mp4',
         '-o', output_template,
         '--no-check-certificates',
         url
