@@ -251,12 +251,13 @@ def analyze_clips_with_gemini(screenshots: list[str], api_key_manager=None) -> l
     # Get API key
     api_key = None
     if api_key_manager:
-        key_info = api_key_manager.get_available_key('text')
-        if key_info:
-            api_key = key_info['key']
+        key_result = api_key_manager.get_available_key('text')
+        if key_result:
+            # get_available_key returns a string (the key itself)
+            api_key = key_result if isinstance(key_result, str) else key_result.get('key', '')
 
     if not api_key:
-        api_key = os.getenv('GEMINI_API_KEYS', '').split(',')[0].strip()
+        api_key = os.getenv('GEMINI_API_KEY', '').strip().strip("'")
 
     if not api_key:
         logger.error("No Gemini API key available")
