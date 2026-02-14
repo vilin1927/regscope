@@ -6,6 +6,11 @@
     <title>Instagram Reel Generator</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <script>
+        document.addEventListener('alpine:init', () => {
+            Alpine.store('auth', { authenticated: false });
+        });
+    </script>
     <style>
         [x-cloak] { display: none !important; }
         .dropzone { border: 2px dashed #4B5563; }
@@ -36,7 +41,7 @@
 
     <!-- Main App -->
     <div class="container mx-auto px-4 py-8 max-w-5xl" x-data="reelGenerator()" x-init="init()"
-         x-show="window.pageAuthenticated" x-cloak>
+         x-show="$store.auth.authenticated" x-cloak>
 
         <!-- Header -->
         <div class="text-center mb-8">
@@ -416,7 +421,7 @@
                     const data = await r.json();
                     if (data.valid) {
                         this.isAuthenticated = true;
-                        window.pageAuthenticated = true;
+                        Alpine.store('auth').authenticated = true;
                     } else {
                         this.accessError = 'Invalid password';
                     }
