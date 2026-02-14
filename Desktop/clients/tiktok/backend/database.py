@@ -1258,6 +1258,525 @@ def get_today_processing_stats() -> Dict[str, Any]:
         }
 
 
+# ============ Instagram Reel Generator Operations ============
+
+def init_ig_reel_tables():
+    """Initialize Instagram Reel Generator tables."""
+    with get_db() as conn:
+        cursor = conn.cursor()
+
+        # Format templates (scraped from IG reels)
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS ig_formats (
+                id TEXT PRIMARY KEY,
+                format_name TEXT NOT NULL,
+                instagram_url TEXT,
+                audio_path TEXT,
+                total_duration FLOAT,
+                clips_json TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
+
+        # Characters (asset groups / personas)
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS ig_characters (
+                id TEXT PRIMARY KEY,
+                character_name TEXT UNIQUE NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
+
+        # Individual asset files
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS ig_assets (
+                id TEXT PRIMARY KEY,
+                character_id TEXT NOT NULL,
+                asset_type TEXT NOT NULL,
+                file_path TEXT NOT NULL,
+                original_filename TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (character_id) REFERENCES ig_characters(id)
+            )
+        ''')
+
+        # Batch generation jobs
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS ig_jobs (
+                id TEXT PRIMARY KEY,
+                format_id TEXT NOT NULL,
+                status TEXT DEFAULT 'pending',
+                num_videos INTEGER NOT NULL,
+                num_text_variations INTEGER DEFAULT 1,
+                asset_type TEXT DEFAULT 'photos',
+                hook_text TEXT,
+                cta_text TEXT,
+                text_variations_json TEXT,
+                character_ids_json TEXT,
+                drive_folder_url TEXT,
+                error_message TEXT,
+                videos_completed INTEGER DEFAULT 0,
+                videos_failed INTEGER DEFAULT 0,
+                celery_task_id TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                started_at TIMESTAMP,
+                completed_at TIMESTAMP,
+                FOREIGN KEY (format_id) REFERENCES ig_formats(id)
+            )
+        ''')
+
+        # Individual videos within a job
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS ig_videos (
+                id TEXT PRIMARY KEY,
+                job_id TEXT NOT NULL,
+                video_number INTEGER NOT NULL,
+                character_id TEXT,
+                before_asset_id TEXT,
+                after_asset_id TEXT,
+                text_variation_index INTEGER DEFAULT 0,
+                output_path TEXT,
+                drive_url TEXT,
+                status TEXT DEFAULT 'pending',
+                error_message TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                started_at TIMESTAMP,
+                completed_at TIMESTAMP,
+                FOREIGN KEY (job_id) REFERENCES ig_jobs(id)
+            )
+        ''')
+
+        # Indexes
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_ig_assets_character ON ig_assets(character_id)')
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_ig_assets_type ON ig_assets(asset_type)')
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_ig_jobs_status ON ig_jobs(status)')
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_ig_jobs_created ON ig_jobs(created_at)')
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_ig_videos_job ON ig_videos(job_id)')
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_ig_videos_status ON ig_videos(status)')
+
+
+# --- ig_formats CRUD ---
+
+def create_ig_format(
+    format_name: str,
+    instagram_url: str = None,
+    audio_path: str = None,
+    total_duration: float = None,
+    clips_json: str = None
+) -> str:
+    """Create a format template and return its ID."""
+    format_id = str(uuid.uuid4())
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute('''
+            INSERT INTO ig_formats (id, format_name, instagram_url, audio_path, total_duration, clips_json)
+            VALUES (?, ?, ?, ?, ?, ?)
+        ''', (format_id, format_name, instagram_url, audio_path, total_duration, clips_json))
+    return format_id
+
+
+def get_ig_format(format_id: str) -> Optional[Dict[str, Any]]:
+    """Get format template by ID."""
+    import json
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute('SELECT * FROM ig_formats WHERE id = ?', (format_id,))
+        row = cursor.fetchone()
+        if row:
+            fmt = dict(row)
+            if fmt.get('clips_json'):
+                try:
+                    fmt['clips'] = json.loads(fmt['clips_json'])
+                except Exception:
+                    fmt['clips'] = []
+            else:
+                fmt['clips'] = []
+            return fmt
+        return None
+
+
+def list_ig_formats() -> List[Dict[str, Any]]:
+    """List all format templates, newest first."""
+    import json
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute('SELECT * FROM ig_formats ORDER BY created_at DESC')
+        formats = []
+        for row in cursor.fetchall():
+            fmt = dict(row)
+            if fmt.get('clips_json'):
+                try:
+                    fmt['clips'] = json.loads(fmt['clips_json'])
+                except Exception:
+                    fmt['clips'] = []
+            else:
+                fmt['clips'] = []
+            formats.append(fmt)
+        return formats
+
+
+def update_ig_format(
+    format_id: str,
+    format_name: str = None,
+    audio_path: str = None,
+    total_duration: float = None,
+    clips_json: str = None
+):
+    """Update a format template."""
+    with get_db() as conn:
+        cursor = conn.cursor()
+        updates = []
+        params = []
+
+        if format_name is not None:
+            updates.append('format_name = ?')
+            params.append(format_name)
+        if audio_path is not None:
+            updates.append('audio_path = ?')
+            params.append(audio_path)
+        if total_duration is not None:
+            updates.append('total_duration = ?')
+            params.append(total_duration)
+        if clips_json is not None:
+            updates.append('clips_json = ?')
+            params.append(clips_json)
+
+        if updates:
+            params.append(format_id)
+            cursor.execute(f'''
+                UPDATE ig_formats SET {', '.join(updates)} WHERE id = ?
+            ''', params)
+
+
+def delete_ig_format(format_id: str) -> bool:
+    """Delete a format template. Returns True if deleted."""
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute('DELETE FROM ig_formats WHERE id = ?', (format_id,))
+        return cursor.rowcount > 0
+
+
+# --- ig_characters CRUD ---
+
+def create_ig_character(character_name: str) -> str:
+    """Create a character and return its ID."""
+    character_id = str(uuid.uuid4())
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute('''
+            INSERT INTO ig_characters (id, character_name)
+            VALUES (?, ?)
+        ''', (character_id, character_name))
+    return character_id
+
+
+def get_ig_character(character_id: str) -> Optional[Dict[str, Any]]:
+    """Get character by ID."""
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute('SELECT * FROM ig_characters WHERE id = ?', (character_id,))
+        row = cursor.fetchone()
+        return dict(row) if row else None
+
+
+def list_ig_characters() -> List[Dict[str, Any]]:
+    """List all characters with asset counts."""
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute('''
+            SELECT c.*,
+                COUNT(CASE WHEN a.asset_type = 'before_photo' THEN 1 END) as before_photos,
+                COUNT(CASE WHEN a.asset_type = 'after_photo' THEN 1 END) as after_photos,
+                COUNT(CASE WHEN a.asset_type = 'before_video' THEN 1 END) as before_videos,
+                COUNT(CASE WHEN a.asset_type = 'after_video' THEN 1 END) as after_videos
+            FROM ig_characters c
+            LEFT JOIN ig_assets a ON a.character_id = c.id
+            GROUP BY c.id
+            ORDER BY c.created_at DESC
+        ''')
+        return [dict(row) for row in cursor.fetchall()]
+
+
+def delete_ig_character(character_id: str) -> bool:
+    """Delete a character and all its assets from DB. Returns True if deleted."""
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute('DELETE FROM ig_assets WHERE character_id = ?', (character_id,))
+        cursor.execute('DELETE FROM ig_characters WHERE id = ?', (character_id,))
+        return cursor.rowcount > 0
+
+
+# --- ig_assets CRUD ---
+
+def create_ig_asset(
+    character_id: str,
+    asset_type: str,
+    file_path: str,
+    original_filename: str = None
+) -> str:
+    """Create an asset record and return its ID."""
+    asset_id = str(uuid.uuid4())
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute('''
+            INSERT INTO ig_assets (id, character_id, asset_type, file_path, original_filename)
+            VALUES (?, ?, ?, ?, ?)
+        ''', (asset_id, character_id, asset_type, file_path, original_filename))
+    return asset_id
+
+
+def get_ig_assets_by_character(character_id: str, asset_type: str = None) -> List[Dict[str, Any]]:
+    """Get assets for a character, optionally filtered by type."""
+    with get_db() as conn:
+        cursor = conn.cursor()
+        if asset_type:
+            cursor.execute('''
+                SELECT * FROM ig_assets
+                WHERE character_id = ? AND asset_type = ?
+                ORDER BY created_at
+            ''', (character_id, asset_type))
+        else:
+            cursor.execute('''
+                SELECT * FROM ig_assets
+                WHERE character_id = ?
+                ORDER BY asset_type, created_at
+            ''', (character_id,))
+        return [dict(row) for row in cursor.fetchall()]
+
+
+def get_ig_asset(asset_id: str) -> Optional[Dict[str, Any]]:
+    """Get a single asset by ID."""
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute('SELECT * FROM ig_assets WHERE id = ?', (asset_id,))
+        row = cursor.fetchone()
+        return dict(row) if row else None
+
+
+def delete_ig_asset(asset_id: str) -> bool:
+    """Delete an asset from DB. Returns True if deleted."""
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute('DELETE FROM ig_assets WHERE id = ?', (asset_id,))
+        return cursor.rowcount > 0
+
+
+# --- ig_jobs CRUD ---
+
+def create_ig_job(
+    format_id: str,
+    num_videos: int,
+    hook_text: str = None,
+    cta_text: str = None,
+    num_text_variations: int = 1,
+    asset_type: str = 'photos',
+    character_ids_json: str = None
+) -> str:
+    """Create a generation job and return its ID."""
+    job_id = str(uuid.uuid4())
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute('''
+            INSERT INTO ig_jobs (id, format_id, num_videos, hook_text, cta_text,
+                                 num_text_variations, asset_type, character_ids_json)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        ''', (job_id, format_id, num_videos, hook_text, cta_text,
+              num_text_variations, asset_type, character_ids_json))
+    return job_id
+
+
+def get_ig_job(job_id: str) -> Optional[Dict[str, Any]]:
+    """Get job by ID with parsed JSON fields."""
+    import json
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute('SELECT * FROM ig_jobs WHERE id = ?', (job_id,))
+        row = cursor.fetchone()
+        if row:
+            job = dict(row)
+            for field in ('text_variations_json', 'character_ids_json'):
+                if job.get(field):
+                    try:
+                        job[field.replace('_json', '')] = json.loads(job[field])
+                    except Exception:
+                        pass
+            return job
+        return None
+
+
+def list_ig_jobs(status: str = None, limit: int = 50, offset: int = 0) -> List[Dict[str, Any]]:
+    """List IG reel jobs, newest first."""
+    import json
+    with get_db() as conn:
+        cursor = conn.cursor()
+        query = 'SELECT * FROM ig_jobs WHERE 1=1'
+        params = []
+
+        if status:
+            query += ' AND status = ?'
+            params.append(status)
+
+        query += ' ORDER BY created_at DESC LIMIT ? OFFSET ?'
+        params.extend([limit, offset])
+
+        cursor.execute(query, params)
+        jobs = []
+        for row in cursor.fetchall():
+            job = dict(row)
+            for field in ('text_variations_json', 'character_ids_json'):
+                if job.get(field):
+                    try:
+                        job[field.replace('_json', '')] = json.loads(job[field])
+                    except Exception:
+                        pass
+            jobs.append(job)
+        return jobs
+
+
+def update_ig_job_status(
+    job_id: str,
+    status: str,
+    error_message: str = None,
+    drive_folder_url: str = None,
+    text_variations_json: str = None,
+    celery_task_id: str = None,
+    videos_completed: int = None,
+    videos_failed: int = None
+):
+    """Update IG reel job status."""
+    with get_db() as conn:
+        cursor = conn.cursor()
+        updates = ['status = ?']
+        params = [status]
+
+        if status == 'processing':
+            updates.append('started_at = ?')
+            params.append(datetime.utcnow().isoformat())
+        elif status in ('completed', 'failed'):
+            updates.append('completed_at = ?')
+            params.append(datetime.utcnow().isoformat())
+
+        if error_message is not None:
+            updates.append('error_message = ?')
+            params.append(error_message)
+        if drive_folder_url is not None:
+            updates.append('drive_folder_url = ?')
+            params.append(drive_folder_url)
+        if text_variations_json is not None:
+            updates.append('text_variations_json = ?')
+            params.append(text_variations_json)
+        if celery_task_id is not None:
+            updates.append('celery_task_id = ?')
+            params.append(celery_task_id)
+        if videos_completed is not None:
+            updates.append('videos_completed = ?')
+            params.append(videos_completed)
+        if videos_failed is not None:
+            updates.append('videos_failed = ?')
+            params.append(videos_failed)
+
+        params.append(job_id)
+        cursor.execute(f'''
+            UPDATE ig_jobs SET {', '.join(updates)} WHERE id = ?
+        ''', params)
+
+
+def increment_ig_job_counter(job_id: str, field: str):
+    """Atomically increment videos_completed or videos_failed."""
+    if field not in ('videos_completed', 'videos_failed'):
+        raise ValueError(f"Invalid counter field: {field}")
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute(f'''
+            UPDATE ig_jobs SET {field} = {field} + 1 WHERE id = ?
+        ''', (job_id,))
+
+
+# --- ig_videos CRUD ---
+
+def create_ig_video(
+    job_id: str,
+    video_number: int,
+    character_id: str = None,
+    before_asset_id: str = None,
+    after_asset_id: str = None,
+    text_variation_index: int = 0
+) -> str:
+    """Create a video record and return its ID."""
+    video_id = str(uuid.uuid4())
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute('''
+            INSERT INTO ig_videos (id, job_id, video_number, character_id,
+                                   before_asset_id, after_asset_id, text_variation_index)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        ''', (video_id, job_id, video_number, character_id,
+              before_asset_id, after_asset_id, text_variation_index))
+    return video_id
+
+
+def get_ig_videos_by_job(job_id: str) -> List[Dict[str, Any]]:
+    """Get all videos for a job."""
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute('''
+            SELECT * FROM ig_videos
+            WHERE job_id = ?
+            ORDER BY video_number
+        ''', (job_id,))
+        return [dict(row) for row in cursor.fetchall()]
+
+
+def update_ig_video_status(
+    video_id: str,
+    status: str,
+    error_message: str = None,
+    output_path: str = None,
+    drive_url: str = None
+):
+    """Update video status."""
+    with get_db() as conn:
+        cursor = conn.cursor()
+        updates = ['status = ?']
+        params = [status]
+
+        if status == 'processing':
+            updates.append('started_at = ?')
+            params.append(datetime.utcnow().isoformat())
+        elif status in ('completed', 'failed'):
+            updates.append('completed_at = ?')
+            params.append(datetime.utcnow().isoformat())
+
+        if error_message is not None:
+            updates.append('error_message = ?')
+            params.append(error_message)
+        if output_path is not None:
+            updates.append('output_path = ?')
+            params.append(output_path)
+        if drive_url is not None:
+            updates.append('drive_url = ?')
+            params.append(drive_url)
+
+        params.append(video_id)
+        cursor.execute(f'''
+            UPDATE ig_videos SET {', '.join(updates)} WHERE id = ?
+        ''', params)
+
+
+def get_ig_job_status(job_id: str) -> Optional[Dict[str, Any]]:
+    """Get lightweight job status for polling (progress counts)."""
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute('''
+            SELECT id, status, num_videos, videos_completed, videos_failed,
+                   drive_folder_url, error_message, created_at, started_at, completed_at
+            FROM ig_jobs WHERE id = ?
+        ''', (job_id,))
+        row = cursor.fetchone()
+        return dict(row) if row else None
+
+
 # Initialize database on import
 init_db()
 init_tiktok_copy_tables()
+init_ig_reel_tables()

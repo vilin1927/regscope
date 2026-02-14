@@ -32,6 +32,7 @@ from admin_routes import admin_bp
 from video_routes import video_bp
 from preset_routes import preset_bp
 from tiktok_copy_routes import tiktok_copy_bp
+from instagram_reel_routes import ig_reel_bp
 from video_generator import create_videos_for_variations, VideoGeneratorError
 from database import create_job, update_job_status
 
@@ -58,6 +59,9 @@ app.register_blueprint(preset_bp)
 
 # Register TikTok Copy blueprint
 app.register_blueprint(tiktok_copy_bp)
+
+# Register Instagram Reel blueprint
+app.register_blueprint(ig_reel_bp)
 
 # Frontend directory (relative to backend)
 FRONTEND_DIR = os.path.join(os.path.dirname(__file__), '..', 'frontend')
@@ -101,6 +105,13 @@ def serve_admin():
 def serve_tiktok_copy():
     """Serve TikTok Copy tool page"""
     return send_from_directory(FRONTEND_DIR, 'tiktok-copy.html')
+
+
+@app.route('/instagram-reel')
+@app.route('/instagram-reel.html')
+def serve_instagram_reel():
+    """Serve Instagram Reel Generator page"""
+    return send_from_directory(FRONTEND_DIR, 'instagram-reel.html')
 
 
 @app.route('/api/health', methods=['GET'])

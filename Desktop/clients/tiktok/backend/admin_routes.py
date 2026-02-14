@@ -15,7 +15,8 @@ from werkzeug.utils import secure_filename
 from logging_config import get_logger
 from database import (
     list_video_jobs, get_video_jobs_count,
-    list_tiktok_copy_batches, get_tiktok_copy_batches_count
+    list_tiktok_copy_batches, get_tiktok_copy_batches_count,
+    list_ig_jobs, get_ig_videos_by_job
 )
 
 logger = get_logger('admin')
@@ -359,6 +360,34 @@ def list_tiktok_copy_jobs_api():
 
     except Exception as e:
         logger.error(f"Failed to list TikTok Copy batches: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+# ============ Instagram Reel Jobs ============
+
+@admin_bp.route('/ig-reel-jobs', methods=['GET'])
+@require_auth
+def list_ig_reel_jobs_api():
+    """List Instagram Reel generation jobs for admin panel."""
+    try:
+        limit = request.args.get('limit', 50, type=int)
+        offset = request.args.get('offset', 0, type=int)
+
+        jobs = list_ig_jobs(limit=limit, offset=offset)
+
+        # Attach video details to each job
+        for job in jobs:
+            job['videos'] = get_ig_videos_by_job(job['id'])
+
+        return jsonify({
+            'jobs': jobs,
+            'total': len(jobs),
+            'limit': limit,
+            'offset': offset
+        })
+
+    except Exception as e:
+        logger.error(f"Failed to list IG Reel jobs: {e}")
         return jsonify({'error': str(e)}), 500
 
 

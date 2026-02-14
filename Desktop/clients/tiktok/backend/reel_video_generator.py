@@ -1,0 +1,577 @@
+"""
+Reel Video Generator
+
+Assembles Instagram reel videos from photo/video assets + text overlays + audio.
+Uses FFmpeg for all video operations.
+"""
+import itertools
+import os
+import random
+import re
+import shutil
+import subprocess
+import tempfile
+import uuid
+from typing import Optional
+
+from PIL import Image, ImageDraw, ImageFont
+
+from logging_config import get_logger
+
+logger = get_logger('reel_video_generator')
+
+# Output dimensions (9:16 vertical)
+OUTPUT_WIDTH = 1080
+OUTPUT_HEIGHT = 1920
+
+
+class ReelVideoError(Exception):
+    """Exception raised for reel video generation errors."""
+    pass
+
+
+# ============ Text Rendering ============
+
+def _get_font(size: int) -> ImageFont.FreeTypeFont:
+    """Get a font, falling back to default if not available."""
+    font_paths = [
+        '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf',
+        '/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf',
+        '/System/Library/Fonts/Helvetica.ttc',
+        '/usr/share/fonts/TTF/DejaVuSans-Bold.ttf',
+    ]
+    for path in font_paths:
+        if os.path.exists(path):
+            try:
+                return ImageFont.truetype(path, size)
+            except Exception:
+                continue
+    return ImageFont.load_default()
+
+
+def render_text_on_image(
+    image_path: str,
+    text: str,
+    style: str,
+    output_path: str,
+    position: str = 'bottom'
+) -> str:
+    """
+    Render text overlay on an image using Pillow.
+
+    Args:
+        image_path: Path to source image (1080x1920)
+        text: Text to render
+        style: 'hook' (white on black semi-transparent) or 'cta' (black on white)
+        output_path: Path for output image
+        position: 'top', 'center', or 'bottom'
+
+    Returns:
+        Path to output image
+    """
+    img = Image.open(image_path).convert('RGBA')
+    overlay = Image.new('RGBA', img.size, (0, 0, 0, 0))
+    draw = ImageDraw.Draw(overlay)
+
+    # Scale font size based on image height
+    font_size = int(img.height * 0.035)
+    font = _get_font(font_size)
+
+    # Word wrap text
+    max_width = int(img.width * 0.85)
+    lines = _wrap_text(draw, text, font, max_width)
+    rendered_text = '\n'.join(lines)
+
+    # Measure text block
+    bbox = draw.multiline_textbbox((0, 0), rendered_text, font=font, spacing=8)
+    text_w = bbox[2] - bbox[0]
+    text_h = bbox[3] - bbox[1]
+
+    padding_x = 30
+    padding_y = 20
+
+    # Calculate position
+    bg_w = text_w + padding_x * 2
+    bg_h = text_h + padding_y * 2
+    bg_x = (img.width - bg_w) // 2
+
+    if position == 'top':
+        bg_y = int(img.height * 0.12)
+    elif position == 'center':
+        bg_y = (img.height - bg_h) // 2
+    else:  # bottom
+        bg_y = int(img.height * 0.75)
+
+    # Draw background
+    if style == 'hook':
+        bg_color = (0, 0, 0, 180)  # Black semi-transparent
+        text_color = (255, 255, 255, 255)
+    else:  # cta
+        bg_color = (255, 255, 255, 240)
+        text_color = (0, 0, 0, 255)
+
+    draw.rounded_rectangle(
+        [bg_x, bg_y, bg_x + bg_w, bg_y + bg_h],
+        radius=12,
+        fill=bg_color
+    )
+
+    # Draw text
+    text_x = bg_x + padding_x
+    text_y = bg_y + padding_y
+    draw.multiline_text(
+        (text_x, text_y),
+        rendered_text,
+        font=font,
+        fill=text_color,
+        spacing=8
+    )
+
+    # Composite
+    result = Image.alpha_composite(img, overlay)
+    result = result.convert('RGB')
+    result.save(output_path, quality=95)
+
+    return output_path
+
+
+def _wrap_text(draw, text: str, font, max_width: int) -> list[str]:
+    """Word-wrap text to fit within max_width."""
+    words = text.split()
+    lines = []
+    current_line = []
+
+    for word in words:
+        test_line = ' '.join(current_line + [word])
+        bbox = draw.textbbox((0, 0), test_line, font=font)
+        if bbox[2] - bbox[0] <= max_width:
+            current_line.append(word)
+        else:
+            if current_line:
+                lines.append(' '.join(current_line))
+            current_line = [word]
+
+    if current_line:
+        lines.append(' '.join(current_line))
+
+    return lines if lines else [text]
+
+
+# ============ Asset Preparation ============
+
+def prepare_photo_clip(
+    photo_path: str,
+    duration: float,
+    output_path: str,
+    text: str = None,
+    text_style: str = None,
+    text_position: str = 'bottom'
+) -> str:
+    """
+    Convert a photo to a video clip with blurred background padding for 9:16.
+
+    Args:
+        photo_path: Path to source photo
+        duration: Clip duration in seconds
+        output_path: Output video path
+        text: Optional text overlay
+        text_style: 'hook' or 'cta'
+        text_position: 'top', 'center', or 'bottom'
+
+    Returns:
+        Path to output video clip
+    """
+    work_dir = tempfile.mkdtemp(prefix='photo_clip_')
+
+    try:
+        # If text needs to be rendered, do it on the image first
+        prepared_image = photo_path
+        if text and text_style:
+            # First scale the photo to 1080x1920 with blurred bg
+            scaled_path = os.path.join(work_dir, 'scaled.png')
+            _scale_image_with_blur_bg(photo_path, scaled_path)
+            prepared_image = os.path.join(work_dir, 'with_text.png')
+            render_text_on_image(scaled_path, text, text_style, prepared_image, text_position)
+        else:
+            # Just scale
+            prepared_image = os.path.join(work_dir, 'scaled.png')
+            _scale_image_with_blur_bg(photo_path, prepared_image)
+
+        # Convert image to video clip
+        cmd = [
+            'ffmpeg', '-y',
+            '-loop', '1',
+            '-i', prepared_image,
+            '-t', str(duration),
+            '-vf', f'scale={OUTPUT_WIDTH}:{OUTPUT_HEIGHT}:force_original_aspect_ratio=decrease,pad={OUTPUT_WIDTH}:{OUTPUT_HEIGHT}:(ow-iw)/2:(oh-ih)/2:black',
+            '-c:v', 'libx264',
+            '-preset', 'medium',
+            '-crf', '23',
+            '-pix_fmt', 'yuv420p',
+            '-r', '30',
+            output_path
+        ]
+
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
+        if result.returncode != 0:
+            raise ReelVideoError(f"Photo clip creation failed: {result.stderr[-200:]}")
+
+        return output_path
+
+    finally:
+        shutil.rmtree(work_dir, ignore_errors=True)
+
+
+def _scale_image_with_blur_bg(input_path: str, output_path: str):
+    """
+    Scale image to 1080x1920 with blurred background padding.
+    Image is centered at full height, empty space filled with blurred version.
+    """
+    img = Image.open(input_path).convert('RGB')
+    w, h = img.size
+
+    # Target dimensions
+    tw, th = OUTPUT_WIDTH, OUTPUT_HEIGHT
+    target_ratio = tw / th
+    img_ratio = w / h
+
+    if abs(img_ratio - target_ratio) < 0.01:
+        # Already correct aspect ratio, just resize
+        img = img.resize((tw, th), Image.LANCZOS)
+        img.save(output_path, quality=95)
+        return
+
+    # Create blurred background
+    bg = img.resize((tw, th), Image.LANCZOS)
+    from PIL import ImageFilter
+    bg = bg.filter(ImageFilter.GaussianBlur(radius=30))
+
+    # Scale image to fit within frame (maintain aspect ratio)
+    if img_ratio > target_ratio:
+        # Wider than target - fit to width
+        new_w = tw
+        new_h = int(tw / img_ratio)
+    else:
+        # Taller than target - fit to height
+        new_h = th
+        new_w = int(th * img_ratio)
+
+    img_resized = img.resize((new_w, new_h), Image.LANCZOS)
+
+    # Center on blurred background
+    x_offset = (tw - new_w) // 2
+    y_offset = (th - new_h) // 2
+    bg.paste(img_resized, (x_offset, y_offset))
+
+    bg.save(output_path, quality=95)
+
+
+def prepare_video_clip(
+    video_path: str,
+    target_duration: float,
+    output_path: str,
+    text: str = None,
+    text_style: str = None,
+    text_position: str = 'bottom'
+) -> str:
+    """
+    Scale and trim/loop a video clip to target duration and 9:16 aspect ratio.
+
+    Args:
+        video_path: Path to source video
+        target_duration: Target clip duration
+        output_path: Output video path
+        text: Optional text overlay
+        text_style: 'hook' or 'cta'
+        text_position: 'top', 'center', or 'bottom'
+
+    Returns:
+        Path to output video clip
+    """
+    # Build filter chain
+    filters = [
+        f'scale={OUTPUT_WIDTH}:{OUTPUT_HEIGHT}:force_original_aspect_ratio=decrease',
+        f'pad={OUTPUT_WIDTH}:{OUTPUT_HEIGHT}:(ow-iw)/2:(oh-ih)/2:black'
+    ]
+
+    # Add text overlay via FFmpeg drawtext if needed
+    if text and text_style:
+        escaped_text = text.replace("'", "\\'").replace(":", "\\:")
+        if text_style == 'hook':
+            # White text on black semi-transparent box
+            filters.append(
+                f"drawtext=text='{escaped_text}':fontsize=38:fontcolor=white:"
+                f"box=1:boxcolor=black@0.7:boxborderw=15:"
+                f"x=(w-text_w)/2:y=h*0.75"
+            )
+        else:  # cta
+            filters.append(
+                f"drawtext=text='{escaped_text}':fontsize=38:fontcolor=black:"
+                f"box=1:boxcolor=white@0.95:boxborderw=15:"
+                f"x=(w-text_w)/2:y=h*0.75"
+            )
+
+    filter_chain = ','.join(filters)
+
+    cmd = [
+        'ffmpeg', '-y',
+        '-stream_loop', '-1',  # Loop if shorter than target
+        '-i', video_path,
+        '-t', str(target_duration),
+        '-vf', filter_chain,
+        '-c:v', 'libx264',
+        '-preset', 'medium',
+        '-crf', '23',
+        '-pix_fmt', 'yuv420p',
+        '-an',  # Strip audio (we'll add format audio later)
+        '-r', '30',
+        output_path
+    ]
+
+    result = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
+    if result.returncode != 0:
+        raise ReelVideoError(f"Video clip preparation failed: {result.stderr[-200:]}")
+
+    return output_path
+
+
+# ============ Video Assembly ============
+
+def assemble_reel_video(
+    clips_config: list[dict],
+    audio_path: str,
+    output_path: str,
+    request_id: str = ""
+) -> str:
+    """
+    Assemble a complete reel video from clips + audio.
+
+    Args:
+        clips_config: List of clip configs:
+            [{"asset_path": str, "asset_type": "photo"|"video", "duration": float,
+              "text": str|None, "text_style": "hook"|"cta"|None, "text_position": str}]
+        audio_path: Path to audio file
+        output_path: Output video file path
+        request_id: For logging
+
+    Returns:
+        Path to assembled video
+
+    Raises:
+        ReelVideoError: If assembly fails
+    """
+    log_prefix = f"[{request_id}] " if request_id else ""
+    work_dir = tempfile.mkdtemp(prefix='reel_assembly_')
+
+    try:
+        clip_paths = []
+
+        # Step 1: Prepare each clip
+        for i, clip in enumerate(clips_config):
+            clip_output = os.path.join(work_dir, f'clip_{i:02d}.mp4')
+
+            asset_path = clip['asset_path']
+            duration = clip['duration']
+            text = clip.get('text')
+            text_style = clip.get('text_style')
+            text_position = clip.get('text_position', 'bottom')
+
+            if clip.get('asset_type') == 'video':
+                prepare_video_clip(
+                    asset_path, duration, clip_output,
+                    text, text_style, text_position
+                )
+            else:
+                prepare_photo_clip(
+                    asset_path, duration, clip_output,
+                    text, text_style, text_position
+                )
+
+            clip_paths.append(clip_output)
+            logger.debug(f"{log_prefix}Prepared clip {i}: {duration}s")
+
+        # Step 2: Create concat file
+        concat_path = os.path.join(work_dir, 'concat.txt')
+        with open(concat_path, 'w') as f:
+            for cp in clip_paths:
+                f.write(f"file '{os.path.abspath(cp)}'\n")
+
+        # Step 3: Concatenate clips + add audio
+        total_duration = sum(c['duration'] for c in clips_config)
+
+        cmd = [
+            'ffmpeg', '-y',
+            '-f', 'concat',
+            '-safe', '0',
+            '-i', concat_path,
+        ]
+
+        if audio_path and os.path.exists(audio_path):
+            cmd.extend(['-i', audio_path])
+
+        cmd.extend(['-t', str(total_duration)])
+
+        cmd.extend([
+            '-c:v', 'libx264',
+            '-preset', 'medium',
+            '-crf', '23',
+            '-pix_fmt', 'yuv420p',
+        ])
+
+        if audio_path and os.path.exists(audio_path):
+            cmd.extend([
+                '-c:a', 'aac',
+                '-b:a', '192k',
+                '-shortest',
+            ])
+
+        cmd.extend([
+            '-movflags', '+faststart',
+            output_path
+        ])
+
+        logger.info(f"{log_prefix}Assembling reel: {len(clips_config)} clips, {total_duration:.1f}s")
+
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
+        if result.returncode != 0:
+            raise ReelVideoError(f"Video assembly failed: {result.stderr[-300:]}")
+
+        if not os.path.exists(output_path) or os.path.getsize(output_path) < 1000:
+            raise ReelVideoError("Output video is empty or too small")
+
+        size_mb = os.path.getsize(output_path) / 1024 / 1024
+        logger.info(f"{log_prefix}Reel assembled: {output_path} ({size_mb:.1f}MB)")
+
+        return output_path
+
+    finally:
+        shutil.rmtree(work_dir, ignore_errors=True)
+
+
+# ============ Combination Generator ============
+
+def generate_combinations(
+    format_clips: list[dict],
+    characters: list[dict],
+    text_variations: list[str],
+    cta_variations: list[str],
+    num_videos: int,
+    asset_type: str = 'photos'
+) -> list[dict]:
+    """
+    Generate unique video combinations from format template + assets + text variations.
+
+    Args:
+        format_clips: Clip definitions from format template
+        characters: List of character dicts with their assets:
+            [{"id": str, "before_photos": [asset_dicts], "after_photos": [...],
+              "before_videos": [...], "after_videos": [...]}]
+        text_variations: List of hook text variations
+        cta_variations: List of CTA text variations
+        num_videos: Number of videos to generate
+        asset_type: 'photos', 'videos', or 'both'
+
+    Returns:
+        List of video config dicts ready for assembly
+    """
+    if not characters:
+        raise ReelVideoError("No characters with assets provided")
+    if not text_variations:
+        text_variations = ['']
+    if not cta_variations:
+        cta_variations = ['']
+
+    all_combos = []
+
+    for character in characters:
+        char_id = character['id']
+
+        # Get available assets based on type filter
+        before_assets = []
+        after_assets = []
+
+        if asset_type in ('photos', 'both'):
+            before_assets.extend(character.get('before_photos', []))
+            after_assets.extend(character.get('after_photos', []))
+        if asset_type in ('videos', 'both'):
+            before_assets.extend(character.get('before_videos', []))
+            after_assets.extend(character.get('after_videos', []))
+
+        if not before_assets or not after_assets:
+            logger.warning(f"Character {char_id} has no {asset_type} assets, skipping")
+            continue
+
+        # Generate all possible combos for this character
+        for before_asset, after_asset, hook_idx, cta_idx in itertools.product(
+            before_assets, after_assets,
+            range(len(text_variations)), range(len(cta_variations))
+        ):
+            combo = {
+                'character_id': char_id,
+                'before_asset': before_asset,
+                'after_asset': after_asset,
+                'text_variation_index': hook_idx,
+                'hook_text': text_variations[hook_idx],
+                'cta_text': cta_variations[cta_idx],
+            }
+            all_combos.append(combo)
+
+    if not all_combos:
+        raise ReelVideoError("No valid combinations could be generated")
+
+    # Shuffle and limit to requested number
+    random.shuffle(all_combos)
+
+    if len(all_combos) < num_videos:
+        logger.warning(f"Only {len(all_combos)} unique combos available (requested {num_videos})")
+
+    selected = all_combos[:num_videos]
+
+    # Build full video configs with clip assignments
+    video_configs = []
+    for i, combo in enumerate(selected):
+        clips_config = []
+        for clip_def in format_clips:
+            clip_type = clip_def.get('type', 'before')
+
+            if clip_type == 'before':
+                asset = combo['before_asset']
+                text = combo['hook_text']
+                text_style = 'hook'
+            elif clip_type == 'after':
+                asset = combo['after_asset']
+                text = None
+                text_style = None
+            elif clip_type == 'cta':
+                asset = combo['after_asset']  # Use after asset as bg for CTA
+                text = combo['cta_text']
+                text_style = 'cta'
+            else:  # transition or unknown
+                asset = combo['before_asset']
+                text = None
+                text_style = None
+
+            # Determine if asset is photo or video
+            asset_path = asset.get('file_path', '')
+            is_video = asset_path.lower().endswith(('.mp4', '.mov', '.avi', '.webm'))
+
+            clips_config.append({
+                'asset_path': asset_path,
+                'asset_type': 'video' if is_video else 'photo',
+                'duration': clip_def['duration'],
+                'text': text,
+                'text_style': text_style,
+                'text_position': clip_def.get('text_position', 'bottom'),
+            })
+
+        video_configs.append({
+            'video_number': i + 1,
+            'character_id': combo['character_id'],
+            'before_asset_id': combo['before_asset'].get('id'),
+            'after_asset_id': combo['after_asset'].get('id'),
+            'text_variation_index': combo['text_variation_index'],
+            'clips_config': clips_config,
+        })
+
+    logger.info(f"Generated {len(video_configs)} video combinations")
+    return video_configs

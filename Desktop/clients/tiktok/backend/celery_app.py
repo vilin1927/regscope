@@ -24,7 +24,7 @@ celery_app = Celery(
     'tiktok_batch',
     broker=REDIS_URL,
     backend=REDIS_URL,
-    include=['tasks']  # Module containing task definitions
+    include=['tasks', 'instagram_reel_tasks']  # Modules containing task definitions
 )
 
 # Celery configuration
@@ -67,6 +67,7 @@ celery_app.conf.task_routes = {
     'tasks.process_batch': {'queue': 'batch'},
     'tasks.process_link': {'queue': 'links'},
     'tasks.generate_variation': {'queue': 'variations'},
+    'instagram_reel_tasks.generate_reel_batch': {'queue': 'ig_reel'},
 }
 
 if __name__ == '__main__':
