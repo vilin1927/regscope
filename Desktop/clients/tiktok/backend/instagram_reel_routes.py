@@ -255,6 +255,78 @@ def scrape_format():
         return jsonify({'error': str(e)}), 500
 
 
+@ig_reel_bp.route('/formats/upload', methods=['POST'])
+def upload_format():
+    """
+    Create a format template from an uploaded reel video file.
+
+    Multipart form:
+        file: video file (mp4, mov)
+        format_name: name for the template
+    """
+    if 'file' not in request.files:
+        return jsonify({'error': 'Video file is required'}), 400
+
+    file = request.files['file']
+    format_name = request.form.get('format_name', '').strip()
+
+    if not format_name:
+        return jsonify({'error': 'Format name is required'}), 400
+
+    ext = file.filename.rsplit('.', 1)[-1].lower() if '.' in file.filename else ''
+    if ext not in ('mp4', 'mov', 'webm', 'mkv'):
+        return jsonify({'error': 'Only video files (mp4, mov, webm, mkv) are allowed'}), 400
+
+    try:
+        from instagram_scraper import create_format_from_upload
+
+        # Save uploaded file temporarily
+        import tempfile
+        tmp = tempfile.NamedTemporaryFile(delete=False, suffix=f'.{ext}')
+        file.save(tmp.name)
+        tmp.close()
+
+        api_key_manager = None
+        try:
+            from api_key_manager import get_api_key_manager
+            api_key_manager = get_api_key_manager()
+        except Exception:
+            pass
+
+        template = create_format_from_upload(
+            video_path=tmp.name,
+            format_name=format_name,
+            output_base_dir=FORMATS_DIR,
+            api_key_manager=api_key_manager
+        )
+
+        # Clean up temp file
+        try:
+            os.remove(tmp.name)
+        except Exception:
+            pass
+
+        format_id = create_ig_format(
+            format_name=template['format_name'],
+            instagram_url=template['instagram_url'],
+            audio_path=template.get('audio_path') or '',
+            total_duration=template['total_duration'],
+            clips_json=json.dumps(template['clips'])
+        )
+
+        logger.info(f"Created format from upload: {format_name} ({format_id[:8]})")
+        return jsonify({
+            'id': format_id,
+            'format_name': format_name,
+            'total_duration': template['total_duration'],
+            'clips': template['clips']
+        }), 201
+
+    except Exception as e:
+        logger.error(f"Format upload failed: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
 @ig_reel_bp.route('/formats', methods=['GET'])
 def get_formats():
     """List all saved format templates."""

@@ -436,3 +436,78 @@ def scrape_and_create_format(url: str, format_name: str, output_base_dir: str, a
 
     logger.info(f"Format template created: {format_name} ({len(clips)} clips, {total_duration:.1f}s)")
     return template
+
+
+def create_format_from_upload(video_path: str, format_name: str, output_base_dir: str, api_key_manager=None) -> dict:
+    """
+    Create format template from an uploaded video file (skips yt-dlp download).
+    Same pipeline as scrape_and_create_format but starts from a local file.
+    """
+    format_dir = os.path.join(output_base_dir, format_name.replace(' ', '_'))
+    os.makedirs(format_dir, exist_ok=True)
+
+    # Copy uploaded video to format dir
+    import shutil
+    dest_video = os.path.join(format_dir, os.path.basename(video_path))
+    if os.path.abspath(video_path) != os.path.abspath(dest_video):
+        shutil.copy2(video_path, dest_video)
+    video_path = dest_video
+
+    total_duration = get_video_duration(video_path)
+    if total_duration <= 0:
+        raise InstagramScraperError("Could not determine video duration")
+
+    logger.info(f"Uploaded video duration: {total_duration:.2f}s")
+
+    # Extract audio
+    audio_path = os.path.join(format_dir, 'audio.mp3')
+    try:
+        extract_audio(video_path, audio_path)
+    except InstagramScraperError:
+        logger.warning("No audio in uploaded video - format will have no audio")
+        audio_path = None
+
+    # Detect scene cuts
+    cuts = detect_scene_cuts(video_path)
+
+    # Extract screenshots for analysis
+    screenshots = extract_clip_screenshots(video_path, cuts, total_duration)
+
+    # Analyze clips with Gemini
+    clip_analysis = analyze_clips_with_gemini(screenshots, api_key_manager)
+
+    # Build clip structure
+    boundaries = [0.0] + cuts + [total_duration]
+    clips = []
+    for i in range(len(boundaries) - 1):
+        duration = round(boundaries[i + 1] - boundaries[i], 2)
+        analysis = clip_analysis[i] if i < len(clip_analysis) else {}
+        clips.append({
+            'index': i,
+            'duration': duration,
+            'type': analysis.get('type', 'before' if i == 0 else 'after'),
+            'detected_text': analysis.get('detected_text'),
+            'text_position': analysis.get('text_position', 'bottom')
+        })
+
+    # Clean up video and screenshots
+    try:
+        os.remove(video_path)
+    except Exception:
+        pass
+    for s in screenshots:
+        try:
+            os.remove(s)
+        except Exception:
+            pass
+
+    template = {
+        'format_name': format_name,
+        'instagram_url': 'uploaded',
+        'audio_path': audio_path,
+        'total_duration': total_duration,
+        'clips': clips
+    }
+
+    logger.info(f"Format from upload: {format_name} ({len(clips)} clips, {total_duration:.1f}s)")
+    return template

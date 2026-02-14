@@ -70,16 +70,36 @@
         <div x-show="currentStep === 1" x-transition class="bg-gray-800 rounded-xl p-6 shadow-xl">
             <h2 class="text-xl font-bold text-white mb-4">Step 1: Choose Format</h2>
 
-            <!-- Scrape new format -->
+            <!-- Upload reel video OR scrape -->
             <div class="mb-6">
-                <h3 class="text-gray-300 font-medium mb-2">Scrape from Instagram</h3>
+                <h3 class="text-gray-300 font-medium mb-2">Upload a reel video</h3>
+                <p class="text-gray-500 text-xs mb-2">Save the reel from Instagram and upload the .mp4 file here</p>
+                <div class="flex gap-3 items-end">
+                    <div class="flex-1">
+                        <input type="file" accept="video/mp4,video/quicktime,video/webm" @change="uploadFormatFile = $event.target.files[0]"
+                            class="w-full text-sm text-gray-400 file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-gray-700 file:text-gray-300 hover:file:bg-gray-600 file:cursor-pointer">
+                    </div>
+                    <input x-model="uploadFormatName" placeholder="Format name"
+                        class="w-48 px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-purple-500">
+                    <button @click="uploadFormat()" :disabled="scraping || !uploadFormatFile || !uploadFormatName"
+                        class="px-6 py-3 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-600 rounded-lg font-semibold text-white transition-colors whitespace-nowrap">
+                        <span x-show="!scraping">Analyze</span>
+                        <span x-show="scraping">Analyzing...</span>
+                    </button>
+                </div>
+
+                <div class="relative my-4">
+                    <div class="absolute inset-0 flex items-center"><div class="w-full border-t border-gray-600"></div></div>
+                    <div class="relative flex justify-center"><span class="bg-gray-800 px-3 text-gray-500 text-sm">or scrape by URL</span></div>
+                </div>
+
                 <div class="flex gap-3">
                     <input x-model="scrapeUrl" placeholder="https://instagram.com/reel/..."
                         class="flex-1 px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-purple-500">
                     <input x-model="scrapeFormatName" placeholder="Format name"
                         class="w-48 px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-purple-500">
                     <button @click="scrapeFormat()" :disabled="scraping || !scrapeUrl || !scrapeFormatName"
-                        class="px-6 py-3 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-600 rounded-lg font-semibold text-white transition-colors whitespace-nowrap">
+                        class="px-6 py-3 bg-gray-600 hover:bg-gray-500 disabled:bg-gray-700 rounded-lg font-semibold text-white transition-colors whitespace-nowrap">
                         <span x-show="!scraping">Scrape</span>
                         <span x-show="scraping">Scraping...</span>
                     </button>
@@ -443,6 +463,8 @@
             selectedFormat: null,
             scrapeUrl: '',
             scrapeFormatName: '',
+            uploadFormatFile: null,
+            uploadFormatName: '',
             scraping: false,
             scrapeError: '',
 
@@ -499,6 +521,32 @@
 
             selectFormat(fmt) {
                 this.selectedFormat = JSON.parse(JSON.stringify(fmt));
+            },
+
+            async uploadFormat() {
+                this.scraping = true;
+                this.scrapeError = '';
+                try {
+                    const fd = new FormData();
+                    fd.append('file', this.uploadFormatFile);
+                    fd.append('format_name', this.uploadFormatName);
+                    const r = await fetch('/api/instagram-reel/formats/upload', {
+                        method: 'POST',
+                        body: fd
+                    });
+                    const data = await r.json();
+                    if (r.ok) {
+                        await this.loadFormats();
+                        this.selectedFormat = data;
+                        this.uploadFormatFile = null;
+                        this.uploadFormatName = '';
+                    } else {
+                        this.scrapeError = data.error || 'Upload analysis failed';
+                    }
+                } catch (e) {
+                    this.scrapeError = 'Connection error';
+                }
+                this.scraping = false;
             },
 
             async scrapeFormat() {
