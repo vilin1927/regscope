@@ -44,9 +44,9 @@ def download_reel(url: str, output_dir: str) -> str:
     """
     os.makedirs(output_dir, exist_ok=True)
 
-    api_key = os.getenv('RAPIDAPI_KEY', '').strip()
+    api_key = os.getenv('RAPIDAPI_IG_KEY', '').strip()
     if not api_key:
-        raise InstagramScraperError("RAPIDAPI_KEY not set in environment")
+        raise InstagramScraperError("RAPIDAPI_IG_KEY not set in environment")
 
     logger.info(f"Downloading reel via RapidAPI: {url[:60]}...")
 
