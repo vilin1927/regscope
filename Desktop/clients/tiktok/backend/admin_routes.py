@@ -16,7 +16,7 @@ from logging_config import get_logger
 from database import (
     list_video_jobs, get_video_jobs_count,
     list_tiktok_copy_batches, get_tiktok_copy_batches_count,
-    list_ig_jobs, get_ig_videos_by_job
+    list_ig_jobs, get_ig_jobs_count, get_ig_videos_by_job
 )
 
 logger = get_logger('admin')
@@ -381,7 +381,7 @@ def list_ig_reel_jobs_api():
 
         return jsonify({
             'jobs': jobs,
-            'total': len(jobs),
+            'total': get_ig_jobs_count(),
             'limit': limit,
             'offset': offset
         })

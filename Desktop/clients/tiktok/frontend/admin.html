@@ -376,7 +376,7 @@
                 <div class="bg-gray-800/50 backdrop-blur rounded-xl p-6 shadow-xl">
                     <div class="flex justify-between items-center mb-4">
                         <h2 class="text-xl font-semibold">Job Queue</h2>
-                        <button @click="queueTab === 'slideshow' ? refreshJobs() : (queueTab === 'video' ? fetchVideoJobs() : fetchTikTokCopyJobs())" class="text-sm px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded">
+                        <button @click="queueTab === 'slideshow' ? refreshJobs() : (queueTab === 'video' ? fetchVideoJobs() : (queueTab === 'tiktok-copy' ? fetchTikTokCopyJobs() : fetchIgReelJobs()))" class="text-sm px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded">
                             Refresh
                         </button>
                     </div>
@@ -403,6 +403,13 @@
                             :class="queueTab === 'tiktok-copy' ? 'bg-blue-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'"
                         >
                             TikTok Copy
+                        </button>
+                        <button
+                            @click="queueTab = 'ig-reels'; fetchIgReelJobs()"
+                            class="px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+                            :class="queueTab === 'ig-reels' ? 'bg-green-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'"
+                        >
+                            IG Reels
                         </button>
                     </div>
 
@@ -462,6 +469,26 @@
                         </div>
                         <div class="bg-red-500/20 rounded p-2">
                             <div class="text-red-400 font-bold" x-text="tiktokCopyStats.failed">0</div>
+                            <div class="text-gray-400">Failed</div>
+                        </div>
+                    </div>
+
+                    <!-- IG Reels Queue Stats -->
+                    <div x-show="queueTab === 'ig-reels'" class="grid grid-cols-4 gap-2 mb-4 text-center text-xs">
+                        <div class="bg-yellow-500/20 rounded p-2">
+                            <div class="text-yellow-400 font-bold" x-text="igReelStats.pending">0</div>
+                            <div class="text-gray-400">Pending</div>
+                        </div>
+                        <div class="bg-blue-500/20 rounded p-2">
+                            <div class="text-blue-400 font-bold" x-text="igReelStats.processing">0</div>
+                            <div class="text-gray-400">Processing</div>
+                        </div>
+                        <div class="bg-green-500/20 rounded p-2">
+                            <div class="text-green-400 font-bold" x-text="igReelStats.completed">0</div>
+                            <div class="text-gray-400">Completed</div>
+                        </div>
+                        <div class="bg-red-500/20 rounded p-2">
+                            <div class="text-red-400 font-bold" x-text="igReelStats.failed">0</div>
                             <div class="text-gray-400">Failed</div>
                         </div>
                     </div>
@@ -635,6 +662,84 @@
                         </div>
                     </div>
 
+                    <!-- IG Reels Jobs List -->
+                    <div x-show="queueTab === 'ig-reels'" class="space-y-3 mb-4">
+                        <template x-for="job in igReelJobs" :key="job.id">
+                            <div class="bg-gray-700/50 rounded p-3 text-sm">
+                                <!-- Job Header -->
+                                <div class="flex justify-between items-start mb-2">
+                                    <div class="flex-1 min-w-0">
+                                        <div class="flex items-center space-x-2">
+                                            <span class="font-mono text-xs text-gray-400" x-text="job.id.substring(0, 8)"></span>
+                                            <span class="text-gray-300" x-text="(job.num_videos || (job.videos ? job.videos.length : 0)) + ' videos'"></span>
+                                        </div>
+                                        <div class="text-xs text-gray-500 mt-1" x-text="formatDate(job.created_at)"></div>
+                                    </div>
+                                    <div class="flex items-center space-x-2 flex-shrink-0 ml-2">
+                                        <span class="px-2 py-0.5 rounded text-xs"
+                                              :class="{
+                                                  'bg-yellow-500/30 text-yellow-400': job.status === 'pending',
+                                                  'bg-blue-500/30 text-blue-400': job.status === 'processing',
+                                                  'bg-green-500/30 text-green-400': job.status === 'completed',
+                                                  'bg-red-500/30 text-red-400': job.status === 'failed'
+                                              }"
+                                              x-text="job.status">
+                                        </span>
+                                        <button
+                                            @click="job.expanded = !job.expanded"
+                                            class="p-1 text-gray-400 hover:text-gray-300 transition-colors"
+                                        >
+                                            <svg class="w-4 h-4 transition-transform" :class="{ 'rotate-180': job.expanded }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                                            </svg>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- Job Stats -->
+                                <div class="flex space-x-4 text-xs mb-2">
+                                    <span class="text-green-400" x-text="(job.videos_completed || 0) + ' done'"></span>
+                                    <span class="text-red-400" x-show="job.videos_failed > 0" x-text="(job.videos_failed || 0) + ' failed'"></span>
+                                </div>
+
+                                <!-- Drive Folder Link -->
+                                <div x-show="job.drive_folder_url" class="mb-2">
+                                    <a :href="job.drive_folder_url" target="_blank" class="text-xs text-blue-400 hover:text-blue-300">
+                                        Open folder in Drive
+                                    </a>
+                                </div>
+
+                                <!-- Expanded Videos List -->
+                                <div x-show="job.expanded" x-transition class="mt-3 pt-3 border-t border-gray-600 space-y-2">
+                                    <template x-for="video in (job.videos || [])" :key="video.id">
+                                        <div class="flex items-center justify-between bg-gray-600/30 rounded p-2 text-xs">
+                                            <div class="flex-1 min-w-0 mr-2">
+                                                <div class="text-gray-300">Video #<span x-text="video.video_number"></span></div>
+                                            </div>
+                                            <div class="flex items-center space-x-2 flex-shrink-0">
+                                                <span class="px-1.5 py-0.5 rounded text-xs"
+                                                      :class="{
+                                                          'bg-yellow-500/30 text-yellow-400': video.status === 'pending',
+                                                          'bg-blue-500/30 text-blue-400': video.status === 'processing',
+                                                          'bg-green-500/30 text-green-400': video.status === 'completed',
+                                                          'bg-red-500/30 text-red-400': video.status === 'failed'
+                                                      }"
+                                                      x-text="video.status">
+                                                </span>
+                                                <a x-show="video.drive_url" :href="video.drive_url" target="_blank" class="text-blue-400 hover:text-blue-300">
+                                                    Open
+                                                </a>
+                                            </div>
+                                        </div>
+                                    </template>
+                                </div>
+                            </div>
+                        </template>
+                        <div x-show="igReelJobs.length === 0" class="text-center text-gray-500 py-8">
+                            No IG Reel jobs found
+                        </div>
+                    </div>
+
                     <!-- Slideshow Pagination -->
                     <div x-show="queueTab === 'slideshow' && totalJobs > perPage" class="flex items-center justify-between pt-4 border-t border-gray-700">
                         <div class="text-sm text-gray-400">
@@ -697,6 +802,29 @@
                             <button
                                 @click="tiktokCopyNextPage"
                                 :disabled="tiktokCopyPage * perPage >= totalTikTokCopyBatches"
+                                class="px-3 py-1 bg-gray-700 rounded text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-600"
+                            >
+                                Next
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- IG Reels Pagination -->
+                    <div x-show="queueTab === 'ig-reels' && totalIgReelJobs > perPage" class="flex items-center justify-between pt-4 border-t border-gray-700">
+                        <div class="text-sm text-gray-400">
+                            Showing <span x-text="((igReelPage - 1) * perPage) + 1"></span>-<span x-text="Math.min(igReelPage * perPage, totalIgReelJobs)"></span> of <span x-text="totalIgReelJobs"></span>
+                        </div>
+                        <div class="flex space-x-2">
+                            <button
+                                @click="igReelPrevPage"
+                                :disabled="igReelPage === 1"
+                                class="px-3 py-1 bg-gray-700 rounded text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-600"
+                            >
+                                Previous
+                            </button>
+                            <button
+                                @click="igReelNextPage"
+                                :disabled="igReelPage * perPage >= totalIgReelJobs"
                                 class="px-3 py-1 bg-gray-700 rounded text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-600"
                             >
                                 Next
@@ -845,6 +973,12 @@
                 tiktokCopyPage: 1,
                 totalTikTokCopyBatches: 0,
 
+                // IG Reels state
+                igReelJobs: [],
+                igReelStats: { pending: 0, processing: 0, completed: 0, failed: 0 },
+                igReelPage: 1,
+                totalIgReelJobs: 0,
+
                 // Product Photos state
                 productCategories: [],
                 photoMessage: '',
@@ -875,6 +1009,7 @@
                             this.refreshJobs();
                             this.fetchQueueStats();
                             this.fetchVideoJobs();
+                            this.fetchIgReelJobs();
                             this.fetchProductPhotos();
                             this.fetchApiKeyStatus();
                         } else {
@@ -913,6 +1048,7 @@
                             this.refreshJobs();
                             this.fetchQueueStats();
                             this.fetchVideoJobs();
+                            this.fetchIgReelJobs();
                             this.fetchProductPhotos();
                             this.fetchApiKeyStatus();
                         } else {
@@ -1260,6 +1396,58 @@
                     if (this.tiktokCopyPage * this.perPage < this.totalTikTokCopyBatches) {
                         this.tiktokCopyPage++;
                         this.fetchTikTokCopyJobs();
+                    }
+                },
+
+                // IG Reels methods
+                async fetchIgReelJobs() {
+                    try {
+                        const offset = (this.igReelPage - 1) * this.perPage;
+                        const res = await fetch(`${API_BASE}/api/admin/ig-reel-jobs?limit=${this.perPage}&offset=${offset}`, {
+                            headers: { 'X-Admin-Token': this.token }
+                        });
+                        if (res.ok) {
+                            const data = await res.json();
+                            this.igReelJobs = (data.jobs || []).map(j => ({ ...j, expanded: false }));
+                            this.totalIgReelJobs = data.total || 0;
+                        }
+                    } catch (e) {
+                        console.error('Failed to fetch IG Reel jobs:', e);
+                    }
+                    this.fetchIgReelStats();
+                },
+
+                async fetchIgReelStats() {
+                    try {
+                        const res = await fetch(`${API_BASE}/api/admin/ig-reel-jobs?limit=1000`, {
+                            headers: { 'X-Admin-Token': this.token }
+                        });
+                        if (res.ok) {
+                            const data = await res.json();
+                            const allJobs = data.jobs || [];
+                            this.igReelStats = {
+                                pending: allJobs.filter(j => j.status === 'pending').length,
+                                processing: allJobs.filter(j => j.status === 'processing').length,
+                                completed: allJobs.filter(j => j.status === 'completed').length,
+                                failed: allJobs.filter(j => j.status === 'failed').length
+                            };
+                        }
+                    } catch (e) {
+                        console.error('Failed to fetch IG Reel stats:', e);
+                    }
+                },
+
+                igReelPrevPage() {
+                    if (this.igReelPage > 1) {
+                        this.igReelPage--;
+                        this.fetchIgReelJobs();
+                    }
+                },
+
+                igReelNextPage() {
+                    if (this.igReelPage * this.perPage < this.totalIgReelJobs) {
+                        this.igReelPage++;
+                        this.fetchIgReelJobs();
                     }
                 },
 

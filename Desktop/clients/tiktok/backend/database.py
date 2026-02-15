@@ -1633,6 +1633,19 @@ def list_ig_jobs(status: str = None, limit: int = 50, offset: int = 0) -> List[D
         return jobs
 
 
+def get_ig_jobs_count(status: str = None) -> int:
+    """Get total count of IG reel jobs for pagination."""
+    with get_db() as conn:
+        cursor = conn.cursor()
+        query = 'SELECT COUNT(*) as count FROM ig_jobs'
+        params = []
+        if status:
+            query += ' WHERE status = ?'
+            params.append(status)
+        cursor.execute(query, params)
+        return cursor.fetchone()['count']
+
+
 def update_ig_job_status(
     job_id: str,
     status: str,
