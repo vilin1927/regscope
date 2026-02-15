@@ -62,7 +62,7 @@ def download_reel(url: str, output_dir: str) -> str:
             timeout=30,
         )
         resp.raise_for_status()
-        data = resp.json()
+        raw = resp.json()
     except requests.exceptions.Timeout:
         raise InstagramScraperError("RapidAPI request timed out (30s)")
     except requests.exceptions.HTTPError as e:
@@ -71,20 +71,23 @@ def download_reel(url: str, output_dir: str) -> str:
     except Exception as e:
         raise InstagramScraperError(f"RapidAPI request failed: {e}")
 
+    # Response is wrapped: {"success": true, "data": {..., "medias": [...]}}
+    data = raw.get('data', raw)
+
     # Step 2: Extract video URL from response
     medias = data.get('medias', [])
     video_url = None
     for media in medias:
-        if media.get('type') == 'video' or media.get('url', '').endswith('.mp4'):
+        if media.get('type') == 'video' or '.mp4' in media.get('url', ''):
             video_url = media['url']
             break
     if not video_url and medias:
         video_url = medias[0].get('url')
     if not video_url:
-        raise InstagramScraperError(f"No video URL in API response: {json.dumps(data)[:300]}")
+        raise InstagramScraperError(f"No video URL in API response: {json.dumps(raw)[:300]}")
 
     # Step 3: Download the actual video file
-    reel_id = data.get('url', '').split('/')[-2] if data.get('url') else uuid.uuid4().hex[:10]
+    reel_id = data.get('shortcode') or data.get('url', '').split('/')[-2] if data.get('url') else uuid.uuid4().hex[:10]
     video_path = os.path.join(output_dir, f'reel_{reel_id}.mp4')
 
     try:
