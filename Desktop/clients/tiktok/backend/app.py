@@ -63,6 +63,18 @@ app.register_blueprint(tiktok_copy_bp)
 # Register Instagram Reel blueprint
 app.register_blueprint(ig_reel_bp)
 
+# JSON error handlers for consistent API responses
+@app.errorhandler(400)
+def bad_request(e):
+    return jsonify({'error': 'Bad request — invalid JSON or malformed input'}), 400
+
+@app.errorhandler(404)
+def not_found(e):
+    # Only return JSON for API routes
+    if request.path.startswith('/api/'):
+        return jsonify({'error': 'Not found'}), 404
+    return e
+
 # Frontend directory (relative to backend)
 FRONTEND_DIR = os.path.join(os.path.dirname(__file__), '..', 'frontend')
 
