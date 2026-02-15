@@ -38,6 +38,9 @@ def download_reel(url: str, output_dir: str) -> str:
     os.makedirs(output_dir, exist_ok=True)
     output_template = os.path.join(output_dir, 'reel_%(id)s.%(ext)s')
 
+    # Look for cookies file for Instagram authentication
+    cookies_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'instagram_cookies.txt')
+
     cmd = [
         'yt-dlp',
         '--no-playlist',
@@ -45,8 +48,15 @@ def download_reel(url: str, output_dir: str) -> str:
         '--merge-output-format', 'mp4',
         '-o', output_template,
         '--no-check-certificates',
-        url
     ]
+
+    if os.path.exists(cookies_path):
+        cmd.extend(['--cookies', cookies_path])
+        logger.info(f"Using cookies from: {cookies_path}")
+    else:
+        logger.warning("No cookies file found - Instagram may block the download")
+
+    cmd.append(url)
 
     logger.info(f"Downloading reel: {url[:60]}...")
 
