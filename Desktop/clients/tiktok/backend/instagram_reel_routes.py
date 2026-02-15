@@ -145,12 +145,17 @@ def upload_assets(character_id):
 
         # Validate file content matches expected type
         if is_video:
-            result = subprocess.run(
-                ['ffprobe', '-v', 'error', file_path],
-                capture_output=True, timeout=10
-            )
-            if result.returncode != 0:
-                logger.warning(f"Invalid video file skipped: {original_name}")
+            try:
+                result = subprocess.run(
+                    ['ffprobe', '-v', 'error', file_path],
+                    capture_output=True, timeout=10
+                )
+                if result.returncode != 0:
+                    logger.warning(f"Invalid video file skipped: {original_name}")
+                    os.remove(file_path)
+                    continue
+            except subprocess.TimeoutExpired:
+                logger.warning(f"ffprobe timeout on video file: {original_name}")
                 os.remove(file_path)
                 continue
         else:
@@ -309,6 +314,17 @@ def upload_format():
     if not format_name:
         return jsonify({'error': 'Format name is required'}), 400
 
+    # Sanitize format name for filesystem safety
+    safe_format_name = secure_filename(format_name)
+    if not safe_format_name:
+        return jsonify({'error': 'Invalid format name (contains only special characters)'}), 400
+
+    # Check for duplicate format name
+    existing_formats = list_ig_formats()
+    for ef in existing_formats:
+        if ef.get('format_name') == safe_format_name:
+            return jsonify({'error': f'Format "{safe_format_name}" already exists'}), 409
+
     ext = file.filename.rsplit('.', 1)[-1].lower() if '.' in file.filename else ''
     if ext not in ('mp4', 'mov', 'webm', 'mkv'):
         return jsonify({'error': 'Only video files (mp4, mov, webm, mkv) are allowed'}), 400
@@ -331,7 +347,7 @@ def upload_format():
 
         template = create_format_from_upload(
             video_path=tmp.name,
-            format_name=format_name,
+            format_name=safe_format_name,
             output_base_dir=FORMATS_DIR,
             api_key_manager=api_key_manager
         )
@@ -350,10 +366,10 @@ def upload_format():
             clips_json=json.dumps(template['clips'])
         )
 
-        logger.info(f"Created format from upload: {format_name} ({format_id[:8]})")
+        logger.info(f"Created format from upload: {safe_format_name} ({format_id[:8]})")
         return jsonify({
             'id': format_id,
-            'format_name': format_name,
+            'format_name': safe_format_name,
             'total_duration': template['total_duration'],
             'clips': template['clips']
         }), 201
