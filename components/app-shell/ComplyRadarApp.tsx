@@ -2,8 +2,6 @@
 
 import { useState, useEffect } from "react";
 import { AnimatePresence } from "framer-motion";
-import { ShieldAlert, Lightbulb, Mail, Settings } from "lucide-react";
-import { useTranslations } from "next-intl";
 import { MobileGate } from "./MobileGate";
 import { Sidebar } from "./Sidebar";
 import { Header } from "./Header";
@@ -15,10 +13,9 @@ import { ScanHistoryScreen } from "../scan-history/ScanHistoryScreen";
 import { AuthScreen } from "../auth/AuthScreen";
 import { SettingsScreen } from "../settings/SettingsScreen";
 import { LegalScreen } from "../legal/LegalScreen";
-import { InPrepScreen } from "../mockups/InPrepScreen";
-import { RiskAnalysisMockup } from "../mockups/RiskAnalysisMockup";
-import { NewsletterMockup } from "../mockups/NewsletterMockup";
-import { RecommendationsMockup } from "../mockups/RecommendationsMockup";
+import { RiskAnalysisScreen } from "../risk-analysis/RiskAnalysisScreen";
+import { RecommendationsScreen } from "../recommendations/RecommendationsScreen";
+import { NewsletterScreen } from "../newsletter/NewsletterScreen";
 import { useAuth } from "@/hooks/useAuth";
 import { useScanHistory } from "@/hooks/useScanHistory";
 import { useProcessing } from "@/hooks/useProcessing";
@@ -48,7 +45,6 @@ export function ComplyRadarApp() {
     }
   };
 
-  const t = useTranslations("Mockups");
   const auth = useAuth();
   const scans = useScanHistory(auth.userId, auth.isGuest);
 
@@ -235,35 +231,26 @@ export function ComplyRadarApp() {
             )}
 
             {currentScreen === "risk-analysis" && (
-              <InPrepScreen
+              <RiskAnalysisScreen
                 key="risk-analysis"
-                icon={ShieldAlert}
-                color="red"
-                title={t("riskAnalysis.title")}
-                description={t("riskAnalysis.description")}
-                mockup={<RiskAnalysisMockup regulations={hasResults ? scans.matchedRegulations : undefined} />}
+                scanId={scans.currentScanId ?? undefined}
+                hasResults={hasResults}
               />
             )}
 
             {currentScreen === "newsletter" && (
-              <InPrepScreen
+              <NewsletterScreen
                 key="newsletter"
-                icon={Mail}
-                color="blue"
-                title={t("newsletter.title")}
-                description={t("newsletter.description")}
-                mockup={<NewsletterMockup regulations={hasResults ? scans.matchedRegulations : undefined} />}
+                userId={auth.userId}
+                isGuest={auth.isGuest}
               />
             )}
 
             {currentScreen === "recommendations" && (
-              <InPrepScreen
+              <RecommendationsScreen
                 key="recommendations"
-                icon={Lightbulb}
-                color="amber"
-                title={t("recommendations.title")}
-                description={t("recommendations.description")}
-                mockup={<RecommendationsMockup regulations={hasResults ? scans.matchedRegulations : undefined} />}
+                scanId={scans.currentScanId ?? undefined}
+                hasResults={hasResults}
               />
             )}
 

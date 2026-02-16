@@ -83,21 +83,18 @@ export function Sidebar({
         <NavItem
           icon={ShieldAlert}
           label={t("riskAnalysis")}
-          badge={t("inPreparation")}
           active={currentScreen === "risk-analysis"}
           onClick={() => onNavigate("risk-analysis")}
         />
         <NavItem
           icon={Lightbulb}
           label={t("recommendations")}
-          badge={t("inPreparation")}
           active={currentScreen === "recommendations"}
           onClick={() => onNavigate("recommendations")}
         />
         <NavItem
           icon={Mail}
           label={t("newsletter")}
-          badge={t("inPreparation")}
           active={currentScreen === "newsletter"}
           onClick={() => onNavigate("newsletter")}
         />

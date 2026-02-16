@@ -13,8 +13,7 @@
     "recommendations": "Recommendations",
     "newsletter": "Newsletter",
     "system": "SYSTEM",
-    "settings": "Settings",
-    "inPreparation": "In Preparation"
+    "settings": "Settings"
   },
   "Dashboard": {
     "welcome": "Welcome to ComplyRadar",
@@ -327,35 +326,73 @@
     "legal": "Legal",
     "confirmLogout": "Are you sure you want to sign out?"
   },
-  "Mockups": {
-    "inPreparation": "In Preparation",
-    "comingInV2": "Available in Version 2",
-    "riskAnalysis": {
-      "title": "Risk Analysis",
-      "description": "AI-powered analysis of your business profile against each matched regulation. Compliance gaps, deadlines, and penalty exposure categorized by severity.",
-      "regulation": "Regulation",
-      "severity": "Severity",
-      "gap": "Compliance Gap",
-      "deadline": "Deadline",
-      "penalty": "Potential Penalty"
-    },
-    "newsletter": {
-      "title": "Regulation Newsletter",
-      "description": "Personalized email digest with changes to regulations relevant to your business.",
-      "weeklyUpdate": "Your Weekly Regulation Update",
-      "weekly": "Weekly",
-      "monthly": "Monthly",
-      "frequency": "Frequency",
-      "sendTest": "Send Test Newsletter"
-    },
-    "recommendations": {
-      "title": "Recommendations",
-      "description": "Prioritized action list based on your scan results. Compliance steps, recommended insurance, and timeline.",
-      "immediate": "Immediate",
-      "soon": "Soon",
-      "planned": "Planned",
-      "insurance": "Insurance"
+  "RiskAnalysis": {
+    "title": "Risk Analysis",
+    "description": "AI-powered analysis of your business profile against each matched regulation. Compliance gaps, deadlines, and penalty exposure categorized by severity.",
+    "noScanResults": "Run a compliance scan first to generate a risk analysis.",
+    "loading": "Checking for existing analysis...",
+    "generating": "Generating risk analysis...",
+    "generatingDesc": "Your compliance gaps are being analyzed. This may take up to 60 seconds.",
+    "readyToAnalyze": "Risk analysis ready",
+    "readyToAnalyzeDesc": "Analyze your compliance gaps, deadlines, and penalty exposure based on your scan results.",
+    "runAnalysis": "Run Risk Analysis",
+    "foundIssues": "{count} risks identified",
+    "regulation": "Regulation",
+    "severityCol": "Severity",
+    "gap": "Compliance Gap",
+    "deadline": "Deadline",
+    "penalty": "Potential Penalty",
+    "mitigations": "Recommended Actions",
+    "severity": {
+      "kritisch": "Critical",
+      "hoch": "High",
+      "mittel": "Medium",
+      "niedrig": "Low"
     }
+  },
+  "Recommendations": {
+    "title": "Recommendations",
+    "description": "Prioritized action list based on your scan results. Compliance steps, recommended insurance, and timeline.",
+    "noScanResults": "Run a compliance scan first to get recommendations.",
+    "loading": "Checking for existing recommendations...",
+    "generating": "Generating recommendations...",
+    "generatingDesc": "Your prioritized action list is being created. This may take up to 60 seconds.",
+    "readyToGenerate": "Recommendations ready",
+    "readyToGenerateDesc": "Generate a prioritized action list based on your scan results.",
+    "generateRecommendations": "Generate Recommendations",
+    "foundActions": "{count} actions recommended",
+    "riskTip": "Tip: Run the Risk Analysis first for more detailed recommendations.",
+    "action": "action",
+    "actions": "actions",
+    "insurance": "Insurance",
+    "timeline": {
+      "sofort": "Immediate",
+      "kurzfristig": "Short-term",
+      "geplant": "Planned"
+    }
+  },
+  "Newsletter": {
+    "title": "Regulation Newsletter",
+    "description": "Personalized email digest with changes to regulations relevant to your business.",
+    "authRequired": "Sign in to configure the newsletter.",
+    "loading": "Loading preferences...",
+    "saving": "Saving...",
+    "optIn": "Subscribe to Newsletter",
+    "optInDesc": "Receive regular updates on regulation changes in your selected areas.",
+    "frequency": "Frequency",
+    "weekly": "Weekly",
+    "monthly": "Monthly",
+    "areas": "Compliance Areas",
+    "areasDesc": "Select the areas you want to be informed about.",
+    "preview": "Preview",
+    "weeklyUpdate": "Your Weekly Regulation Update",
+    "monthlyUpdate": "Your Monthly Regulation Update",
+    "previewItem1": "ArbSchG — New Risk Assessment Requirements",
+    "previewTag1": "Deadline",
+    "previewItem2": "DGUV Rule 109-606 — Implementation Deadline Approaching",
+    "previewTag2": "Update",
+    "previewItem3": "VerpackG — New Registration Requirements",
+    "previewTag3": "Info"
   },
   "Mobile": {
     "title": "Desktop View Recommended",

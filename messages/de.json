@@ -13,8 +13,7 @@
     "recommendations": "Empfehlungen",
     "newsletter": "Newsletter",
     "system": "SYSTEM",
-    "settings": "Einstellungen",
-    "inPreparation": "In Vorbereitung"
+    "settings": "Einstellungen"
   },
   "Dashboard": {
     "welcome": "Willkommen bei ComplyRadar",
@@ -327,35 +326,73 @@
     "legal": "Rechtliches",
     "confirmLogout": "Möchten Sie sich wirklich abmelden?"
   },
-  "Mockups": {
-    "inPreparation": "In Vorbereitung",
-    "comingInV2": "Verfügbar in Version 2",
-    "riskAnalysis": {
-      "title": "Risikoanalyse",
-      "description": "KI-gestützte Analyse Ihres Unternehmensprofils gegen jede relevante Vorschrift. Compliance-Lücken, Fristen und Bußgeldrisiken werden nach Schweregrad kategorisiert.",
-      "regulation": "Vorschrift",
-      "severity": "Schweregrad",
-      "gap": "Compliance-Lücke",
-      "deadline": "Frist",
-      "penalty": "Mögliches Bußgeld"
-    },
-    "newsletter": {
-      "title": "Vorschriften-Newsletter",
-      "description": "Personalisierter E-Mail-Digest mit Änderungen an Vorschriften, die für Ihren Betrieb relevant sind.",
-      "weeklyUpdate": "Ihr wöchentliches Vorschriften-Update",
-      "weekly": "Wöchentlich",
-      "monthly": "Monatlich",
-      "frequency": "Häufigkeit",
-      "sendTest": "Test-Newsletter senden"
-    },
-    "recommendations": {
-      "title": "Empfehlungen",
-      "description": "Priorisierte Maßnahmenliste basierend auf Ihren Scan-Ergebnissen. Compliance-Schritte, empfohlene Versicherungen und Zeitplan.",
-      "immediate": "Sofort",
-      "soon": "Bald",
-      "planned": "Geplant",
-      "insurance": "Versicherung"
+  "RiskAnalysis": {
+    "title": "Risikoanalyse",
+    "description": "KI-gestützte Analyse Ihres Unternehmensprofils gegen jede relevante Vorschrift. Compliance-Lücken, Fristen und Bußgeldrisiken werden nach Schweregrad kategorisiert.",
+    "noScanResults": "Führen Sie zuerst einen Compliance-Scan durch, um eine Risikoanalyse zu erstellen.",
+    "loading": "Prüfe vorhandene Analyse...",
+    "generating": "Risikoanalyse wird erstellt...",
+    "generatingDesc": "Ihre Compliance-Lücken werden analysiert. Dies kann bis zu 60 Sekunden dauern.",
+    "readyToAnalyze": "Risikoanalyse bereit",
+    "readyToAnalyzeDesc": "Analysieren Sie Ihre Compliance-Lücken, Fristen und Bußgeldrisiken basierend auf Ihren Scan-Ergebnissen.",
+    "runAnalysis": "Risikoanalyse starten",
+    "foundIssues": "{count} Risiken identifiziert",
+    "regulation": "Vorschrift",
+    "severityCol": "Schweregrad",
+    "gap": "Compliance-Lücke",
+    "deadline": "Frist",
+    "penalty": "Mögliches Bußgeld",
+    "mitigations": "Empfohlene Maßnahmen",
+    "severity": {
+      "kritisch": "Kritisch",
+      "hoch": "Hoch",
+      "mittel": "Mittel",
+      "niedrig": "Niedrig"
     }
+  },
+  "Recommendations": {
+    "title": "Empfehlungen",
+    "description": "Priorisierte Maßnahmenliste basierend auf Ihren Scan-Ergebnissen. Compliance-Schritte, empfohlene Versicherungen und Zeitplan.",
+    "noScanResults": "Führen Sie zuerst einen Compliance-Scan durch, um Empfehlungen zu erhalten.",
+    "loading": "Prüfe vorhandene Empfehlungen...",
+    "generating": "Empfehlungen werden erstellt...",
+    "generatingDesc": "Ihre priorisierte Maßnahmenliste wird erstellt. Dies kann bis zu 60 Sekunden dauern.",
+    "readyToGenerate": "Empfehlungen bereit",
+    "readyToGenerateDesc": "Erstellen Sie eine priorisierte Maßnahmenliste basierend auf Ihren Scan-Ergebnissen.",
+    "generateRecommendations": "Empfehlungen erstellen",
+    "foundActions": "{count} Maßnahmen empfohlen",
+    "riskTip": "Tipp: Führen Sie zuerst die Risikoanalyse durch, um detailliertere Empfehlungen zu erhalten.",
+    "action": "Maßnahme",
+    "actions": "Maßnahmen",
+    "insurance": "Versicherung",
+    "timeline": {
+      "sofort": "Sofort",
+      "kurzfristig": "Kurzfristig",
+      "geplant": "Geplant"
+    }
+  },
+  "Newsletter": {
+    "title": "Vorschriften-Newsletter",
+    "description": "Personalisierter E-Mail-Digest mit Änderungen an Vorschriften, die für Ihren Betrieb relevant sind.",
+    "authRequired": "Melden Sie sich an, um den Newsletter zu konfigurieren.",
+    "loading": "Einstellungen werden geladen...",
+    "saving": "Wird gespeichert...",
+    "optIn": "Newsletter abonnieren",
+    "optInDesc": "Erhalten Sie regelmäßige Updates zu Vorschriftsänderungen in Ihren ausgewählten Bereichen.",
+    "frequency": "Häufigkeit",
+    "weekly": "Wöchentlich",
+    "monthly": "Monatlich",
+    "areas": "Compliance-Bereiche",
+    "areasDesc": "Wählen Sie die Bereiche, über die Sie informiert werden möchten.",
+    "preview": "Vorschau",
+    "weeklyUpdate": "Ihr wöchentliches Vorschriften-Update",
+    "monthlyUpdate": "Ihr monatliches Vorschriften-Update",
+    "previewItem1": "ArbSchG — Neue Anforderungen an Gefährdungsbeurteilung",
+    "previewTag1": "Frist",
+    "previewItem2": "DGUV Regel 109-606 — Umsetzungsfrist nähert sich",
+    "previewTag2": "Aktualisierung",
+    "previewItem3": "VerpackG — Neue Registrierungspflichten",
+    "previewTag3": "Info"
   },
   "Mobile": {
     "title": "Desktop-Ansicht empfohlen",
