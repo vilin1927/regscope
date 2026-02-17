@@ -132,13 +132,12 @@ export async function POST(request: Request) {
           ? allRegulations.filter((r) => userAreas.includes(r.category))
           : allRegulations;
 
-      // Sort by risk level and take top 5
+      // Sort by risk level (highest first)
       const sorted = [...filteredRegulations].sort(
         (a, b) => (riskOrder[a.riskLevel] ?? 2) - (riskOrder[b.riskLevel] ?? 2)
       );
-      const top5 = sorted.slice(0, 5);
 
-      const updates = top5.map((r) => ({
+      const updates = sorted.map((r) => ({
         title: r.name,
         category: (areaLabels[locale]?.[r.category] || r.category),
         riskLevel: r.riskLevel as "hoch" | "mittel" | "niedrig",
