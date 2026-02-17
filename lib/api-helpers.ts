@@ -79,7 +79,7 @@ export async function callOpenAI(
       response_format: { type: "json_object" },
       temperature: 0.2,
     };
-    if (maxTokens) body.max_tokens = maxTokens;
+    if (maxTokens) body.max_completion_tokens = maxTokens;
 
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
