@@ -8,6 +8,8 @@ import {
   Lightbulb,
   Mail,
   Settings,
+  Send,
+  Users,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { NavItem } from "./NavItem";
@@ -98,6 +100,26 @@ export function Sidebar({
           active={currentScreen === "newsletter"}
           onClick={() => onNavigate("newsletter")}
         />
+
+        {userEmail === process.env.NEXT_PUBLIC_ADMIN_EMAIL && (
+          <>
+            <p className="px-3 pt-4 pb-1 text-[10px] font-bold uppercase tracking-widest text-gray-400">
+              {t("admin")}
+            </p>
+            <NavItem
+              icon={Send}
+              label={t("newsletterSend")}
+              active={currentScreen === "admin-newsletter"}
+              onClick={() => onNavigate("admin-newsletter")}
+            />
+            <NavItem
+              icon={Users}
+              label={t("adminUsers")}
+              active={currentScreen === "admin-users"}
+              onClick={() => onNavigate("admin-users")}
+            />
+          </>
+        )}
 
         <p className="px-3 pt-4 pb-1 text-[10px] font-bold uppercase tracking-widest text-gray-400">
           {t("system")}

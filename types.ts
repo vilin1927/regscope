@@ -8,6 +8,8 @@ export type Screen =
   | "risk-analysis"
   | "newsletter"
   | "recommendations"
+  | "admin-newsletter"
+  | "admin-users"
   | "settings"
   | "impressum"
   | "datenschutz";

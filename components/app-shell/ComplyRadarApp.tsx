@@ -16,6 +16,8 @@ import { LegalScreen } from "../legal/LegalScreen";
 import { RiskAnalysisScreen } from "../risk-analysis/RiskAnalysisScreen";
 import { RecommendationsScreen } from "../recommendations/RecommendationsScreen";
 import { NewsletterScreen } from "../newsletter/NewsletterScreen";
+import { AdminNewsletterScreen } from "../admin/AdminNewsletterScreen";
+import { AdminUsersScreen } from "../admin/AdminUsersScreen";
 import { useAuth } from "@/hooks/useAuth";
 import { useScanHistory } from "@/hooks/useScanHistory";
 import { useProcessing } from "@/hooks/useProcessing";
@@ -252,6 +254,14 @@ export function ComplyRadarApp() {
                 scanId={scans.currentScanId ?? undefined}
                 hasResults={hasResults}
               />
+            )}
+
+            {currentScreen === "admin-newsletter" && (
+              <AdminNewsletterScreen key="admin-newsletter" />
+            )}
+
+            {currentScreen === "admin-users" && (
+              <AdminUsersScreen key="admin-users" />
             )}
 
             {currentScreen === "settings" && (

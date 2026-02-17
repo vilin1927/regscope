@@ -19,6 +19,8 @@ const screenTitleKeys: Record<Screen, string> = {
   "risk-analysis": "RiskAnalysis.title",
   newsletter: "Newsletter.title",
   recommendations: "Recommendations.title",
+  "admin-newsletter": "Admin.newsletter",
+  "admin-users": "Admin.users",
   settings: "Settings.title",
   impressum: "Legal.impressum",
   datenschutz: "Legal.datenschutz",
