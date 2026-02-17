@@ -28,7 +28,7 @@ export async function POST(request: Request) {
       body = await request.json();
     } catch {
       return NextResponse.json(
-        { error: "Invalid JSON in request body" },
+        { error: "Ungültiges JSON im Anfragekörper" },
         { status: 400 }
       );
     }
@@ -43,13 +43,13 @@ export async function POST(request: Request) {
         "unknown";
       if (isRateLimited(ip)) {
         return NextResponse.json(
-          { error: "Too many requests. Please try again later." },
+          { error: "Zu viele Anfragen. Bitte versuchen Sie es später erneut." },
           { status: 429 }
         );
       }
     }
     if (!scanId) {
-      return NextResponse.json({ error: "Missing scanId" }, { status: 400 });
+      return NextResponse.json({ error: "Scan-ID fehlt" }, { status: 400 });
     }
 
     // Verify scan ownership
@@ -62,7 +62,7 @@ export async function POST(request: Request) {
 
     if (scanError || !scan) {
       return NextResponse.json(
-        { error: "Scan not found or access denied" },
+        { error: "Scan nicht gefunden oder Zugriff verweigert" },
         { status: 404 }
       );
     }
@@ -136,7 +136,7 @@ export async function POST(request: Request) {
 
     if (allNonCompliant.length === 0) {
       return NextResponse.json(
-        { error: "No compliance gaps found — all regulations fulfilled" },
+        { error: "Keine Compliance-Lücken gefunden — alle Vorschriften erfüllt" },
         { status: 400 }
       );
     }
@@ -252,7 +252,7 @@ ${JSON.stringify(nonCompliant)}${riskContextTruncated}`;
       );
       await supabase.from("recommendations").delete().eq("id", placeholder.id);
       return NextResponse.json(
-        { error: "Invalid response format from AI" },
+        { error: "Ungültiges Antwortformat von der KI" },
         { status: 502 }
       );
     }
@@ -260,7 +260,7 @@ ${JSON.stringify(nonCompliant)}${riskContextTruncated}`;
     if (!parsed.items || !Array.isArray(parsed.items)) {
       await supabase.from("recommendations").delete().eq("id", placeholder.id);
       return NextResponse.json(
-        { error: "Invalid recommendations format" },
+        { error: "Ungültiges Empfehlungsformat" },
         { status: 502 }
       );
     }
@@ -323,7 +323,7 @@ ${JSON.stringify(nonCompliant)}${riskContextTruncated}`;
     return NextResponse.json(
       {
         error:
-          error instanceof Error ? error.message : "Internal server error",
+          error instanceof Error ? error.message : "Interner Serverfehler",
       },
       { status: 500 }
     );

@@ -42,7 +42,7 @@ export async function createSupabaseServerClient() {
 export async function requireAuth(supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>) {
   const { data: { session } } = await supabase.auth.getSession();
   if (!session?.user?.id) {
-    return { userId: null, error: "Authentication required" };
+    return { userId: null, error: "Anmeldung erforderlich" };
   }
   return { userId: session.user.id, error: null };
 }
@@ -57,7 +57,7 @@ export async function callOpenAI(
   const model = process.env.OPENAI_MODEL || "gpt-4o";
 
   if (!apiKey) {
-    return { content: "", error: "OpenAI API key not configured" };
+    return { content: "", error: "OpenAI API-Schlüssel nicht konfiguriert" };
   }
 
   const controller = new AbortController();
@@ -94,20 +94,20 @@ export async function callOpenAI(
     if (!response.ok) {
       const errorBody = await response.text();
       console.error("OpenAI API error:", response.status, errorBody);
-      return { content: "", error: `OpenAI API error: ${response.status}` };
+      return { content: "", error: `OpenAI API-Fehler: ${response.status}` };
     }
 
     const completion = await response.json();
     const content = completion.choices?.[0]?.message?.content;
 
     if (!content) {
-      return { content: "", error: "Empty response from OpenAI" };
+      return { content: "", error: "Leere Antwort von OpenAI" };
     }
 
     return { content, error: null };
   } catch (err) {
     if (err instanceof Error && err.name === "AbortError") {
-      return { content: "", error: "Request timed out. Please try again." };
+      return { content: "", error: "Zeitüberschreitung. Bitte versuchen Sie es erneut." };
     }
     throw err;
   } finally {

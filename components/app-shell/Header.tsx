@@ -47,7 +47,7 @@ export function Header({ currentScreen }: HeaderProps) {
         className="flex items-center gap-2 text-xs font-medium px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors"
       >
         <span className="text-base leading-none">{locale === "de" ? "🇬🇧" : "🇩🇪"}</span>
-        <span>{locale === "de" ? "English" : "Deutsch"}</span>
+        <span>{locale === "de" ? "EN" : "DE"}</span>
       </button>
     </header>
   );

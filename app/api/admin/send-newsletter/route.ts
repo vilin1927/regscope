@@ -14,7 +14,7 @@ export async function POST(request: Request) {
     const adminApiKey = process.env.ADMIN_API_KEY;
     if (!adminApiKey) {
       return NextResponse.json(
-        { error: "Admin API key not configured" },
+        { error: "Admin API-Schlüssel nicht konfiguriert" },
         { status: 500 }
       );
     }
@@ -35,7 +35,7 @@ export async function POST(request: Request) {
   } catch (error) {
     console.error("Admin send newsletter proxy error:", error);
     return NextResponse.json(
-      { error: "Internal server error" },
+      { error: "Interner Serverfehler" },
       { status: 500 }
     );
   }

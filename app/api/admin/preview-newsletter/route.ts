@@ -59,7 +59,7 @@ export async function POST(request: Request) {
 
     if (!sub) {
       return NextResponse.json(
-        { error: "No subscriber found" },
+        { error: "Kein Abonnent gefunden" },
         { status: 404 }
       );
     }
@@ -144,7 +144,7 @@ export async function POST(request: Request) {
   } catch (error) {
     console.error("Admin preview newsletter error:", error);
     return NextResponse.json(
-      { error: "Internal server error" },
+      { error: "Interner Serverfehler" },
       { status: 500 }
     );
   }

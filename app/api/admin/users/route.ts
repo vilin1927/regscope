@@ -16,7 +16,7 @@ export async function GET() {
     if (usersError) {
       console.error("Admin users fetch error:", usersError);
       return NextResponse.json(
-        { error: "Failed to fetch users" },
+        { error: "Benutzer konnten nicht geladen werden" },
         { status: 500 }
       );
     }
@@ -69,7 +69,7 @@ export async function GET() {
   } catch (error) {
     console.error("Admin users error:", error);
     return NextResponse.json(
-      { error: "Internal server error" },
+      { error: "Interner Serverfehler" },
       { status: 500 }
     );
   }

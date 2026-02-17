@@ -33,7 +33,7 @@ export async function POST(request: Request) {
     const adminEmail = process.env.ADMIN_EMAIL;
     if (!adminEmail) {
       return NextResponse.json(
-        { error: "Admin email not configured" },
+        { error: "Admin-E-Mail nicht konfiguriert" },
         { status: 500 }
       );
     }
@@ -42,13 +42,13 @@ export async function POST(request: Request) {
     const authHeader = request.headers.get("authorization");
     const adminKey = process.env.ADMIN_API_KEY;
     if (!adminKey || authHeader !== `Bearer ${adminKey}`) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return NextResponse.json({ error: "Nicht autorisiert" }, { status: 401 });
     }
 
     const resendApiKey = process.env.RESEND_API_KEY;
     if (!resendApiKey) {
       return NextResponse.json(
-        { error: "Resend API key not configured" },
+        { error: "Resend API-Schlüssel nicht konfiguriert" },
         { status: 500 }
       );
     }
@@ -56,7 +56,7 @@ export async function POST(request: Request) {
     const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
     if (!serviceRoleKey) {
       return NextResponse.json(
-        { error: "Service role key not configured" },
+        { error: "Service-Role-Schlüssel nicht konfiguriert" },
         { status: 500 }
       );
     }
@@ -77,13 +77,13 @@ export async function POST(request: Request) {
     if (fetchError) {
       console.error("Failed to fetch subscribers:", fetchError);
       return NextResponse.json(
-        { error: "Failed to fetch subscribers" },
+        { error: "Abonnenten konnten nicht geladen werden" },
         { status: 500 }
       );
     }
 
     if (!subscribers || subscribers.length === 0) {
-      return NextResponse.json({ sent: 0, message: "No subscribers" });
+      return NextResponse.json({ sent: 0, message: "Keine Abonnenten" });
     }
 
     const dashboardUrl =
@@ -210,7 +210,7 @@ export async function POST(request: Request) {
   } catch (error) {
     console.error("Send newsletter error:", error);
     return NextResponse.json(
-      { error: "Internal server error" },
+      { error: "Interner Serverfehler" },
       { status: 500 }
     );
   }

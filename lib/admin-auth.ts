@@ -21,7 +21,7 @@ export async function requireAdmin() {
   } = await supabase.auth.getUser();
   if (user?.email !== process.env.ADMIN_EMAIL) {
     return {
-      error: NextResponse.json({ error: "Forbidden" }, { status: 403 }),
+      error: NextResponse.json({ error: "Zugriff verweigert" }, { status: 403 }),
     };
   }
 
@@ -29,7 +29,7 @@ export async function requireAdmin() {
   if (!serviceRoleKey) {
     return {
       error: NextResponse.json(
-        { error: "Service role key not configured" },
+        { error: "Service-Role-Schlüssel nicht konfiguriert" },
         { status: 500 }
       ),
     };

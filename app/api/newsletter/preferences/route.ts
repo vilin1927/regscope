@@ -25,7 +25,7 @@ export async function GET(request: Request) {
       "unknown";
     if (isRateLimited(ip)) {
       return NextResponse.json(
-        { error: "Too many requests" },
+        { error: "Zu viele Anfragen" },
         { status: 429 }
       );
     }
@@ -61,7 +61,7 @@ export async function GET(request: Request) {
   } catch (error) {
     console.error("Newsletter preferences GET error:", error);
     return NextResponse.json(
-      { error: "Internal server error" },
+      { error: "Interner Serverfehler" },
       { status: 500 }
     );
   }
@@ -75,7 +75,7 @@ export async function PUT(request: Request) {
       "unknown";
     if (isRateLimited(ip)) {
       return NextResponse.json(
-        { error: "Too many requests" },
+        { error: "Zu viele Anfragen" },
         { status: 429 }
       );
     }
@@ -91,7 +91,7 @@ export async function PUT(request: Request) {
       body = await request.json();
     } catch {
       return NextResponse.json(
-        { error: "Invalid JSON" },
+        { error: "Ungültiges JSON" },
         { status: 400 }
       );
     }
@@ -130,7 +130,7 @@ export async function PUT(request: Request) {
     if (upsertError) {
       console.error("Newsletter preferences upsert error:", upsertError);
       return NextResponse.json(
-        { error: "Failed to save preferences" },
+        { error: "Einstellungen konnten nicht gespeichert werden" },
         { status: 500 }
       );
     }
@@ -139,7 +139,7 @@ export async function PUT(request: Request) {
   } catch (error) {
     console.error("Newsletter preferences PUT error:", error);
     return NextResponse.json(
-      { error: "Internal server error" },
+      { error: "Interner Serverfehler" },
       { status: 500 }
     );
   }

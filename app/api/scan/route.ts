@@ -68,7 +68,7 @@ function validateResponse(
 ): MatchedRegulation[] {
   const data = parsed as { regulations?: unknown[] };
   if (!data.regulations || !Array.isArray(data.regulations)) {
-    throw new Error("Response missing 'regulations' array");
+    throw new Error("Antwort enthält kein 'regulations'-Array");
   }
 
   const results: MatchedRegulation[] = [];
@@ -113,7 +113,7 @@ export async function POST(request: Request) {
     const ip = request.headers.get("x-forwarded-for") ?? request.headers.get("x-real-ip") ?? "unknown";
     if (isRateLimited(ip)) {
       return NextResponse.json(
-        { error: "Too many requests. Please try again later." },
+        { error: "Zu viele Anfragen. Bitte versuchen Sie es später erneut." },
         { status: 429 }
       );
     }
@@ -135,7 +135,7 @@ export async function POST(request: Request) {
 
     if (!apiKey) {
       return NextResponse.json(
-        { error: "OpenAI API key not configured" },
+        { error: "OpenAI API-Schlüssel nicht konfiguriert" },
         { status: 500 }
       );
     }
@@ -145,7 +145,7 @@ export async function POST(request: Request) {
       body = await request.json();
     } catch {
       return NextResponse.json(
-        { error: "Invalid JSON in request body" },
+        { error: "Ungültiges JSON im Anfragekörper" },
         { status: 400 }
       );
     }
@@ -154,7 +154,7 @@ export async function POST(request: Request) {
 
     if (!profile || typeof profile !== "object") {
       return NextResponse.json(
-        { error: "Missing business profile" },
+        { error: "Unternehmensprofil fehlt" },
         { status: 400 }
       );
     }
@@ -164,7 +164,7 @@ export async function POST(request: Request) {
     const missingFields = REQUIRED_PROFILE_FIELDS.filter((f) => !profileObj[f]);
     if (missingFields.length > 0) {
       return NextResponse.json(
-        { error: `Missing required fields: ${missingFields.join(", ")}` },
+        { error: `Fehlende Pflichtfelder: ${missingFields.join(", ")}` },
         { status: 400 }
       );
     }
@@ -242,7 +242,7 @@ ${JSON.stringify(compactRegs, null, 2)}`;
     } catch (err) {
       if (err instanceof Error && err.name === "AbortError") {
         return NextResponse.json(
-          { error: "OpenAI request timed out. Please try again." },
+          { error: "OpenAI-Anfrage zeitüberschritten. Bitte versuchen Sie es erneut." },
           { status: 504 }
         );
       }
@@ -255,7 +255,7 @@ ${JSON.stringify(compactRegs, null, 2)}`;
       const errorBody = await response.text();
       console.error("OpenAI API error:", response.status, errorBody);
       return NextResponse.json(
-        { error: `OpenAI API error: ${response.status}` },
+        { error: `OpenAI API-Fehler: ${response.status}` },
         { status: 502 }
       );
     }
@@ -265,7 +265,7 @@ ${JSON.stringify(compactRegs, null, 2)}`;
 
     if (!content) {
       return NextResponse.json(
-        { error: "Empty response from OpenAI" },
+        { error: "Leere Antwort von OpenAI" },
         { status: 502 }
       );
     }
@@ -276,7 +276,7 @@ ${JSON.stringify(compactRegs, null, 2)}`;
     } catch {
       console.error("Failed to parse OpenAI response:", content.slice(0, 200));
       return NextResponse.json(
-        { error: "Invalid response format from AI" },
+        { error: "Ungültiges Antwortformat von der KI" },
         { status: 502 }
       );
     }
@@ -287,7 +287,7 @@ ${JSON.stringify(compactRegs, null, 2)}`;
   } catch (error) {
     console.error("Scan API error:", error);
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Internal server error" },
+      { error: error instanceof Error ? error.message : "Interner Serverfehler" },
       { status: 500 }
     );
   }

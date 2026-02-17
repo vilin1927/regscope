@@ -138,7 +138,7 @@ export function useRecommendations(scanId: string | undefined) {
             setReport(pollResult);
             return;
           }
-          throw new Error("Generation timed out. Please try again.");
+          throw new Error("Generierung abgelaufen. Bitte versuchen Sie es erneut.");
         }
 
         if (!genRes.ok) {
@@ -199,7 +199,7 @@ export function useRecommendations(scanId: string | undefined) {
             setReport(pollResult);
             return;
           }
-          throw new Error("Generation timed out. Please try again.");
+          throw new Error("Generierung abgelaufen. Bitte versuchen Sie es erneut.");
         }
 
         if (!res.ok) {

@@ -88,7 +88,7 @@ export function useAuth(): AuthState & AuthActions {
       setUserId(result.data.user?.id);
       setIsGuest(false);
     } catch {
-      setAuthError("Authentication service not configured. Try guest mode.");
+      setAuthError("Authentifizierungsdienst nicht konfiguriert. Versuchen Sie den Gastmodus.");
     }
   };
 

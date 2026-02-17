@@ -27,7 +27,7 @@ export async function POST(request: Request) {
       body = await request.json();
     } catch {
       return NextResponse.json(
-        { error: "Invalid JSON in request body" },
+        { error: "Ungültiges JSON im Anfragekörper" },
         { status: 400 }
       );
     }
@@ -42,14 +42,14 @@ export async function POST(request: Request) {
         "unknown";
       if (isRateLimited(ip)) {
         return NextResponse.json(
-          { error: "Too many requests. Please try again later." },
+          { error: "Zu viele Anfragen. Bitte versuchen Sie es später erneut." },
           { status: 429 }
         );
       }
     }
     if (!scanId) {
       return NextResponse.json(
-        { error: "Missing scanId" },
+        { error: "Scan-ID fehlt" },
         { status: 400 }
       );
     }
@@ -64,7 +64,7 @@ export async function POST(request: Request) {
 
     if (scanError || !scan) {
       return NextResponse.json(
-        { error: "Scan not found or access denied" },
+        { error: "Scan nicht gefunden oder Zugriff verweigert" },
         { status: 404 }
       );
     }
@@ -130,7 +130,7 @@ export async function POST(request: Request) {
 
     if (allNonCompliant.length === 0) {
       return NextResponse.json(
-        { error: "No compliance gaps found — all regulations fulfilled" },
+        { error: "Keine Compliance-Lücken gefunden — alle Vorschriften erfüllt" },
         { status: 400 }
       );
     }
@@ -206,7 +206,7 @@ Vorschriften (${allNonCompliant.length} gesamt, Top ${regulations.length}): ${JS
       console.error("Failed to parse risk analysis response:", content.slice(0, 200));
       await supabase.from("risk_reports").delete().eq("id", placeholder.id);
       return NextResponse.json(
-        { error: "Invalid response format from AI" },
+        { error: "Ungültiges Antwortformat von der KI" },
         { status: 502 }
       );
     }
@@ -215,7 +215,7 @@ Vorschriften (${allNonCompliant.length} gesamt, Top ${regulations.length}): ${JS
     if (!parsed.items || !Array.isArray(parsed.items)) {
       await supabase.from("risk_reports").delete().eq("id", placeholder.id);
       return NextResponse.json(
-        { error: "Invalid risk analysis format" },
+        { error: "Ungültiges Risikoanalyse-Format" },
         { status: 502 }
       );
     }
@@ -278,7 +278,7 @@ Vorschriften (${allNonCompliant.length} gesamt, Top ${regulations.length}): ${JS
     return NextResponse.json(
       {
         error:
-          error instanceof Error ? error.message : "Internal server error",
+          error instanceof Error ? error.message : "Interner Serverfehler",
       },
       { status: 500 }
     );

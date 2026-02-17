@@ -16,7 +16,7 @@ export async function GET() {
     if (fetchError) {
       console.error("Admin subscribers fetch error:", fetchError);
       return NextResponse.json(
-        { error: "Failed to fetch subscribers" },
+        { error: "Abonnenten konnten nicht geladen werden" },
         { status: 500 }
       );
     }
@@ -48,7 +48,7 @@ export async function GET() {
   } catch (error) {
     console.error("Admin subscribers error:", error);
     return NextResponse.json(
-      { error: "Internal server error" },
+      { error: "Interner Serverfehler" },
       { status: 500 }
     );
   }
