@@ -7,6 +7,9 @@ import {
 } from "@/lib/api-helpers";
 import type { RecommendationItem } from "@/types/addons";
 
+// Allow up to 60s for OpenAI generation
+export const maxDuration = 60;
+
 const VALID_TIMELINES = ["sofort", "kurzfristig", "geplant"];
 const VALID_TYPES = ["action", "insurance"];
 

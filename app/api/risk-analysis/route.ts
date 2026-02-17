@@ -7,6 +7,9 @@ import {
 } from "@/lib/api-helpers";
 import type { RiskItem } from "@/types/addons";
 
+// Allow up to 60s for OpenAI generation
+export const maxDuration = 60;
+
 const VALID_SEVERITIES = ["kritisch", "hoch", "mittel", "niedrig"];
 
 export async function POST(request: Request) {
