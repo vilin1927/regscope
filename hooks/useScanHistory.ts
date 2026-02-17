@@ -62,21 +62,31 @@ export function useScanHistory(
         }
 
         if (data) {
-          setScanHistory(
-            data.map((scan) => ({
-              id: scan.id,
-              companyName:
-                (scan.business_profile as Record<string, unknown>)?.companyName as string || "Betrieb",
-              date: new Date(scan.created_at).toLocaleDateString("de-DE"),
-              regulationCount: (scan.matched_regulations as unknown[])?.length || 0,
-              complianceScore: Number(scan.compliance_score) || 0,
-              businessProfile: scan.business_profile as Record<string, unknown>,
-              matchedRegulationIds: ((scan.matched_regulations as Array<{ id: string }>) || []).map(
-                (r) => r.id
-              ),
-              matchedRegulations: scan.matched_regulations as MatchedRegulation[] | undefined,
-            }))
-          );
+          const mapped = data.map((scan) => ({
+            id: scan.id,
+            companyName:
+              (scan.business_profile as Record<string, unknown>)?.companyName as string || "Betrieb",
+            date: new Date(scan.created_at).toLocaleDateString("de-DE"),
+            regulationCount: (scan.matched_regulations as unknown[])?.length || 0,
+            complianceScore: Number(scan.compliance_score) || 0,
+            businessProfile: scan.business_profile as Record<string, unknown>,
+            matchedRegulationIds: ((scan.matched_regulations as Array<{ id: string }>) || []).map(
+              (r) => r.id
+            ),
+            matchedRegulations: scan.matched_regulations as MatchedRegulation[] | undefined,
+          }));
+          setScanHistory(mapped);
+
+          // Auto-select the most recent scan so Risk Analysis / Recommendations work after re-login
+          if (mapped.length > 0 && !currentScanId) {
+            const latest = mapped[0];
+            setCurrentScanId(latest.id);
+            if (latest.matchedRegulations && latest.matchedRegulations.length > 0) {
+              setMatchedRegulations(latest.matchedRegulations);
+            }
+            setBusinessProfile(latest.businessProfile);
+            loadComplianceChecks(latest.id);
+          }
         }
       } catch (err) {
         console.error("Failed to load scan history:", err);
