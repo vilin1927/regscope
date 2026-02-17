@@ -19,92 +19,137 @@ export function useRecommendations(scanId: string | undefined) {
     };
   }, []);
 
-  // Try to load existing report when scanId changes
+  // Check for cached report, auto-generate if none exists
   useEffect(() => {
     if (!scanId) {
       setReport(null);
       return;
     }
 
-    let cancelled = false;
-    setIsLoading(true);
-    setError(undefined);
-
-    // Check for cached report only — don't trigger generation
-    fetch("/api/recommendations", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ scanId, checkOnly: true }),
-    })
-      .then(async (res) => {
-        if (cancelled) return;
-        if (res.status === 401 || res.status === 400) {
-          setReport(null);
-          return;
-        }
-        const data = await res.json();
-        if (!res.ok) {
-          setReport(null);
-          return;
-        }
-        if (data.cached && data.report) {
-          setReport(data.report);
-        }
-      })
-      .catch(() => {
-        // Silently fail on initial load
-      })
-      .finally(() => {
-        if (!cancelled && mountedRef.current) {
-          setIsLoading(false);
-        }
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [scanId]);
-
-  const generate = useCallback(async (force = false) => {
-    if (!scanId) return;
-
+    // Abort any in-flight request
     abortRef.current?.abort();
     const controller = new AbortController();
     abortRef.current = controller;
 
-    setIsGenerating(true);
-    setError(undefined);
+    let cancelled = false;
 
-    try {
-      const res = await fetch("/api/recommendations", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ scanId, force }),
-        signal: controller.signal,
-      });
+    async function loadOrGenerate() {
+      setIsLoading(true);
+      setError(undefined);
 
-      const data = await res.json();
+      try {
+        // Step 1: Fast cache check
+        const checkRes = await fetch("/api/recommendations", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ scanId, checkOnly: true }),
+          signal: controller.signal,
+        });
 
-      if (!res.ok) {
-        throw new Error(data.error || `Request failed (${res.status})`);
-      }
+        if (cancelled) return;
 
-      if (mountedRef.current) {
-        setReport(data.report);
-      }
-    } catch (err) {
-      if (err instanceof Error && err.name === "AbortError") return;
-      if (mountedRef.current) {
-        setError(
-          err instanceof Error ? err.message : "Ein Fehler ist aufgetreten"
-        );
-      }
-    } finally {
-      if (mountedRef.current) {
-        setIsGenerating(false);
+        if (checkRes.status === 401 || checkRes.status === 400) {
+          setReport(null);
+          setIsLoading(false);
+          return;
+        }
+
+        if (checkRes.ok) {
+          const checkData = await checkRes.json();
+          if (checkData.cached && checkData.report) {
+            setReport(checkData.report);
+            setIsLoading(false);
+            return;
+          }
+        }
+
+        // Step 2: No cached report — auto-generate
+        setIsLoading(false);
+        setIsGenerating(true);
+
+        const genRes = await fetch("/api/recommendations", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ scanId }),
+          signal: controller.signal,
+        });
+
+        if (cancelled) return;
+
+        const genData = await genRes.json();
+        if (!genRes.ok) {
+          throw new Error(genData.error || `Request failed (${genRes.status})`);
+        }
+
+        if (mountedRef.current) {
+          setReport(genData.report);
+        }
+      } catch (err) {
+        if (err instanceof Error && err.name === "AbortError") return;
+        if (mountedRef.current && !cancelled) {
+          setError(
+            err instanceof Error ? err.message : "Ein Fehler ist aufgetreten"
+          );
+        }
+      } finally {
+        if (mountedRef.current && !cancelled) {
+          setIsLoading(false);
+          setIsGenerating(false);
+        }
       }
     }
+
+    loadOrGenerate();
+
+    return () => {
+      cancelled = true;
+      controller.abort();
+    };
   }, [scanId]);
+
+  const generate = useCallback(
+    async (force = false) => {
+      if (!scanId) return;
+
+      abortRef.current?.abort();
+      const controller = new AbortController();
+      abortRef.current = controller;
+
+      setIsGenerating(true);
+      setError(undefined);
+
+      try {
+        const res = await fetch("/api/recommendations", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ scanId, force }),
+          signal: controller.signal,
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          throw new Error(data.error || `Request failed (${res.status})`);
+        }
+
+        if (mountedRef.current) {
+          setReport(data.report);
+        }
+      } catch (err) {
+        if (err instanceof Error && err.name === "AbortError") return;
+        if (mountedRef.current) {
+          setError(
+            err instanceof Error ? err.message : "Ein Fehler ist aufgetreten"
+          );
+        }
+      } finally {
+        if (mountedRef.current) {
+          setIsGenerating(false);
+        }
+      }
+    },
+    [scanId]
+  );
 
   const regenerate = useCallback(() => generate(true), [generate]);
 
