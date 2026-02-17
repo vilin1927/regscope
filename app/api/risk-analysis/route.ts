@@ -78,21 +78,40 @@ export async function POST(request: Request) {
       // Check for existing report (cache-first)
       const { data: existing } = await supabase
         .from("risk_reports")
-        .select("id, report, created_at")
+        .select("id, report, status, created_at")
         .eq("scan_id", scanId)
         .eq("user_id", userId)
         .single();
 
       if (existing) {
-        return NextResponse.json({
-          report: {
-            id: existing.id,
-            scanId,
-            ...existing.report,
-            createdAt: existing.created_at,
-          },
-          cached: true,
-        });
+        // Completed report — return cached
+        if (existing.status === "complete") {
+          return NextResponse.json({
+            report: {
+              id: existing.id,
+              scanId,
+              ...existing.report,
+              createdAt: existing.created_at,
+            },
+            cached: true,
+          });
+        }
+
+        // Still generating — check if stale (>2 minutes)
+        const age = Date.now() - new Date(existing.created_at).getTime();
+        if (age < 2 * 60 * 1000) {
+          return NextResponse.json({
+            report: null,
+            cached: false,
+            status: "generating",
+          });
+        }
+
+        // Stale generating row — delete and regenerate
+        await supabase
+          .from("risk_reports")
+          .delete()
+          .eq("id", existing.id);
       }
 
       // checkOnly mode: just checking for cache, don't generate
@@ -112,6 +131,27 @@ export async function POST(request: Request) {
         { error: "No compliance gaps found — all regulations fulfilled" },
         { status: 400 }
       );
+    }
+
+    // Insert placeholder with 'generating' status
+    const { data: placeholder, error: placeholderError } = await supabase
+      .from("risk_reports")
+      .insert({
+        scan_id: scanId,
+        user_id: userId,
+        report: {},
+        status: "generating",
+      })
+      .select("id")
+      .single();
+
+    if (placeholderError) {
+      // Race condition: another request already started generating
+      return NextResponse.json({
+        report: null,
+        cached: false,
+        status: "generating",
+      });
     }
 
     // Generate risk analysis via OpenAI
@@ -157,6 +197,8 @@ ${JSON.stringify(regulations, null, 2)}`;
     );
 
     if (aiError) {
+      // Clean up placeholder on failure
+      await supabase.from("risk_reports").delete().eq("id", placeholder.id);
       return NextResponse.json({ error: aiError }, { status: 502 });
     }
 
@@ -165,6 +207,7 @@ ${JSON.stringify(regulations, null, 2)}`;
       parsed = JSON.parse(content);
     } catch {
       console.error("Failed to parse risk analysis response:", content.slice(0, 200));
+      await supabase.from("risk_reports").delete().eq("id", placeholder.id);
       return NextResponse.json(
         { error: "Invalid response format from AI" },
         { status: 502 }
@@ -173,6 +216,7 @@ ${JSON.stringify(regulations, null, 2)}`;
 
     // Validate items
     if (!parsed.items || !Array.isArray(parsed.items)) {
+      await supabase.from("risk_reports").delete().eq("id", placeholder.id);
       return NextResponse.json(
         { error: "Invalid risk analysis format" },
         { status: 502 }
@@ -208,28 +252,27 @@ ${JSON.stringify(regulations, null, 2)}`;
       summary: typeof parsed.summary === "string" ? parsed.summary : "",
     };
 
-    // Store in Supabase
-    const { data: inserted, error: insertError } = await supabase
+    // Update placeholder with completed report
+    const { data: updated, error: updateError } = await supabase
       .from("risk_reports")
-      .insert({
-        scan_id: scanId,
-        user_id: userId,
+      .update({
         report,
+        status: "complete",
       })
+      .eq("id", placeholder.id)
       .select("id, created_at")
       .single();
 
-    if (insertError) {
-      console.error("Failed to store risk report:", insertError);
-      // Still return the report even if storage fails
+    if (updateError) {
+      console.error("Failed to store risk report:", updateError);
     }
 
     return NextResponse.json({
       report: {
-        id: inserted?.id || "temp",
+        id: updated?.id || placeholder.id,
         scanId,
         ...report,
-        createdAt: inserted?.created_at || new Date().toISOString(),
+        createdAt: updated?.created_at || new Date().toISOString(),
       },
       cached: false,
     });
