@@ -51,13 +51,11 @@ export interface RecommendationReport {
 
 // --- Newsletter ---
 
-export type NewsletterFrequency = "weekly" | "monthly";
-
 export type NewsletterLocale = "de" | "en";
 
 export interface NewsletterPreferences {
   optedIn: boolean;
-  frequency: NewsletterFrequency;
+  frequency: string;
   areas: RegulationCategory[];
   locale: NewsletterLocale;
 }

@@ -19,7 +19,6 @@ interface RegulationUpdate {
 interface NewsletterDigestProps {
   userName?: string;
   locale?: "de" | "en";
-  frequency?: "weekly" | "monthly";
   subscribedAreas?: string[];
   complianceScore?: number;
   totalRegulations?: number;
@@ -38,8 +37,7 @@ const riskColors = {
 const translations = {
   de: {
     greeting: "Hallo",
-    weeklyTitle: "Ihr wöchentliches Vorschriften-Update",
-    monthlyTitle: "Ihr monatliches Vorschriften-Update",
+    title: "Ihr Vorschriften-Update",
     score: "Score",
     regulations: "Vorschriften",
     urgent: "Dringend",
@@ -56,8 +54,7 @@ const translations = {
   },
   en: {
     greeting: "Hello",
-    weeklyTitle: "Your Weekly Regulation Update",
-    monthlyTitle: "Your Monthly Regulation Update",
+    title: "Your Regulation Update",
     score: "Score",
     regulations: "Regulations",
     urgent: "Urgent",
@@ -83,7 +80,6 @@ const riskLabelKeys = {
 export default function NewsletterDigest({
   userName = "Nutzer",
   locale = "de",
-  frequency = "weekly",
   subscribedAreas = [],
   complianceScore = 0,
   totalRegulations = 0,
@@ -93,7 +89,7 @@ export default function NewsletterDigest({
   unsubscribeUrl = "#",
 }: NewsletterDigestProps) {
   const t = translations[locale];
-  const title = frequency === "weekly" ? t.weeklyTitle : t.monthlyTitle;
+  const title = t.title;
 
   return (
     <Html lang={locale}>

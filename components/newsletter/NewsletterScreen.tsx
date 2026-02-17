@@ -1,11 +1,10 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Mail, ScanSearch, Loader2, Check } from "lucide-react";
+import { Mail, Loader2, Check } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useNewsletterPreferences } from "@/hooks/useNewsletterPreferences";
 import type { RegulationCategory } from "@/data/regulations/types";
-import type { NewsletterFrequency } from "@/types/addons";
 
 interface NewsletterScreenProps {
   userId?: string;
@@ -25,7 +24,6 @@ const COMPLIANCE_AREAS: RegulationCategory[] = [
 export function NewsletterScreen({ userId, isGuest }: NewsletterScreenProps) {
   const t = useTranslations("Newsletter");
   const tCat = useTranslations("Results.category");
-  const tApp = useTranslations("App");
   const { preferences, isLoading, isSaving, error, update } =
     useNewsletterPreferences(userId);
 
@@ -127,26 +125,6 @@ export function NewsletterScreen({ userId, isGuest }: NewsletterScreenProps) {
         </div>
       </div>
 
-      {/* Frequency */}
-      <div className="bg-white border border-gray-200 rounded-xl p-6 mb-4">
-        <h2 className="font-semibold text-gray-900 mb-3">{t("frequency")}</h2>
-        <div className="flex gap-3">
-          {(["weekly", "monthly"] as NewsletterFrequency[]).map((freq) => (
-            <button
-              key={freq}
-              onClick={() => update({ frequency: freq })}
-              className={`flex-1 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-                preferences.frequency === freq
-                  ? "bg-blue-100 text-blue-700 border-2 border-blue-300"
-                  : "bg-gray-100 text-gray-700 border-2 border-transparent hover:bg-gray-200"
-              }`}
-            >
-              {t(freq)}
-            </button>
-          ))}
-        </div>
-      </div>
-
       {/* Areas */}
       <div className="bg-white border border-gray-200 rounded-xl p-6 mb-4">
         <h2 className="font-semibold text-gray-900 mb-3">{t("areas")}</h2>
@@ -190,54 +168,11 @@ export function NewsletterScreen({ userId, isGuest }: NewsletterScreenProps) {
         </div>
       )}
 
-      {/* Newsletter preview */}
+      {/* Newsletter info */}
       <div className="bg-white border border-gray-200 rounded-xl p-6">
-        <h2 className="font-semibold text-gray-900 mb-3">{t("preview")}</h2>
-        <div className="border border-gray-200 rounded-lg overflow-hidden">
-          <div className="bg-blue-600 px-5 py-3 flex items-center gap-2">
-            <ScanSearch className="w-4 h-4 text-white" />
-            <span className="text-white font-bold text-sm">
-              {tApp("name")}
-            </span>
-          </div>
-          <div className="p-5">
-            <h3 className="font-bold text-gray-900 mb-3">
-              {preferences.frequency === "weekly"
-                ? t("weeklyUpdate")
-                : t("monthlyUpdate")}
-            </h3>
-            <div className="space-y-3">
-              {[
-                {
-                  title: t("previewItem1"),
-                  tag: t("previewTag1"),
-                  tagCls: "bg-red-100 text-red-700",
-                },
-                {
-                  title: t("previewItem2"),
-                  tag: t("previewTag2"),
-                  tagCls: "bg-amber-100 text-amber-700",
-                },
-                {
-                  title: t("previewItem3"),
-                  tag: t("previewTag3"),
-                  tagCls: "bg-blue-100 text-blue-700",
-                },
-              ].map((item) => (
-                <div
-                  key={item.title}
-                  className="flex items-center justify-between py-3 border-b border-gray-100 last:border-0"
-                >
-                  <span className="text-sm text-gray-700">{item.title}</span>
-                  <span
-                    className={`text-xs font-medium px-2 py-0.5 rounded-full ${item.tagCls}`}
-                  >
-                    {item.tag}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
+        <div className="flex items-center gap-3">
+          <Mail className="w-5 h-5 text-blue-500" />
+          <p className="text-sm text-gray-600">{t("previewInfo")}</p>
         </div>
       </div>
     </motion.div>

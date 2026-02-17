@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
-import { Send, Eye, Users, Clock, Loader2 } from "lucide-react";
+import { Send, Eye, Users, Loader2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 
 interface Subscriber {
@@ -95,12 +95,6 @@ export function AdminNewsletterScreen() {
   };
 
   const activeCount = data?.optedIn || 0;
-  const weeklyCount =
-    data?.subscribers.filter((s) => s.optedIn && s.frequency === "weekly")
-      .length || 0;
-  const monthlyCount =
-    data?.subscribers.filter((s) => s.optedIn && s.frequency === "monthly")
-      .length || 0;
 
   return (
     <motion.div
@@ -121,8 +115,8 @@ export function AdminNewsletterScreen() {
         </div>
       ) : (
         <>
-          {/* Stat Cards */}
-          <div className="grid grid-cols-3 gap-4">
+          {/* Stat Card */}
+          <div className="max-w-xs">
             <div className="bg-white rounded-xl border border-gray-200 p-5 text-center">
               <div className="flex items-center justify-center w-10 h-10 bg-blue-50 rounded-lg mx-auto mb-3">
                 <Users className="w-5 h-5 text-blue-600" />
@@ -130,26 +124,6 @@ export function AdminNewsletterScreen() {
               <p className="text-2xl font-bold text-gray-900">{activeCount}</p>
               <p className="text-xs text-gray-500 uppercase tracking-wide mt-1">
                 {t("subscribers")}
-              </p>
-            </div>
-            <div className="bg-white rounded-xl border border-gray-200 p-5 text-center">
-              <div className="flex items-center justify-center w-10 h-10 bg-green-50 rounded-lg mx-auto mb-3">
-                <Clock className="w-5 h-5 text-green-600" />
-              </div>
-              <p className="text-2xl font-bold text-gray-900">{weeklyCount}</p>
-              <p className="text-xs text-gray-500 uppercase tracking-wide mt-1">
-                {t("weekly")}
-              </p>
-            </div>
-            <div className="bg-white rounded-xl border border-gray-200 p-5 text-center">
-              <div className="flex items-center justify-center w-10 h-10 bg-purple-50 rounded-lg mx-auto mb-3">
-                <Clock className="w-5 h-5 text-purple-600" />
-              </div>
-              <p className="text-2xl font-bold text-gray-900">
-                {monthlyCount}
-              </p>
-              <p className="text-xs text-gray-500 uppercase tracking-wide mt-1">
-                {t("monthly")}
               </p>
             </div>
           </div>
@@ -241,7 +215,6 @@ export function AdminNewsletterScreen() {
                 <thead>
                   <tr className="border-b border-gray-100 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     <th className="px-5 py-3">{t("email")}</th>
-                    <th className="px-5 py-3">{t("frequency")}</th>
                     <th className="px-5 py-3">{t("locale")}</th>
                     <th className="px-5 py-3">{t("areas")}</th>
                     <th className="px-5 py-3">{t("status")}</th>
@@ -254,9 +227,6 @@ export function AdminNewsletterScreen() {
                       className="border-b border-gray-50 hover:bg-gray-50"
                     >
                       <td className="px-5 py-3 text-gray-900">{sub.email}</td>
-                      <td className="px-5 py-3 text-gray-600 capitalize">
-                        {sub.frequency}
-                      </td>
                       <td className="px-5 py-3 text-gray-600 uppercase">
                         {sub.locale}
                       </td>

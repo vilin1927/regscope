@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { ShieldAlert, AlertTriangle, Loader2, BarChart3 } from "lucide-react";
+import { ShieldAlert, AlertTriangle, Loader2, BarChart3, RefreshCw } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useRiskAnalysis } from "@/hooks/useRiskAnalysis";
 import type { RiskSeverity } from "@/types/addons";
@@ -23,7 +23,7 @@ export function RiskAnalysisScreen({
   hasResults,
 }: RiskAnalysisScreenProps) {
   const t = useTranslations("RiskAnalysis");
-  const { report, isLoading, isGenerating, error, generate } =
+  const { report, isLoading, isGenerating, error, generate, regenerate } =
     useRiskAnalysis(scanId);
 
   // State 1: No scan results
@@ -127,7 +127,7 @@ export function RiskAnalysisScreen({
           <p className="text-gray-700 font-medium mb-2">{t("readyToAnalyze")}</p>
           <p className="text-gray-500 text-sm mb-6">{t("readyToAnalyzeDesc")}</p>
           <button
-            onClick={generate}
+            onClick={() => generate()}
             className="px-6 py-2.5 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700 transition-colors"
           >
             {t("runAnalysis")}
@@ -157,12 +157,24 @@ export function RiskAnalysisScreen({
         <div className="w-12 h-12 bg-red-100 rounded-xl flex items-center justify-center">
           <ShieldAlert className="w-6 h-6 text-red-600" />
         </div>
-        <div>
+        <div className="flex-1">
           <h1 className="text-2xl font-bold text-gray-900">{t("title")}</h1>
           <p className="text-gray-500 text-sm mt-1">
             {t("foundIssues", { count: report.items.length })}
           </p>
         </div>
+        <button
+          onClick={regenerate}
+          disabled={isGenerating}
+          className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-red-600 border border-red-200 rounded-lg hover:bg-red-50 disabled:opacity-50"
+        >
+          {isGenerating ? (
+            <Loader2 className="w-4 h-4 animate-spin" />
+          ) : (
+            <RefreshCw className="w-4 h-4" />
+          )}
+          {t("rerun")}
+        </button>
       </div>
 
       {/* Summary */}

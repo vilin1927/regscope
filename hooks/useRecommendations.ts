@@ -64,7 +64,7 @@ export function useRecommendations(scanId: string | undefined) {
     };
   }, [scanId]);
 
-  const generate = useCallback(async () => {
+  const generate = useCallback(async (force = false) => {
     if (!scanId) return;
 
     abortRef.current?.abort();
@@ -78,7 +78,7 @@ export function useRecommendations(scanId: string | undefined) {
       const res = await fetch("/api/recommendations", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ scanId }),
+        body: JSON.stringify({ scanId, force }),
         signal: controller.signal,
       });
 
@@ -105,5 +105,7 @@ export function useRecommendations(scanId: string | undefined) {
     }
   }, [scanId]);
 
-  return { report, isLoading, isGenerating, error, generate };
+  const regenerate = useCallback(() => generate(true), [generate]);
+
+  return { report, isLoading, isGenerating, error, generate, regenerate };
 }

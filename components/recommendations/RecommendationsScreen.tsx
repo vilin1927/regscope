@@ -10,6 +10,7 @@ import {
   Clock,
   Info,
   BarChart3,
+  RefreshCw,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useRecommendations } from "@/hooks/useRecommendations";
@@ -33,7 +34,7 @@ export function RecommendationsScreen({
   hasRiskReport,
 }: RecommendationsScreenProps) {
   const t = useTranslations("Recommendations");
-  const { report, isLoading, isGenerating, error, generate } =
+  const { report, isLoading, isGenerating, error, generate, regenerate } =
     useRecommendations(scanId);
 
   // State 1: No scan results
@@ -144,7 +145,7 @@ export function RecommendationsScreen({
           <p className="text-gray-700 font-medium mb-2">{t("readyToGenerate")}</p>
           <p className="text-gray-500 text-sm mb-6">{t("readyToGenerateDesc")}</p>
           <button
-            onClick={generate}
+            onClick={() => generate()}
             className="px-6 py-2.5 bg-amber-600 text-white rounded-lg font-medium hover:bg-amber-700 transition-colors"
           >
             {t("generateRecommendations")}
@@ -172,12 +173,24 @@ export function RecommendationsScreen({
         <div className="w-12 h-12 bg-amber-100 rounded-xl flex items-center justify-center">
           <Lightbulb className="w-6 h-6 text-amber-600" />
         </div>
-        <div>
+        <div className="flex-1">
           <h1 className="text-2xl font-bold text-gray-900">{t("title")}</h1>
           <p className="text-gray-500 text-sm mt-1">
             {t("foundActions", { count: report.items.length })}
           </p>
         </div>
+        <button
+          onClick={regenerate}
+          disabled={isGenerating}
+          className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-amber-600 border border-amber-200 rounded-lg hover:bg-amber-50 disabled:opacity-50"
+        >
+          {isGenerating ? (
+            <Loader2 className="w-4 h-4 animate-spin" />
+          ) : (
+            <RefreshCw className="w-4 h-4" />
+          )}
+          {t("rerun")}
+        </button>
       </div>
 
       {/* Summary */}

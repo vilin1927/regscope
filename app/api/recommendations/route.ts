@@ -32,7 +32,7 @@ export async function POST(request: Request) {
     }
 
     // Parse body
-    let body: { scanId?: string };
+    let body: { scanId?: string; force?: boolean };
     try {
       body = await request.json();
     } catch {
@@ -42,7 +42,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const { scanId } = body;
+    const { scanId, force } = body;
     if (!scanId) {
       return NextResponse.json({ error: "Missing scanId" }, { status: 400 });
     }
@@ -62,24 +62,33 @@ export async function POST(request: Request) {
       );
     }
 
-    // Check for existing report
-    const { data: existing } = await supabase
-      .from("recommendations")
-      .select("id, report, created_at")
-      .eq("scan_id", scanId)
-      .eq("user_id", userId)
-      .single();
+    // Delete existing report when force re-run
+    if (force) {
+      await supabase
+        .from("recommendations")
+        .delete()
+        .eq("scan_id", scanId)
+        .eq("user_id", userId);
+    } else {
+      // Check for existing report (cache-first)
+      const { data: existing } = await supabase
+        .from("recommendations")
+        .select("id, report, created_at")
+        .eq("scan_id", scanId)
+        .eq("user_id", userId)
+        .single();
 
-    if (existing) {
-      return NextResponse.json({
-        report: {
-          id: existing.id,
-          scanId,
-          ...existing.report,
-          createdAt: existing.created_at,
-        },
-        cached: true,
-      });
+      if (existing) {
+        return NextResponse.json({
+          report: {
+            id: existing.id,
+            scanId,
+            ...existing.report,
+            createdAt: existing.created_at,
+          },
+          cached: true,
+        });
+      }
     }
 
     // Optionally read risk report for enrichment

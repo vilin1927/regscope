@@ -124,18 +124,13 @@ export async function POST(request: Request) {
 
     const subject =
       locale === "en"
-        ? sub.frequency === "weekly"
-          ? "Your Weekly Regulation Update — ComplyRadar"
-          : "Your Monthly Regulation Update — ComplyRadar"
-        : sub.frequency === "weekly"
-          ? "Ihr wöchentliches Vorschriften-Update — ComplyRadar"
-          : "Ihr monatliches Vorschriften-Update — ComplyRadar";
+        ? "Your Regulation Update — ComplyRadar"
+        : "Ihr Vorschriften-Update — ComplyRadar";
 
     const html = await render(
       NewsletterDigest({
         userName,
         locale,
-        frequency: sub.frequency,
         subscribedAreas,
         complianceScore,
         totalRegulations,
