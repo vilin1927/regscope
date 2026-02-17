@@ -3,7 +3,7 @@ import { cookies } from "next/headers";
 
 // Shared rate limiter (per-IP, resets on cold start)
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
-const RATE_LIMIT = 10;
+const RATE_LIMIT = 30;
 const RATE_WINDOW = 60_000;
 
 export function isRateLimited(ip: string): boolean {

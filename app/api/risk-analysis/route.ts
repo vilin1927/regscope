@@ -14,18 +14,6 @@ const VALID_SEVERITIES = ["kritisch", "hoch", "mittel", "niedrig"];
 
 export async function POST(request: Request) {
   try {
-    // Rate limiting
-    const ip =
-      request.headers.get("x-forwarded-for") ??
-      request.headers.get("x-real-ip") ??
-      "unknown";
-    if (isRateLimited(ip)) {
-      return NextResponse.json(
-        { error: "Too many requests. Please try again later." },
-        { status: 429 }
-      );
-    }
-
     // Auth (required — no guests)
     const supabase = await createSupabaseServerClient();
     const { userId, error: authError } = await requireAuth(supabase);
@@ -45,6 +33,20 @@ export async function POST(request: Request) {
     }
 
     const { scanId, force, checkOnly } = body;
+
+    // Rate limiting — skip for cheap cache checks (checkOnly)
+    if (!checkOnly) {
+      const ip =
+        request.headers.get("x-forwarded-for") ??
+        request.headers.get("x-real-ip") ??
+        "unknown";
+      if (isRateLimited(ip)) {
+        return NextResponse.json(
+          { error: "Too many requests. Please try again later." },
+          { status: 429 }
+        );
+      }
+    }
     if (!scanId) {
       return NextResponse.json(
         { error: "Missing scanId" },
