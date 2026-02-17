@@ -6,6 +6,7 @@ import {
 } from "@/lib/api-helpers";
 
 const VALID_FREQUENCIES = ["weekly", "monthly"];
+const VALID_LOCALES = ["de", "en"];
 const VALID_AREAS = [
   "arbeitssicherheit",
   "arbeitsrecht",
@@ -37,7 +38,7 @@ export async function GET(request: Request) {
 
     const { data } = await supabase
       .from("newsletter_preferences")
-      .select("opted_in, frequency, areas")
+      .select("opted_in, frequency, areas, locale")
       .eq("user_id", userId)
       .single();
 
@@ -46,6 +47,7 @@ export async function GET(request: Request) {
         optedIn: data.opted_in,
         frequency: data.frequency,
         areas: data.areas,
+        locale: data.locale ?? "de",
       });
     }
 
@@ -54,6 +56,7 @@ export async function GET(request: Request) {
       optedIn: false,
       frequency: "weekly",
       areas: [],
+      locale: "de",
     });
   } catch (error) {
     console.error("Newsletter preferences GET error:", error);
@@ -83,7 +86,7 @@ export async function PUT(request: Request) {
       return NextResponse.json({ error: authError }, { status: 401 });
     }
 
-    let body: { optedIn?: boolean; frequency?: string; areas?: string[] };
+    let body: { optedIn?: boolean; frequency?: string; areas?: string[]; locale?: string };
     try {
       body = await request.json();
     } catch {
@@ -104,6 +107,10 @@ export async function PUT(request: Request) {
     const areas = Array.isArray(body.areas)
       ? body.areas.filter((a) => VALID_AREAS.includes(a))
       : [];
+    const locale =
+      typeof body.locale === "string" && VALID_LOCALES.includes(body.locale)
+        ? body.locale
+        : "de";
 
     // Upsert
     const { error: upsertError } = await supabase
@@ -114,6 +121,7 @@ export async function PUT(request: Request) {
           opted_in: optedIn,
           frequency,
           areas,
+          locale,
           updated_at: new Date().toISOString(),
         },
         { onConflict: "user_id" }
@@ -127,7 +135,7 @@ export async function PUT(request: Request) {
       );
     }
 
-    return NextResponse.json({ optedIn, frequency, areas });
+    return NextResponse.json({ optedIn, frequency, areas, locale });
   } catch (error) {
     console.error("Newsletter preferences PUT error:", error);
     return NextResponse.json(

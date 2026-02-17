@@ -7,7 +7,6 @@ import {
   Text,
   Link,
   Hr,
-  Img,
 } from "@react-email/components";
 
 interface RegulationUpdate {
@@ -19,10 +18,15 @@ interface RegulationUpdate {
 
 interface NewsletterDigestProps {
   userName?: string;
-  frequency: "weekly" | "monthly";
-  updates: RegulationUpdate[];
-  dashboardUrl: string;
-  unsubscribeUrl: string;
+  locale?: "de" | "en";
+  frequency?: "weekly" | "monthly";
+  subscribedAreas?: string[];
+  complianceScore?: number;
+  totalRegulations?: number;
+  highPriorityCount?: number;
+  updates?: RegulationUpdate[];
+  dashboardUrl?: string;
+  unsubscribeUrl?: string;
 }
 
 const riskColors = {
@@ -31,26 +35,68 @@ const riskColors = {
   niedrig: "#2563eb",
 };
 
-const riskLabels = {
-  hoch: "Dringend",
-  mittel: "Aktualisierung",
-  niedrig: "Info",
+const translations = {
+  de: {
+    greeting: "Hallo",
+    weeklyTitle: "Ihr wöchentliches Vorschriften-Update",
+    monthlyTitle: "Ihr monatliches Vorschriften-Update",
+    score: "Score",
+    regulations: "Vorschriften",
+    urgent: "Dringend",
+    yourAreas: "Ihre Bereiche",
+    cta: "Zum Dashboard",
+    footer:
+      "Sie erhalten diese E-Mail, weil Sie den ComplyRadar Vorschriften-Newsletter abonniert haben.",
+    unsubscribe: "Newsletter abbestellen",
+    noUpdates:
+      "Keine neuen Änderungen in Ihren Bereichen. Ihr Betrieb ist auf dem neuesten Stand!",
+    riskHigh: "Dringend",
+    riskMedium: "Aktualisierung",
+    riskLow: "Info",
+  },
+  en: {
+    greeting: "Hello",
+    weeklyTitle: "Your Weekly Regulation Update",
+    monthlyTitle: "Your Monthly Regulation Update",
+    score: "Score",
+    regulations: "Regulations",
+    urgent: "Urgent",
+    yourAreas: "Your Areas",
+    cta: "Go to Dashboard",
+    footer:
+      "You receive this email because you subscribed to the ComplyRadar regulation newsletter.",
+    unsubscribe: "Unsubscribe",
+    noUpdates:
+      "No new changes in your selected areas. Your business is up to date!",
+    riskHigh: "Urgent",
+    riskMedium: "Update",
+    riskLow: "Info",
+  },
 };
+
+const riskLabelKeys = {
+  hoch: "riskHigh",
+  mittel: "riskMedium",
+  niedrig: "riskLow",
+} as const;
 
 export default function NewsletterDigest({
   userName = "Nutzer",
+  locale = "de",
   frequency = "weekly",
+  subscribedAreas = [],
+  complianceScore = 0,
+  totalRegulations = 0,
+  highPriorityCount = 0,
   updates = [],
-  dashboardUrl = "https://regscope-nine.vercel.app",
+  dashboardUrl = "https://smart-lex.de",
   unsubscribeUrl = "#",
 }: NewsletterDigestProps) {
-  const greeting =
-    frequency === "weekly"
-      ? "Ihr wöchentliches Vorschriften-Update"
-      : "Ihr monatliches Vorschriften-Update";
+  const t = translations[locale];
+  const title = frequency === "weekly" ? t.weeklyTitle : t.monthlyTitle;
 
   return (
-    <Html lang="de">
+    <Html lang={locale}>
       <Head />
       <Body style={bodyStyle}>
         <Container style={containerStyle}>
@@ -59,20 +105,56 @@ export default function NewsletterDigest({
             <Text style={headerTextStyle}>ComplyRadar</Text>
           </Section>
 
-          {/* Greeting */}
+          {/* Content */}
           <Section style={contentStyle}>
+            {/* Greeting */}
             <Text style={greetingStyle}>
-              Hallo {userName},
+              {t.greeting} {userName},
             </Text>
-            <Text style={subheadingStyle}>{greeting}</Text>
+            <Text style={subheadingStyle}>{title}</Text>
 
-            {/* Updates */}
+            {/* Compliance Score Summary */}
+            <Section style={scoreRowStyle}>
+              <table
+                width="100%"
+                cellPadding="0"
+                cellSpacing="0"
+                role="presentation"
+              >
+                <tbody>
+                  <tr>
+                    <td style={scoreBoxStyle}>
+                      <Text style={scoreValueStyle}>{complianceScore}%</Text>
+                      <Text style={scoreLabelStyle}>{t.score}</Text>
+                    </td>
+                    <td style={scoreBoxStyle}>
+                      <Text style={scoreValueStyle}>{totalRegulations}</Text>
+                      <Text style={scoreLabelStyle}>{t.regulations}</Text>
+                    </td>
+                    <td style={scoreBoxStyle}>
+                      <Text style={scoreValueStyle}>{highPriorityCount}</Text>
+                      <Text style={scoreLabelStyle}>{t.urgent}</Text>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </Section>
+
+            {/* Subscribed Areas */}
+            {subscribedAreas.length > 0 && (
+              <Section style={{ marginBottom: "20px" }}>
+                <Text style={areasLabelStyle}>{t.yourAreas}</Text>
+                <Text style={areasTagsStyle}>
+                  {subscribedAreas.join(" · ")}
+                </Text>
+              </Section>
+            )}
+
+            {/* Update Cards */}
             {updates.length > 0 ? (
               updates.map((update, i) => (
                 <Section key={i} style={updateCardStyle}>
-                  <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" }}>
-                    <Text style={updateTitleStyle}>{update.title}</Text>
-                  </div>
+                  <Text style={updateTitleStyle}>{update.title}</Text>
                   <Text
                     style={{
                       ...tagStyle,
@@ -80,38 +162,34 @@ export default function NewsletterDigest({
                       backgroundColor: `${riskColors[update.riskLevel]}15`,
                     }}
                   >
-                    {riskLabels[update.riskLevel]}
+                    {t[riskLabelKeys[update.riskLevel]]}
                   </Text>
                   <Text style={updateCategoryStyle}>{update.category}</Text>
                   <Text style={updateSummaryStyle}>{update.summary}</Text>
                 </Section>
               ))
             ) : (
-              <Text style={noUpdatesStyle}>
-                Keine neuen Änderungen in Ihren ausgewählten Bereichen diese
-                Periode. Ihr Betrieb ist auf dem neuesten Stand!
-              </Text>
+              <Text style={noUpdatesStyle}>{t.noUpdates}</Text>
             )}
 
             <Hr style={hrStyle} />
 
             {/* CTA */}
-            <Section style={{ textAlign: "center" as const, margin: "24px 0" }}>
+            <Section
+              style={{ textAlign: "center" as const, margin: "24px 0" }}
+            >
               <Link href={dashboardUrl} style={ctaStyle}>
-                Zum Dashboard
+                {t.cta}
               </Link>
             </Section>
 
             <Hr style={hrStyle} />
 
             {/* Footer */}
-            <Text style={footerStyle}>
-              Sie erhalten diese E-Mail, weil Sie den ComplyRadar
-              Vorschriften-Newsletter abonniert haben.
-            </Text>
+            <Text style={footerStyle}>{t.footer}</Text>
             <Text style={footerStyle}>
               <Link href={unsubscribeUrl} style={unsubscribeLinkStyle}>
-                Newsletter abbestellen
+                {t.unsubscribe}
               </Link>
             </Text>
           </Section>
@@ -167,6 +245,49 @@ const subheadingStyle = {
   fontWeight: "700" as const,
   color: "#1e293b",
   margin: "0 0 20px 0",
+};
+
+const scoreRowStyle = {
+  backgroundColor: "#f8fafc",
+  border: "1px solid #e2e8f0",
+  borderRadius: "8px",
+  padding: "16px",
+  marginBottom: "16px",
+};
+
+const scoreBoxStyle = {
+  textAlign: "center" as const,
+  width: "33.33%",
+};
+
+const scoreValueStyle = {
+  fontSize: "22px",
+  fontWeight: "700" as const,
+  color: "#1e293b",
+  margin: "0 0 2px 0",
+};
+
+const scoreLabelStyle = {
+  fontSize: "12px",
+  color: "#64748b",
+  margin: 0,
+  textTransform: "uppercase" as const,
+  letterSpacing: "0.05em",
+};
+
+const areasLabelStyle = {
+  fontSize: "12px",
+  fontWeight: "600" as const,
+  color: "#64748b",
+  margin: "0 0 6px 0",
+  textTransform: "uppercase" as const,
+  letterSpacing: "0.05em",
+};
+
+const areasTagsStyle = {
+  fontSize: "14px",
+  color: "#1e293b",
+  margin: 0,
 };
 
 const updateCardStyle = {

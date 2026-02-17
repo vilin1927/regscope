@@ -3,10 +3,19 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import type { NewsletterPreferences } from "@/types/addons";
 
+function detectLocale(): "de" | "en" {
+  if (typeof window !== "undefined") {
+    const path = window.location.pathname;
+    if (path.startsWith("/en")) return "en";
+  }
+  return "de";
+}
+
 const DEFAULTS: NewsletterPreferences = {
   optedIn: false,
   frequency: "weekly",
   areas: [],
+  locale: "de",
 };
 
 export function useNewsletterPreferences(userId: string | undefined) {
@@ -35,13 +44,14 @@ export function useNewsletterPreferences(userId: string | undefined) {
 
     let cancelled = false;
     setIsLoading(true);
+    const currentLocale = detectLocale();
 
     fetch("/api/newsletter/preferences")
       .then(async (res) => {
         if (cancelled) return;
         if (res.ok) {
           const data = await res.json();
-          setPreferences(data);
+          setPreferences({ ...data, locale: data.locale ?? currentLocale });
         }
       })
       .catch(() => {})
@@ -60,7 +70,7 @@ export function useNewsletterPreferences(userId: string | undefined) {
     (partial: Partial<NewsletterPreferences>) => {
       // Optimistic update
       setPreferences((prev) => {
-        const next = { ...prev, ...partial };
+        const next = { ...prev, ...partial, locale: partial.locale ?? prev.locale ?? detectLocale() };
 
         // Debounced save to API
         if (debounceRef.current) clearTimeout(debounceRef.current);

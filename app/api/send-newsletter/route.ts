@@ -1,5 +1,31 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { Resend } from "resend";
+import { render } from "@react-email/components";
+import NewsletterDigest from "@/emails/newsletter-digest";
+
+const areaLabels: Record<string, Record<string, string>> = {
+  de: {
+    arbeitssicherheit: "Arbeitssicherheit",
+    arbeitsrecht: "Arbeitsrecht",
+    gewerberecht: "Gewerberecht",
+    umweltrecht: "Umweltrecht",
+    produktsicherheit: "Produktsicherheit",
+    datenschutz: "Datenschutz",
+    versicherungspflichten: "Versicherungspflichten",
+  },
+  en: {
+    arbeitssicherheit: "Workplace Safety",
+    arbeitsrecht: "Employment Law",
+    gewerberecht: "Trade Law",
+    umweltrecht: "Environmental Law",
+    produktsicherheit: "Product Safety",
+    datenschutz: "Data Protection",
+    versicherungspflichten: "Insurance Obligations",
+  },
+};
+
+const riskOrder: Record<string, number> = { hoch: 0, mittel: 1, niedrig: 2 };
 
 export async function POST(request: Request) {
   try {
@@ -35,6 +61,8 @@ export async function POST(request: Request) {
       );
     }
 
+    const resend = new Resend(resendApiKey);
+
     // Use service role to fetch all opted-in users
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -43,7 +71,7 @@ export async function POST(request: Request) {
 
     const { data: subscribers, error: fetchError } = await supabase
       .from("newsletter_preferences")
-      .select("user_id, frequency, areas")
+      .select("user_id, frequency, areas, locale")
       .eq("opted_in", true);
 
     if (fetchError) {
@@ -58,7 +86,11 @@ export async function POST(request: Request) {
       return NextResponse.json({ sent: 0, message: "No subscribers" });
     }
 
-    // Fetch user emails via auth admin API
+    const dashboardUrl =
+      process.env.NEXT_PUBLIC_APP_URL || "https://smart-lex.de";
+    const fromEmail = `ComplyRadar <newsletter@${process.env.RESEND_DOMAIN || "complyradar.de"}>`;
+
+    // Process each subscriber
     const results = [];
     for (const sub of subscribers) {
       const { data: userData } = await supabase.auth.admin.getUserById(
@@ -68,39 +100,106 @@ export async function POST(request: Request) {
       if (!userData?.user?.email) continue;
 
       const email = userData.user.email;
-      const dashboardUrl =
-        process.env.NEXT_PUBLIC_APP_URL || "https://regscope-nine.vercel.app";
+      const locale: "de" | "en" = sub.locale === "en" ? "en" : "de";
 
-      // Send via Resend
+      // Fetch latest scan for this user
+      const { data: scan } = await supabase
+        .from("scans")
+        .select("matched_regulations, business_profile, compliance_score")
+        .eq("user_id", sub.user_id)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .single();
+
+      // Skip user if no scan exists — nothing to report
+      if (!scan) {
+        results.push({ email, status: "skipped", reason: "no_scan" });
+        continue;
+      }
+
+      // Extract data from scan
+      const allRegulations: Array<{
+        name: string;
+        category: string;
+        riskLevel: string;
+        summary: string;
+      }> = scan.matched_regulations || [];
+
+      // Filter to user's subscribed areas
+      const userAreas: string[] = sub.areas || [];
+      const filteredRegulations =
+        userAreas.length > 0
+          ? allRegulations.filter((r) => userAreas.includes(r.category))
+          : allRegulations;
+
+      // Sort by risk level and take top 5
+      const sorted = [...filteredRegulations].sort(
+        (a, b) => (riskOrder[a.riskLevel] ?? 2) - (riskOrder[b.riskLevel] ?? 2)
+      );
+      const top5 = sorted.slice(0, 5);
+
+      const updates = top5.map((r) => ({
+        title: r.name,
+        category: (areaLabels[locale]?.[r.category] || r.category),
+        riskLevel: r.riskLevel as "hoch" | "mittel" | "niedrig",
+        summary: r.summary,
+      }));
+
+      // Compliance stats
+      const complianceScore = Math.round(Number(scan.compliance_score) || 0);
+      const totalRegulations = filteredRegulations.length;
+      const highPriorityCount = filteredRegulations.filter(
+        (r) => r.riskLevel === "hoch"
+      ).length;
+
+      // Company name from business_profile or email fallback
+      const profile = scan.business_profile as Record<string, unknown> | null;
+      const userName =
+        (profile?.companyName as string) || email.split("@")[0];
+
+      // Area labels in user's locale
+      const subscribedAreas = userAreas.map(
+        (a) => areaLabels[locale]?.[a] || a
+      );
+
+      // Subject line
+      const subject =
+        locale === "en"
+          ? sub.frequency === "weekly"
+            ? "Your Weekly Regulation Update — ComplyRadar"
+            : "Your Monthly Regulation Update — ComplyRadar"
+          : sub.frequency === "weekly"
+            ? "Ihr wöchentliches Vorschriften-Update — ComplyRadar"
+            : "Ihr monatliches Vorschriften-Update — ComplyRadar";
+
       try {
-        const res = await fetch("https://api.resend.com/emails", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${resendApiKey}`,
-          },
-          body: JSON.stringify({
-            from: `ComplyRadar <newsletter@${process.env.RESEND_DOMAIN || "complyradar.de"}>`,
-            to: [email],
-            subject:
-              sub.frequency === "weekly"
-                ? "Ihr wöchentliches Vorschriften-Update — ComplyRadar"
-                : "Ihr monatliches Vorschriften-Update — ComplyRadar",
-            html: buildHtmlEmail(
-              email.split("@")[0],
-              sub.frequency,
-              sub.areas,
-              dashboardUrl
-            ),
-          }),
+        const html = await render(
+          NewsletterDigest({
+            userName,
+            locale,
+            frequency: sub.frequency,
+            subscribedAreas,
+            complianceScore,
+            totalRegulations,
+            highPriorityCount,
+            updates,
+            dashboardUrl,
+            unsubscribeUrl: `${dashboardUrl}/newsletter/unsubscribe?uid=${sub.user_id}`,
+          })
+        );
+
+        const { error: sendError } = await resend.emails.send({
+          from: fromEmail,
+          to: [email],
+          subject,
+          html,
         });
 
-        if (res.ok) {
-          results.push({ email, status: "sent" });
-        } else {
-          const err = await res.text();
-          console.error(`Failed to send to ${email}:`, err);
+        if (sendError) {
+          console.error(`Failed to send to ${email}:`, sendError);
           results.push({ email, status: "failed" });
+        } else {
+          results.push({ email, status: "sent" });
         }
       } catch (err) {
         console.error(`Error sending to ${email}:`, err);
@@ -121,62 +220,4 @@ export async function POST(request: Request) {
       { status: 500 }
     );
   }
-}
-
-function buildHtmlEmail(
-  userName: string,
-  frequency: string,
-  areas: string[],
-  dashboardUrl: string
-): string {
-  const greeting =
-    frequency === "weekly"
-      ? "Ihr wöchentliches Vorschriften-Update"
-      : "Ihr monatliches Vorschriften-Update";
-
-  const areaLabels: Record<string, string> = {
-    arbeitssicherheit: "Arbeitssicherheit",
-    arbeitsrecht: "Arbeitsrecht",
-    gewerberecht: "Gewerberecht",
-    umweltrecht: "Umweltrecht",
-    produktsicherheit: "Produktsicherheit",
-    datenschutz: "Datenschutz",
-    versicherungspflichten: "Versicherungspflichten",
-  };
-
-  const selectedAreas =
-    areas.length > 0
-      ? areas.map((a) => areaLabels[a] || a).join(", ")
-      : "Alle Bereiche";
-
-  return `
-<!DOCTYPE html>
-<html lang="de">
-<head><meta charset="utf-8"></head>
-<body style="background:#f8fafc;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;margin:0;padding:20px">
-  <div style="max-width:600px;margin:0 auto">
-    <div style="background:#2563eb;padding:20px 24px;border-radius:12px 12px 0 0">
-      <span style="color:#fff;font-size:18px;font-weight:700">ComplyRadar</span>
-    </div>
-    <div style="background:#fff;padding:24px;border-radius:0 0 12px 12px;border:1px solid #e2e8f0;border-top:none">
-      <p style="font-size:16px;color:#1e293b;margin:0 0 4px">Hallo ${userName},</p>
-      <p style="font-size:20px;font-weight:700;color:#1e293b;margin:0 0 20px">${greeting}</p>
-      <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:16px;margin-bottom:12px">
-        <p style="font-size:14px;font-weight:600;color:#1e293b;margin:0 0 8px">Ihre abonnierten Bereiche</p>
-        <p style="font-size:13px;color:#475569;margin:0">${selectedAreas}</p>
-      </div>
-      <p style="font-size:14px;color:#64748b;text-align:center;padding:16px 0">
-        Besuchen Sie Ihr ComplyRadar Dashboard für aktuelle Compliance-Informationen.
-      </p>
-      <div style="text-align:center;margin:24px 0">
-        <a href="${dashboardUrl}" style="display:inline-block;background:#2563eb;color:#fff;font-size:14px;font-weight:600;padding:12px 24px;border-radius:8px;text-decoration:none">Zum Dashboard</a>
-      </div>
-      <hr style="border-color:#e2e8f0;margin:20px 0">
-      <p style="font-size:12px;color:#94a3b8;text-align:center;margin:4px 0">
-        Sie erhalten diese E-Mail, weil Sie den ComplyRadar Vorschriften-Newsletter abonniert haben.
-      </p>
-    </div>
-  </div>
-</body>
-</html>`;
 }
