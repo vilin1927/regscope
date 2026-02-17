@@ -32,7 +32,7 @@ export async function POST(request: Request) {
     }
 
     // Parse body
-    let body: { scanId?: string; force?: boolean };
+    let body: { scanId?: string; force?: boolean; checkOnly?: boolean };
     try {
       body = await request.json();
     } catch {
@@ -42,7 +42,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const { scanId, force } = body;
+    const { scanId, force, checkOnly } = body;
     if (!scanId) {
       return NextResponse.json({ error: "Missing scanId" }, { status: 400 });
     }
@@ -88,6 +88,11 @@ export async function POST(request: Request) {
           },
           cached: true,
         });
+      }
+
+      // checkOnly mode: just checking for cache, don't generate
+      if (checkOnly) {
+        return NextResponse.json({ report: null, cached: false });
       }
     }
 

@@ -30,11 +30,11 @@ export function useRiskAnalysis(scanId: string | undefined) {
     setIsLoading(true);
     setError(undefined);
 
-    // Attempt to generate — the API returns cached if exists
+    // Check for cached report only — don't trigger generation
     fetch("/api/risk-analysis", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ scanId }),
+      body: JSON.stringify({ scanId, checkOnly: true }),
     })
       .then(async (res) => {
         if (cancelled) return;

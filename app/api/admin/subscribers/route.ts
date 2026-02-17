@@ -10,6 +10,7 @@ export async function GET() {
     const { data: subscribers, error: fetchError } = await adminSupabase!
       .from("newsletter_preferences")
       .select("user_id, opted_in, frequency, areas, locale, updated_at")
+      .eq("opted_in", true)
       .order("updated_at", { ascending: false });
 
     if (fetchError) {

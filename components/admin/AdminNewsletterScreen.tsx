@@ -217,7 +217,6 @@ export function AdminNewsletterScreen() {
                     <th className="px-5 py-3">{t("email")}</th>
                     <th className="px-5 py-3">{t("locale")}</th>
                     <th className="px-5 py-3">{t("areas")}</th>
-                    <th className="px-5 py-3">{t("status")}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -234,17 +233,6 @@ export function AdminNewsletterScreen() {
                         {sub.areas.length > 0
                           ? sub.areas.join(", ")
                           : "—"}
-                      </td>
-                      <td className="px-5 py-3">
-                        <span
-                          className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${
-                            sub.optedIn
-                              ? "bg-green-50 text-green-700"
-                              : "bg-gray-100 text-gray-500"
-                          }`}
-                        >
-                          {sub.optedIn ? t("optedIn") : t("optedOut")}
-                        </span>
                       </td>
                     </tr>
                   ))}

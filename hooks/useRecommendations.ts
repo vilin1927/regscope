@@ -30,10 +30,11 @@ export function useRecommendations(scanId: string | undefined) {
     setIsLoading(true);
     setError(undefined);
 
+    // Check for cached report only — don't trigger generation
     fetch("/api/recommendations", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ scanId }),
+      body: JSON.stringify({ scanId, checkOnly: true }),
     })
       .then(async (res) => {
         if (cancelled) return;
