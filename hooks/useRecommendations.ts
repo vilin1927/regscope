@@ -6,6 +6,16 @@ import type { RecommendationReport } from "@/types/addons";
 const POLL_INTERVAL = 3000; // 3 seconds
 const MAX_POLLS = 30; // 30 * 3s = 90s max
 
+/** Safely parse JSON; if the response isn't JSON, throw a readable error */
+async function safeJson(res: Response) {
+  const text = await res.text();
+  try {
+    return JSON.parse(text);
+  } catch {
+    throw new Error(text.slice(0, 200) || `Request failed (${res.status})`);
+  }
+}
+
 async function pollForReport(
   scanId: string,
   signal: AbortSignal
@@ -23,7 +33,7 @@ async function pollForReport(
 
     if (!res.ok) continue;
 
-    const data = await res.json();
+    const data = await safeJson(res);
     if (data.cached && data.report) return data.report;
     if (data.status !== "generating") return null; // Row gone, stop polling
   }
@@ -82,7 +92,7 @@ export function useRecommendations(scanId: string | undefined) {
         }
 
         if (checkRes.ok) {
-          const checkData = await checkRes.json();
+          const checkData = await safeJson(checkRes);
           if (checkData.cached && checkData.report) {
             setReport(checkData.report);
             setIsLoading(false);
@@ -118,7 +128,7 @@ export function useRecommendations(scanId: string | undefined) {
 
         if (cancelled) return;
 
-        const genData = await genRes.json();
+        const genData = await safeJson(genRes);
 
         // Server says another request is already generating — poll
         if (genData.status === "generating") {
@@ -180,7 +190,7 @@ export function useRecommendations(scanId: string | undefined) {
           signal: controller.signal,
         });
 
-        const data = await res.json();
+        const data = await safeJson(res);
 
         // Server says another request is already generating — poll
         if (data.status === "generating") {
