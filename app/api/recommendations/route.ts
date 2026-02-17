@@ -128,18 +128,31 @@ export async function POST(request: Request) {
       .eq("user_id", userId)
       .single();
 
-    const regulations = scan.matched_regulations || [];
-    const nonCompliant = regulations.filter(
+    const allRegulations = scan.matched_regulations || [];
+    const allNonCompliant = allRegulations.filter(
       (r: { status: string }) =>
         r.status === "fehlend" || r.status === "pruefung"
     );
 
-    if (nonCompliant.length === 0) {
+    if (allNonCompliant.length === 0) {
       return NextResponse.json(
         { error: "No compliance gaps found — all regulations fulfilled" },
         { status: 400 }
       );
     }
+
+    // Prioritize "fehlend" over "pruefung", cap at 10 to stay within timeout
+    const sorted = [...allNonCompliant].sort((a: { status: string }, b: { status: string }) =>
+      a.status === "fehlend" && b.status !== "fehlend" ? -1 : 0
+    );
+    const nonCompliant = sorted.slice(0, 10).map((r: Record<string, unknown>) => ({
+      id: r.id,
+      name: r.name,
+      category: r.category,
+      status: r.status,
+      riskLevel: r.riskLevel,
+      summary: typeof r.summary === "string" ? r.summary.slice(0, 150) : "",
+    }));
 
     // Insert placeholder with 'generating' status
     const { data: placeholder, error: placeholderError } = await supabase
@@ -197,15 +210,31 @@ Regeln:
 - Maßnahmen sollen konkret, praktisch und für einen Handwerksbetrieb umsetzbar sein
 - Wenn Risikoanalyse vorhanden: nutze die Schweregrade und Fristen daraus`;
 
-    const userPrompt = `## Unternehmensprofil
-${JSON.stringify(scan.business_profile, null, 2)}
+    // Compact business profile — only essential fields
+    const bp = scan.business_profile as Record<string, unknown> | null;
+    const compactProfile = bp ? {
+      companyName: bp.companyName,
+      trade: bp.trade,
+      employees: bp.employees,
+      state: bp.state,
+    } : {};
 
-## Vorschriften mit Compliance-Lücken
-${JSON.stringify(nonCompliant, null, 2)}${riskContext}`;
+    // Truncate risk context if too long
+    const riskContextTruncated = riskContext.length > 1500
+      ? riskContext.slice(0, 1500) + "\n...(gekürzt)"
+      : riskContext;
+
+    const userPrompt = `## Unternehmensprofil
+${JSON.stringify(compactProfile)}
+
+## Vorschriften mit Compliance-Lücken (${allNonCompliant.length} gesamt, Top ${nonCompliant.length})
+${JSON.stringify(nonCompliant)}${riskContextTruncated}`;
 
     const { content, error: aiError } = await callOpenAI(
       systemPrompt,
-      userPrompt
+      userPrompt,
+      undefined,
+      3000 // cap response to ~3000 tokens
     );
 
     if (aiError) {

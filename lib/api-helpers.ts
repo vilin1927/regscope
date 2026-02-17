@@ -50,7 +50,8 @@ export async function requireAuth(supabase: Awaited<ReturnType<typeof createSupa
 export async function callOpenAI(
   systemPrompt: string,
   userPrompt: string,
-  signal?: AbortSignal
+  signal?: AbortSignal,
+  maxTokens?: number
 ): Promise<{ content: string; error: string | null }> {
   const apiKey = process.env.OPENAI_API_KEY;
   const model = process.env.OPENAI_MODEL || "gpt-4o";
@@ -60,7 +61,8 @@ export async function callOpenAI(
   }
 
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 60_000);
+  // 50s timeout — leave 10s buffer for Vercel cleanup/response
+  const timeout = setTimeout(() => controller.abort(), 50_000);
 
   // Link external signal if provided
   if (signal) {
@@ -68,21 +70,24 @@ export async function callOpenAI(
   }
 
   try {
+    const body: Record<string, unknown> = {
+      model,
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userPrompt },
+      ],
+      response_format: { type: "json_object" },
+      temperature: 0.2,
+    };
+    if (maxTokens) body.max_tokens = maxTokens;
+
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${apiKey}`,
       },
-      body: JSON.stringify({
-        model,
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userPrompt },
-        ],
-        response_format: { type: "json_object" },
-        temperature: 0.2,
-      }),
+      body: JSON.stringify(body),
       signal: controller.signal,
     });
 
