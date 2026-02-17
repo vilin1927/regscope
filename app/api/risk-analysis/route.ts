@@ -135,17 +135,17 @@ export async function POST(request: Request) {
       );
     }
 
-    // Prioritize "fehlend" over "pruefung", cap at 10 to stay within timeout
+    // Prioritize "fehlend" over "pruefung", cap at 5 to stay within Vercel 60s limit
+    // (tested: 5 regs = ~13s OpenAI, 10 regs = ~30-40s — too risky with cold start)
     const sorted = [...allNonCompliant].sort((a: { status: string }, b: { status: string }) =>
       a.status === "fehlend" && b.status !== "fehlend" ? -1 : 0
     );
-    const regulations = sorted.slice(0, 10).map((r: Record<string, unknown>) => ({
+    const regulations = sorted.slice(0, 5).map((r: Record<string, unknown>) => ({
       id: r.id,
       name: r.name,
       category: r.category,
       status: r.status,
       riskLevel: r.riskLevel,
-      summary: typeof r.summary === "string" ? r.summary.slice(0, 150) : "",
     }));
 
     // Insert placeholder with 'generating' status
@@ -169,36 +169,10 @@ export async function POST(request: Request) {
       });
     }
 
-    // Generate risk analysis via OpenAI
-    const systemPrompt = `Du bist ein erfahrener Compliance-Risikoanalyst für deutsche Handwerksbetriebe.
-
-Du erhältst eine Liste von Vorschriften, bei denen ein Betrieb Compliance-Lücken hat (Status "fehlend" oder "pruefung"), zusammen mit dem Unternehmensprofil.
-
-Erstelle eine detaillierte Risikoanalyse im JSON-Format:
-{
-  "items": [
-    {
-      "regulationId": "<ID der Vorschrift>",
-      "regulationName": "<Name der Vorschrift>",
-      "severity": "<kritisch|hoch|mittel|niedrig>",
-      "complianceGap": "<Konkrete Beschreibung der Lücke, 1-2 Sätze>",
-      "deadline": "<Realistische Frist, z.B. 'Q2 2026' oder 'Sofort'>",
-      "potentialPenalty": "<Mögliche Sanktion mit Betrag>",
-      "mitigation": "<Konkrete Maßnahme zur Behebung, 1-2 Sätze>"
-    }
-  ],
-  "summary": "<Zusammenfassung der Risikolage in 2-3 Sätzen>"
-}
-
-Regeln:
-- Sortiere nach Schweregrad: kritisch > hoch > mittel > niedrig
-- "kritisch" = unmittelbare Gefahr für Mitarbeiter oder hohe Bußgelder (>10.000€)
-- "hoch" = gesetzliche Pflicht verletzt, mittlere Bußgelder
-- "mittel" = Prüfungsbedarf, geringes Bußgeldrisiko
-- "niedrig" = Empfehlung, kein unmittelbares Bußgeldrisiko
-- Verwende nur IDs aus der übergebenen Liste
-- Fristen sollen realistisch für einen Handwerksbetrieb sein
-- Maßnahmen sollen praktisch und umsetzbar sein`;
+    // Generate risk analysis via OpenAI — keep prompt concise for speed
+    const systemPrompt = `Compliance-Risikoanalyst für deutsche Handwerksbetriebe. Antworte NUR mit JSON:
+{"items":[{"regulationId":"ID","regulationName":"Name","severity":"kritisch|hoch|mittel|niedrig","complianceGap":"1 Satz","deadline":"z.B. Sofort oder Q2 2026","potentialPenalty":"Betrag","mitigation":"1 Satz"}],"summary":"1-2 Sätze"}
+Sortiere: kritisch>hoch>mittel>niedrig. Verwende nur IDs aus der Liste. Kurz und präzise antworten.`;
 
     // Compact business profile — only essential fields
     const bp = scan.business_profile as Record<string, unknown> | null;
@@ -209,11 +183,8 @@ Regeln:
       state: bp.state,
     } : {};
 
-    const userPrompt = `## Unternehmensprofil
-${JSON.stringify(compactProfile)}
-
-## Vorschriften mit Compliance-Lücken (${allNonCompliant.length} gesamt, Top ${regulations.length})
-${JSON.stringify(regulations)}`;
+    const userPrompt = `Profil: ${JSON.stringify(compactProfile)}
+Vorschriften (${allNonCompliant.length} gesamt, Top ${regulations.length}): ${JSON.stringify(regulations)}`;
 
     const { content, error: aiError } = await callOpenAI(
       systemPrompt,
