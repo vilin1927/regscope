@@ -191,7 +191,7 @@ export async function POST(request: Request) {
 
         if (sendError) {
           console.error(`Failed to send to ${email}:`, sendError);
-          results.push({ email, status: "failed" });
+          results.push({ email, status: "failed", error: sendError.message || String(sendError) });
         } else {
           results.push({ email, status: "sent" });
         }
