@@ -530,33 +530,74 @@ def assemble_reel_video(
 def generate_combinations(
     format_clips: list[dict],
     characters: list[dict],
-    text_variations: list[str],
-    cta_variations: list[str],
-    num_videos: int,
-    asset_type: str = 'photos'
+    text_variations: list[str] = None,
+    cta_variations: list[str] = None,
+    num_videos: int = 10,
+    asset_type: str = 'photos',
+    clip_variations: list[list[str]] = None,
+    clip_texts: list[dict] = None,
 ) -> list[dict]:
     """
     Generate unique video combinations from format template + assets + text variations.
 
+    Supports two modes:
+    1. Per-clip text (new): clip_variations + clip_texts provided.
+       Each clip has its own text variations indexed by a single text_var_idx.
+    2. Legacy: text_variations + cta_variations provided.
+       Mapped to clips by clip type (before→hook, cta→cta).
+
     Args:
         format_clips: Clip definitions from format template
-        characters: List of character dicts with their assets:
-            [{"id": str, "before_photos": [asset_dicts], "after_photos": [...],
-              "before_videos": [...], "after_videos": [...]}]
-        text_variations: List of hook text variations
-        cta_variations: List of CTA text variations
+        characters: List of character dicts with their assets
+        text_variations: Legacy hook text variations list
+        cta_variations: Legacy CTA text variations list
         num_videos: Number of videos to generate
         asset_type: 'photos', 'videos', or 'both'
+        clip_variations: Per-clip text variations: [[var0, var1], [var0, var1], ...]
+        clip_texts: Per-clip text config: [{"text": str, "style": str}, ...]
 
     Returns:
         List of video config dicts ready for assembly
     """
     if not characters:
         raise ReelVideoError("No characters with assets provided")
-    if not text_variations:
-        text_variations = ['']
-    if not cta_variations:
-        cta_variations = ['']
+
+    # Determine number of text variation indices
+    if clip_variations is not None and clip_texts is not None:
+        # New per-clip mode
+        num_text_vars = max(len(v) for v in clip_variations) if clip_variations else 1
+    else:
+        # Legacy mode: auto-convert to per-clip format
+        if not text_variations:
+            text_variations = ['']
+        if not cta_variations:
+            cta_variations = ['']
+        num_text_vars = len(text_variations)
+
+        # Build clip_texts and clip_variations from legacy params
+        clip_texts = []
+        clip_variations = []
+        for clip_def in format_clips:
+            clip_type = clip_def.get('type', 'before')
+            has_text = clip_def.get('has_text')
+            text_style = clip_def.get('text_style')
+
+            # Legacy defaults: before→hook text, cta→cta text, after→no text
+            if has_text is None:
+                has_text = clip_type in ('before', 'cta')
+            if text_style is None:
+                text_style = 'cta' if clip_type == 'cta' else 'hook'
+
+            if has_text:
+                if text_style == 'cta':
+                    clip_texts.append({'text': cta_variations[0] if cta_variations else '', 'style': 'cta'})
+                    clip_variations.append(cta_variations)
+                else:
+                    clip_texts.append({'text': text_variations[0] if text_variations else '', 'style': 'hook'})
+                    clip_variations.append(text_variations)
+            else:
+                clip_texts.append({'text': '', 'style': 'hook'})
+                clip_variations.append([''] * num_text_vars)
 
     all_combos = []
 
@@ -578,31 +619,34 @@ def generate_combinations(
             logger.warning(f"Character {char_id} has no {asset_type} assets, skipping")
             continue
 
-        # Generate all possible combos for this character
-        for before_asset, after_asset, hook_idx, cta_idx in itertools.product(
-            before_assets, after_assets,
-            range(len(text_variations)), range(len(cta_variations))
+        # Generate all possible combos: character assets × text variation index
+        for before_asset, after_asset, text_var_idx in itertools.product(
+            before_assets, after_assets, range(num_text_vars)
         ):
             combo = {
                 'character_id': char_id,
                 'before_asset': before_asset,
                 'after_asset': after_asset,
-                'text_variation_index': hook_idx,
-                'hook_text': text_variations[hook_idx],
-                'cta_text': cta_variations[cta_idx],
+                'text_variation_index': text_var_idx,
             }
             all_combos.append(combo)
 
     if not all_combos:
         raise ReelVideoError("No valid combinations could be generated")
 
-    # Deduplicate by what's actually visible (assets used by clip types + text)
+    # Deduplicate by what's actually visible (assets used by clip types + per-clip texts)
     clip_types_used = set(c.get('type', 'before') for c in format_clips)
     seen = set()
     unique_combos = []
     for combo in all_combos:
-        # Build a key from only the assets/text that will appear in the video
-        key_parts = [combo['character_id'], combo['hook_text'], combo['cta_text']]
+        tvi = combo['text_variation_index']
+        key_parts = [combo['character_id']]
+        # Include all per-clip texts in dedup key
+        for cv in clip_variations:
+            if tvi < len(cv):
+                key_parts.append(cv[tvi])
+            elif cv:
+                key_parts.append(cv[0])
         if 'before' in clip_types_used or 'transition' in clip_types_used:
             key_parts.append(combo['before_asset'].get('id', ''))
         if 'after' in clip_types_used or 'cta' in clip_types_used:
@@ -624,25 +668,27 @@ def generate_combinations(
     video_configs = []
     for i, combo in enumerate(selected):
         clips_config = []
-        for clip_def in format_clips:
+        tvi = combo['text_variation_index']
+
+        for ci, clip_def in enumerate(format_clips):
             clip_type = clip_def.get('type', 'before')
 
-            if clip_type == 'before':
-                asset = combo['before_asset']
-                text = combo['hook_text']
-                text_style = 'hook'
-            elif clip_type == 'after':
+            # Determine asset for this clip
+            if clip_type in ('after', 'cta'):
                 asset = combo['after_asset']
-                text = None
-                text_style = None
-            elif clip_type == 'cta':
-                asset = combo['after_asset']  # Use after asset as bg for CTA
-                text = combo['cta_text']
-                text_style = 'cta'
-            else:  # transition or unknown
+            else:
                 asset = combo['before_asset']
-                text = None
-                text_style = None
+
+            # Determine text for this clip from per-clip variations
+            text = None
+            text_style = None
+            if ci < len(clip_variations) and ci < len(clip_texts):
+                cv = clip_variations[ci]
+                ct = clip_texts[ci]
+                var_text = cv[tvi] if tvi < len(cv) else (cv[0] if cv else '')
+                if var_text and var_text.strip():
+                    text = var_text
+                    text_style = ct.get('style', 'hook')
 
             # Determine if asset is photo or video
             asset_path = asset.get('file_path', '')

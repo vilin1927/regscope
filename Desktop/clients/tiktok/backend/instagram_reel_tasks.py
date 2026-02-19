@@ -70,22 +70,49 @@ def generate_reel_batch(self, job_id: str):
 
         logger.info(f"[Job {job_id[:8]}] Format: {fmt['format_name']} ({len(clips)} clips)")
 
-        # Step 2: Generate text variations
+        # Step 2: Generate text variations (per-clip or legacy)
         hook_text = job.get('hook_text', '')
         cta_text = job.get('cta_text', '')
         num_text_variations = job.get('num_text_variations', 1)
 
-        hook_variations = generate_text_variations(hook_text, num_text_variations, 'hook')
-        cta_variations = generate_text_variations(cta_text, max(1, num_text_variations), 'cta') if cta_text else ['']
+        # Check for per-clip text config
+        clip_texts_raw = job.get('clip_texts') or None
+        if clip_texts_raw is None and job.get('clip_texts_json'):
+            try:
+                clip_texts_raw = json.loads(job['clip_texts_json'])
+            except Exception:
+                pass
+
+        clip_variations = None
+        clip_texts = None
+
+        if clip_texts_raw and isinstance(clip_texts_raw, list):
+            # New per-clip mode: generate variations for each clip that has text
+            clip_texts = clip_texts_raw
+            clip_variations = []
+            for ct in clip_texts:
+                base_text = ct.get('text', '').strip()
+                style = ct.get('style', 'hook')
+                if base_text:
+                    vars_list = generate_text_variations(base_text, num_text_variations, style)
+                    clip_variations.append(vars_list)
+                else:
+                    clip_variations.append([''] * max(1, num_text_variations))
+
+            all_variations = {'clip_texts': clip_texts, 'clip_variations': clip_variations}
+            logger.info(f"[Job {job_id[:8]}] Per-clip text: {len(clip_texts)} clips, {num_text_variations} variations each")
+        else:
+            # Legacy mode: hook + cta
+            hook_variations = generate_text_variations(hook_text, num_text_variations, 'hook')
+            cta_variations = generate_text_variations(cta_text, max(1, num_text_variations), 'cta') if cta_text else ['']
+            all_variations = {'hook': hook_variations, 'cta': cta_variations}
+            logger.info(f"[Job {job_id[:8]}] Text variations: {len(hook_variations)} hooks, {len(cta_variations)} CTAs")
 
         # Save variations to DB
-        all_variations = {'hook': hook_variations, 'cta': cta_variations}
         update_ig_job_status(
             job_id, 'processing',
             text_variations_json=json.dumps(all_variations)
         )
-
-        logger.info(f"[Job {job_id[:8]}] Text variations: {len(hook_variations)} hooks, {len(cta_variations)} CTAs")
 
         # Step 3: Load characters and their assets
         character_ids = []
@@ -119,14 +146,20 @@ def generate_reel_batch(self, job_id: str):
             raise ReelVideoError("No valid characters with assets found")
 
         # Step 4: Generate combinations
-        video_configs = generate_combinations(
-            format_clips=clips,
-            characters=characters,
-            text_variations=hook_variations,
-            cta_variations=cta_variations,
-            num_videos=job['num_videos'],
-            asset_type=job.get('asset_type', 'photos')
-        )
+        combo_kwargs = {
+            'format_clips': clips,
+            'characters': characters,
+            'num_videos': job['num_videos'],
+            'asset_type': job.get('asset_type', 'photos'),
+        }
+        if clip_variations is not None:
+            combo_kwargs['clip_variations'] = clip_variations
+            combo_kwargs['clip_texts'] = clip_texts
+        else:
+            combo_kwargs['text_variations'] = hook_variations
+            combo_kwargs['cta_variations'] = cta_variations
+
+        video_configs = generate_combinations(**combo_kwargs)
 
         logger.info(f"[Job {job_id[:8]}] Generated {len(video_configs)} video configs")
 

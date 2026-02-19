@@ -514,6 +514,7 @@ def start_generation():
     hook_text = data.get('hook_text', '')
     cta_text = data.get('cta_text', '')
     character_ids = data.get('character_ids', [])
+    clip_texts = data.get('clip_texts')  # New per-clip text array
 
     # Validate
     if not format_id:
@@ -526,14 +527,28 @@ def start_generation():
     if not character_ids:
         return jsonify({'error': 'At least one character_id is required'}), 400
 
-    if not hook_text:
-        return jsonify({'error': 'hook_text is required'}), 400
-
     num_videos = max(1, min(50, int(num_videos)))
     num_text_variations = max(1, min(10, int(num_text_variations)))
 
     if asset_type not in ('photos', 'videos', 'both'):
         return jsonify({'error': 'asset_type must be photos, videos, or both'}), 400
+
+    # Handle clip_texts: new per-clip mode or legacy hook_text/cta_text
+    clip_texts_json = None
+    if clip_texts and isinstance(clip_texts, list):
+        # Validate: at least one clip must have non-empty text
+        has_any_text = any(
+            ct.get('text', '').strip()
+            for ct in clip_texts
+            if isinstance(ct, dict)
+        )
+        if not has_any_text:
+            return jsonify({'error': 'At least one clip must have non-empty text'}), 400
+        clip_texts_json = json.dumps(clip_texts)
+    else:
+        # Legacy mode: require hook_text
+        if not hook_text:
+            return jsonify({'error': 'hook_text is required'}), 400
 
     # Create job
     job_id = create_ig_job(
@@ -543,7 +558,8 @@ def start_generation():
         cta_text=cta_text,
         num_text_variations=num_text_variations,
         asset_type=asset_type,
-        character_ids_json=json.dumps(character_ids)
+        character_ids_json=json.dumps(character_ids),
+        clip_texts_json=clip_texts_json
     )
 
     logger.info(f"Created IG reel job: {job_id[:8]} ({num_videos} videos, {num_text_variations} text vars)")

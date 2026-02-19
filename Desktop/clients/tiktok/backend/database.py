@@ -1354,6 +1354,12 @@ def init_ig_reel_tables():
         cursor.execute('CREATE INDEX IF NOT EXISTS idx_ig_videos_job ON ig_videos(job_id)')
         cursor.execute('CREATE INDEX IF NOT EXISTS idx_ig_videos_status ON ig_videos(status)')
 
+        # Migration: per-clip text support
+        try:
+            cursor.execute('ALTER TABLE ig_jobs ADD COLUMN clip_texts_json TEXT')
+        except sqlite3.OperationalError:
+            pass  # Column already exists
+
 
 # --- ig_formats CRUD ---
 
@@ -1570,7 +1576,8 @@ def create_ig_job(
     cta_text: str = None,
     num_text_variations: int = 1,
     asset_type: str = 'photos',
-    character_ids_json: str = None
+    character_ids_json: str = None,
+    clip_texts_json: str = None
 ) -> str:
     """Create a generation job and return its ID."""
     job_id = str(uuid.uuid4())
@@ -1578,10 +1585,12 @@ def create_ig_job(
         cursor = conn.cursor()
         cursor.execute('''
             INSERT INTO ig_jobs (id, format_id, num_videos, hook_text, cta_text,
-                                 num_text_variations, asset_type, character_ids_json)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                                 num_text_variations, asset_type, character_ids_json,
+                                 clip_texts_json)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         ''', (job_id, format_id, num_videos, hook_text, cta_text,
-              num_text_variations, asset_type, character_ids_json))
+              num_text_variations, asset_type, character_ids_json,
+              clip_texts_json))
     return job_id
 
 
@@ -1594,7 +1603,7 @@ def get_ig_job(job_id: str) -> Optional[Dict[str, Any]]:
         row = cursor.fetchone()
         if row:
             job = dict(row)
-            for field in ('text_variations_json', 'character_ids_json'):
+            for field in ('text_variations_json', 'character_ids_json', 'clip_texts_json'):
                 if job.get(field):
                     try:
                         job[field.replace('_json', '')] = json.loads(job[field])
@@ -1623,7 +1632,7 @@ def list_ig_jobs(status: str = None, limit: int = 50, offset: int = 0) -> List[D
         jobs = []
         for row in cursor.fetchall():
             job = dict(row)
-            for field in ('text_variations_json', 'character_ids_json'):
+            for field in ('text_variations_json', 'character_ids_json', 'clip_texts_json'):
                 if job.get(field):
                     try:
                         job[field.replace('_json', '')] = json.loads(job[field])

@@ -133,25 +133,42 @@
                 </h3>
                 <div class="space-y-2">
                     <template x-for="(clip, ci) in selectedFormat?.clips || []" :key="ci">
-                        <div class="flex items-center gap-3 bg-gray-600 rounded-lg p-3">
-                            <span class="text-gray-400 text-sm w-16">Clip <span x-text="ci+1"></span></span>
-                            <input type="number" step="0.1" min="0.5" :value="clip.duration"
-                                @change="clip.duration = parseFloat($event.target.value)"
-                                class="w-20 px-2 py-1 bg-gray-700 border border-gray-500 rounded text-white text-sm">
-                            <span class="text-gray-400 text-sm">sec</span>
-                            <select :value="clip.type" @change="clip.type = $event.target.value"
-                                class="px-3 py-1 bg-gray-700 border border-gray-500 rounded text-white text-sm">
-                                <option value="before">Before</option>
-                                <option value="after">After</option>
-                                <option value="cta">CTA</option>
-                                <option value="transition">Transition</option>
-                            </select>
-                            <select :value="clip.text_position || 'bottom'" @change="clip.text_position = $event.target.value"
-                                class="px-3 py-1 bg-gray-700 border border-gray-500 rounded text-white text-sm">
-                                <option value="top">Text: Top</option>
-                                <option value="center">Text: Center</option>
-                                <option value="bottom">Text: Bottom</option>
-                            </select>
+                        <div class="bg-gray-600 rounded-lg p-3">
+                            <div class="flex items-center gap-3">
+                                <span class="text-gray-400 text-sm w-16">Clip <span x-text="ci+1"></span></span>
+                                <input type="number" step="0.1" min="0.5" :value="clip.duration"
+                                    @change="clip.duration = parseFloat($event.target.value)"
+                                    class="w-20 px-2 py-1 bg-gray-700 border border-gray-500 rounded text-white text-sm">
+                                <span class="text-gray-400 text-sm">sec</span>
+                                <select :value="clip.type" @change="clip.type = $event.target.value; initClipTextDefaults(clip)"
+                                    class="px-3 py-1 bg-gray-700 border border-gray-500 rounded text-white text-sm">
+                                    <option value="before">Before</option>
+                                    <option value="after">After</option>
+                                    <option value="cta">CTA</option>
+                                    <option value="transition">Transition</option>
+                                </select>
+                                <select :value="clip.text_position || 'bottom'" @change="clip.text_position = $event.target.value"
+                                    class="px-3 py-1 bg-gray-700 border border-gray-500 rounded text-white text-sm">
+                                    <option value="top">Text: Top</option>
+                                    <option value="center">Text: Center</option>
+                                    <option value="bottom">Text: Bottom</option>
+                                </select>
+                                <label class="flex items-center gap-1 ml-auto cursor-pointer">
+                                    <input type="checkbox" :checked="clip.has_text !== false"
+                                        @change="clip.has_text = $event.target.checked; buildClipTexts()"
+                                        class="w-4 h-4 text-purple-500 bg-gray-700 border-gray-500 rounded">
+                                    <span class="text-gray-300 text-xs">Text</span>
+                                </label>
+                                <select x-show="clip.has_text !== false" :value="clip.text_style || 'hook'"
+                                    @change="clip.text_style = $event.target.value; buildClipTexts()"
+                                    class="px-2 py-1 bg-gray-700 border border-gray-500 rounded text-white text-xs">
+                                    <option value="hook">Hook style</option>
+                                    <option value="cta">CTA style</option>
+                                </select>
+                            </div>
+                            <div x-show="clip.detected_text" class="mt-1 ml-16 text-gray-400 text-xs italic">
+                                Detected: "<span x-text="clip.detected_text"></span>"
+                            </div>
                         </div>
                     </template>
                 </div>
@@ -244,28 +261,36 @@
         <!-- ==================== STEP 3: TEXT ==================== -->
         <div x-show="currentStep === 3" x-transition class="bg-gray-800 rounded-xl p-6 shadow-xl">
             <h2 class="text-xl font-bold text-white mb-4">Step 3: Text Configuration</h2>
+            <p class="text-gray-500 text-sm mb-4">Configure text for each clip that has text enabled. Toggle text on/off per clip in Step 1.</p>
 
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                <!-- Hook text -->
-                <div>
-                    <label class="block text-gray-300 text-sm font-medium mb-2">Hook Text (Clip 1)</label>
-                    <textarea x-model="hookText" rows="3" placeholder="POV: you lose face fat"
-                        class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-purple-500 resize-none"></textarea>
-                    <div class="mt-2 p-3 rounded-lg bg-black/50 border border-gray-600">
-                        <p class="text-white text-sm font-medium" x-text="hookText || 'Preview...'"></p>
-                        <p class="text-gray-500 text-xs mt-1">White text on dark background</p>
+            <!-- Per-clip text inputs -->
+            <div class="space-y-4 mb-6">
+                <template x-for="(ct, ci) in clipTexts" :key="ci">
+                    <div class="bg-gray-700 rounded-lg p-4">
+                        <div class="flex items-center gap-3 mb-2">
+                            <span class="text-white font-medium text-sm">Clip <span x-text="ct.clipIndex + 1"></span></span>
+                            <span class="px-2 py-0.5 rounded text-xs font-medium"
+                                  :class="ct.style === 'cta' ? 'bg-white/20 text-white' : 'bg-purple-500/30 text-purple-300'"
+                                  x-text="ct.style === 'cta' ? 'CTA style' : 'Hook style'"></span>
+                            <span class="text-gray-500 text-xs" x-text="ct.clipType"></span>
+                        </div>
+                        <textarea x-model="ct.text" rows="2"
+                            :placeholder="ct.style === 'cta' ? 'e.g. see how I did it' : 'e.g. POV: you lost face fat'"
+                            class="w-full px-4 py-3 bg-gray-600 border border-gray-500 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-purple-500 resize-none"></textarea>
+                        <!-- Preview -->
+                        <div class="mt-2 p-3 rounded-lg"
+                             :class="ct.style === 'cta' ? 'bg-white border border-gray-300' : 'bg-black/50 border border-gray-600'">
+                            <p class="text-sm font-medium"
+                               :class="ct.style === 'cta' ? 'text-black' : 'text-white'"
+                               x-text="ct.text || 'Preview...'"></p>
+                            <p class="text-xs mt-1"
+                               :class="ct.style === 'cta' ? 'text-gray-400' : 'text-gray-500'"
+                               x-text="ct.style === 'cta' ? 'Black text on white background' : 'White text on dark background'"></p>
+                        </div>
                     </div>
-                </div>
-
-                <!-- CTA text -->
-                <div>
-                    <label class="block text-gray-300 text-sm font-medium mb-2">CTA Text (Last Clip)</label>
-                    <textarea x-model="ctaText" rows="3" placeholder="see how I did it &#11015;&#65039;"
-                        class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-purple-500 resize-none"></textarea>
-                    <div class="mt-2 p-3 rounded-lg bg-white border border-gray-300">
-                        <p class="text-black text-sm font-medium" x-text="ctaText || 'Preview...'"></p>
-                        <p class="text-gray-400 text-xs mt-1">Black text on white background</p>
-                    </div>
+                </template>
+                <div x-show="clipTexts.length === 0" class="text-gray-500 text-sm text-center py-4">
+                    No clips have text enabled. Go back to Step 1 and enable text on at least one clip.
                 </div>
             </div>
 
@@ -277,7 +302,7 @@
                 <input type="range" min="1" max="10" x-model="textVariations"
                     class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-purple-500">
                 <p class="text-gray-500 text-xs mt-1">
-                    Claude AI will generate <span x-text="textVariations - 1"></span> additional variations of your text
+                    Claude AI will generate <span x-text="textVariations - 1"></span> additional variation(s) of each clip's text
                 </p>
             </div>
 
@@ -285,7 +310,7 @@
                 <button @click="prevStep()" class="px-6 py-3 bg-gray-600 hover:bg-gray-500 rounded-lg font-semibold text-white transition-colors">
                     &larr; Back
                 </button>
-                <button @click="nextStep()" :disabled="!hookText.trim()"
+                <button @click="nextStep()" :disabled="!hasAnyClipText()"
                     class="px-6 py-3 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-600 rounded-lg font-semibold text-white transition-colors">
                     Continue &rarr;
                 </button>
@@ -474,9 +499,10 @@
             expandedCharacter: null,
             uploadingKey: null,
 
-            // Step 3: Text
-            hookText: '',
-            ctaText: '',
+            // Step 3: Text (per-clip)
+            clipTexts: [],  // [{clipIndex, clipType, style, text}, ...]
+            hookText: '',   // Legacy compat
+            ctaText: '',    // Legacy compat
             textVariations: 1,
 
             // Step 4: Generate
@@ -501,7 +527,12 @@
                 await this.loadCharacters();
             },
 
-            nextStep() { if (this.currentStep < 5) this.currentStep++; },
+            nextStep() {
+                if (this.currentStep < 5) {
+                    if (this.currentStep === 2) this.buildClipTexts();
+                    this.currentStep++;
+                }
+            },
             prevStep() { if (this.currentStep > 1) this.currentStep--; },
             resetToStep(n) {
                 this.currentStep = n;
@@ -521,6 +552,47 @@
 
             selectFormat(fmt) {
                 this.selectedFormat = JSON.parse(JSON.stringify(fmt));
+                // Ensure has_text and text_style defaults exist on all clips
+                for (const clip of (this.selectedFormat.clips || [])) {
+                    if (clip.has_text === undefined || clip.has_text === null) {
+                        clip.has_text = clip.type === 'before' || clip.type === 'cta';
+                    }
+                    if (!clip.text_style) {
+                        clip.text_style = clip.type === 'cta' ? 'cta' : 'hook';
+                    }
+                }
+                this.buildClipTexts();
+            },
+
+            initClipTextDefaults(clip) {
+                // Called when clip type changes — reset text defaults
+                clip.has_text = clip.type === 'before' || clip.type === 'cta';
+                clip.text_style = clip.type === 'cta' ? 'cta' : 'hook';
+                this.buildClipTexts();
+            },
+
+            buildClipTexts() {
+                if (!this.selectedFormat) { this.clipTexts = []; return; }
+                const clips = this.selectedFormat.clips || [];
+                const oldTexts = {};
+                for (const ct of this.clipTexts) {
+                    oldTexts[ct.clipIndex] = ct.text;
+                }
+                this.clipTexts = [];
+                for (let i = 0; i < clips.length; i++) {
+                    const clip = clips[i];
+                    if (clip.has_text === false) continue;
+                    this.clipTexts.push({
+                        clipIndex: i,
+                        clipType: clip.type || 'before',
+                        style: clip.text_style || 'hook',
+                        text: oldTexts[i] !== undefined ? oldTexts[i] : (clip.detected_text || ''),
+                    });
+                }
+            },
+
+            hasAnyClipText() {
+                return this.clipTexts.some(ct => ct.text && ct.text.trim());
             },
 
             async uploadFormat() {
@@ -537,7 +609,7 @@
                     const data = await r.json();
                     if (r.ok) {
                         await this.loadFormats();
-                        this.selectedFormat = data;
+                        this.selectFormat(data);
                         this.uploadFormatFile = null;
                         this.uploadFormatName = '';
                     } else {
@@ -561,7 +633,7 @@
                     const data = await r.json();
                     if (r.ok) {
                         await this.loadFormats();
-                        this.selectedFormat = data;
+                        this.selectFormat(data);
                         this.scrapeUrl = '';
                         this.scrapeFormatName = '';
                     } else {
@@ -582,6 +654,7 @@
                         body: JSON.stringify({clips: this.selectedFormat.clips})
                     });
                     await this.loadFormats();
+                    this.buildClipTexts();
                 } catch (e) { console.error('Save failed', e); }
             },
 
@@ -655,6 +728,20 @@
             async submitGeneration() {
                 this.generating = true;
                 try {
+                    // Build per-clip texts array aligned to format clips
+                    const clips = this.selectedFormat.clips || [];
+                    const clipTextsPayload = clips.map((clip, i) => {
+                        const ct = this.clipTexts.find(c => c.clipIndex === i);
+                        return {
+                            text: ct ? ct.text : '',
+                            style: clip.text_style || (clip.type === 'cta' ? 'cta' : 'hook'),
+                        };
+                    });
+
+                    // Legacy compat: extract hook_text and cta_text from first matching clips
+                    const hookCt = this.clipTexts.find(c => c.style === 'hook' && c.text?.trim());
+                    const ctaCt = this.clipTexts.find(c => c.style === 'cta' && c.text?.trim());
+
                     const r = await fetch('/api/instagram-reel/generate', {
                         method: 'POST',
                         headers: {'Content-Type': 'application/json'},
@@ -663,8 +750,9 @@
                             num_videos: parseInt(this.numVideos),
                             num_text_variations: parseInt(this.textVariations),
                             asset_type: this.assetType,
-                            hook_text: this.hookText,
-                            cta_text: this.ctaText,
+                            hook_text: hookCt ? hookCt.text : '',
+                            cta_text: ctaCt ? ctaCt.text : '',
+                            clip_texts: clipTextsPayload,
                             character_ids: this.selectedCharacters
                         })
                     });
