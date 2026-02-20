@@ -15,16 +15,13 @@ export function Toggle({
   desc,
   checked,
   onChange,
-  isComplianceCheck,
 }: ToggleProps) {
   return (
     <button
       onClick={() => onChange(!checked)}
       className={`p-4 rounded-lg text-left transition-colors w-full ${
         checked
-          ? isComplianceCheck
-            ? "bg-green-50 border-2 border-green-300"
-            : "bg-blue-50 border-2 border-blue-300"
+          ? "bg-blue-50 border-2 border-blue-300"
           : "bg-gray-50 border-2 border-transparent hover:bg-gray-100"
       }`}
     >
@@ -32,11 +29,7 @@ export function Toggle({
         <span className="font-medium text-gray-900 text-sm">{label}</span>
         <div
           className={`w-5 h-5 rounded-full flex items-center justify-center ${
-            checked
-              ? isComplianceCheck
-                ? "bg-green-600"
-                : "bg-blue-600"
-              : "bg-gray-300"
+            checked ? "bg-blue-600" : "bg-gray-300"
           }`}
         >
           {checked && <Check className="w-3 h-3 text-white" />}

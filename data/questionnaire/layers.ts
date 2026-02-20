@@ -56,7 +56,7 @@ export const questionnaireLayers: QuestionnaireLayer[] = [
         type: "date",
         label: "Gründungsdatum",
         placeholder: "TT.MM.JJJJ",
-        required: true,
+        required: false,
         isComplianceCheck: false,
       },
       {

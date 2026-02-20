@@ -185,7 +185,7 @@ export function RiskAnalysisScreen({
       )}
 
       {/* Severity stats */}
-      <div className="grid grid-cols-4 gap-3 mb-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
         {(["kritisch", "hoch", "mittel", "niedrig"] as const).map((sev) => (
           <div
             key={sev}
@@ -204,7 +204,7 @@ export function RiskAnalysisScreen({
       </div>
 
       {/* Risk table */}
-      <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+      <div className="bg-white border border-gray-200 rounded-xl overflow-hidden overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-gray-50 border-b border-gray-200">

@@ -10,6 +10,7 @@ import {
   Settings,
   Send,
   Users,
+  X,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { NavItem } from "./NavItem";
@@ -21,6 +22,8 @@ interface SidebarProps {
   hasResults: boolean;
   userEmail?: string;
   isGuest?: boolean;
+  open: boolean;
+  onClose: () => void;
 }
 
 export function Sidebar({
@@ -29,22 +32,31 @@ export function Sidebar({
   hasResults,
   userEmail,
   isGuest,
+  open,
+  onClose,
 }: SidebarProps) {
   const t = useTranslations("Nav");
   const tApp = useTranslations("App");
 
-  return (
-    <aside className="w-64 bg-white border-r border-gray-200 flex flex-col shrink-0">
+  const sidebarContent = (
+    <>
       {/* Logo */}
       <div className="p-6 border-b border-gray-100">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-blue-700 rounded-xl flex items-center justify-center">
             <ScanSearch className="w-5 h-5 text-white" />
           </div>
-          <div>
+          <div className="flex-1 min-w-0">
             <h1 className="font-bold text-gray-900">{tApp("name")}</h1>
             <p className="text-xs text-gray-500">{tApp("tagline")}</p>
           </div>
+          {/* Close button — mobile only */}
+          <button
+            onClick={onClose}
+            className="md:hidden w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100"
+          >
+            <X className="w-5 h-5 text-gray-500" />
+          </button>
         </div>
       </div>
 
@@ -150,6 +162,30 @@ export function Sidebar({
           </div>
         </div>
       </div>
-    </aside>
+    </>
+  );
+
+  return (
+    <>
+      {/* Desktop sidebar — always visible */}
+      <aside className="hidden md:flex w-64 bg-white border-r border-gray-200 flex-col shrink-0">
+        {sidebarContent}
+      </aside>
+
+      {/* Mobile drawer — overlay */}
+      {open && (
+        <div className="fixed inset-0 z-40 md:hidden">
+          {/* Backdrop */}
+          <div
+            className="absolute inset-0 bg-black/40"
+            onClick={onClose}
+          />
+          {/* Drawer */}
+          <aside className="relative w-64 max-w-[80vw] h-full bg-white flex flex-col shadow-xl">
+            {sidebarContent}
+          </aside>
+        </div>
+      )}
+    </>
   );
 }

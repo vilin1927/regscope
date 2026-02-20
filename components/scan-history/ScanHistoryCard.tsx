@@ -25,7 +25,7 @@ export function ScanHistoryCard({
 
   return (
     <div className="bg-white rounded-xl border border-gray-200 p-5 hover:shadow-md transition-shadow">
-      <div className="flex items-center justify-between mb-3">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
         <div>
           <h3 className="font-semibold text-gray-900">{companyName}</h3>
           <p className="text-sm text-gray-500">{date}</p>

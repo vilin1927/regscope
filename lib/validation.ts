@@ -77,6 +77,10 @@ export function validateLayer(
   const errors: ValidationErrors = {};
 
   for (const field of layer.fields) {
+    // Skip establishmentDate validation when company is not yet established
+    if (field.id === "establishmentDate" && answers.noCompanyYet === true) {
+      continue;
+    }
     const error = validateField(field, answers[field.id]);
     if (error) {
       errors[field.id] = error;

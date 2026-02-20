@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import { AnimatePresence } from "framer-motion";
-import { MobileGate } from "./MobileGate";
 import { Sidebar } from "./Sidebar";
 import { Header } from "./Header";
 import { DashboardScreen } from "../dashboard/DashboardScreen";
@@ -33,7 +32,7 @@ export function ComplyRadarApp() {
     return "auth";
   });
   const [prefillAnswers, setPrefillAnswers] = useState<BusinessProfile>();
-  const [isMobile, setIsMobile] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [processingError, setProcessingError] = useState<string>();
 
   const setCurrentScreen = (screen: Screen) => {
@@ -80,14 +79,6 @@ export function ComplyRadarApp() {
     }
   }, [auth.isLoading, auth.userId, auth.isGuest]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Mobile check
-  useEffect(() => {
-    const check = () => setIsMobile(window.innerWidth < 768);
-    check();
-    window.addEventListener("resize", check);
-    return () => window.removeEventListener("resize", check);
-  }, []);
-
   const startScan = () => {
     setPrefillAnswers(undefined);
     setCurrentScreen("questionnaire");
@@ -110,6 +101,7 @@ export function ComplyRadarApp() {
   };
 
   const navigate = (screen: Screen) => {
+    setSidebarOpen(false);
     if (screen === "questionnaire") {
       startScan();
     } else {
@@ -132,8 +124,6 @@ export function ComplyRadarApp() {
 
   const hasResults = scans.matchedRegulations.length > 0;
 
-  if (isMobile) return <MobileGate />;
-
   if (currentScreen === "auth") {
     return (
       <AuthScreen
@@ -151,7 +141,7 @@ export function ComplyRadarApp() {
     !auth.isGuest
   ) {
     return (
-      <div className="min-h-screen bg-[#f8fafc] flex items-center justify-center p-6">
+      <div className="min-h-screen bg-[#f8fafc] flex items-center justify-center p-4 sm:p-6">
         <div className="w-full max-w-3xl">
           <LegalScreen
             page={currentScreen}
@@ -170,12 +160,14 @@ export function ComplyRadarApp() {
         hasResults={hasResults}
         userEmail={auth.userEmail}
         isGuest={auth.isGuest}
+        open={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
       />
 
       <main className="flex-1 flex flex-col min-w-0">
-        <Header currentScreen={currentScreen} />
+        <Header currentScreen={currentScreen} onMenuToggle={() => setSidebarOpen(true)} />
 
-        <div className="flex-1 p-6 overflow-auto">
+        <div className="flex-1 p-4 md:p-6 overflow-auto">
           <AnimatePresence mode="wait">
             {currentScreen === "dashboard" && (
               <DashboardScreen

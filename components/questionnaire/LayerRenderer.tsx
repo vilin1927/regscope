@@ -50,7 +50,10 @@ export function LayerRenderer({
   const t = useTranslations("Questionnaire");
 
   // Split fields: regular fields and compliance-check toggles
-  const regularFields = layer.fields.filter((f) => !f.isComplianceCheck);
+  // Hide establishmentDate when noCompanyYet is toggled on
+  const regularFields = layer.fields.filter(
+    (f) => !f.isComplianceCheck && !(f.id === "establishmentDate" && answers.noCompanyYet === true)
+  );
   const complianceFields = layer.fields.filter((f) => f.isComplianceCheck);
 
   const layerKey = `layer${layer.id}` as const;
