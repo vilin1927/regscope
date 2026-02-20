@@ -135,7 +135,6 @@ export function FieldRenderer({ field, value, onChange, error }: FieldRendererPr
             label={label}
             checked={(value as boolean) || false}
             onChange={(v) => onChange(v)}
-            isComplianceCheck={field.isComplianceCheck}
           />
         </div>
       );

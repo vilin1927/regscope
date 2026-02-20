@@ -7,7 +7,6 @@ interface ToggleProps {
   desc?: string;
   checked: boolean;
   onChange: (value: boolean) => void;
-  isComplianceCheck?: boolean;
 }
 
 export function Toggle({
