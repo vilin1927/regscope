@@ -132,6 +132,24 @@ class ApiKeyManager:
         key_id = self._get_key_id(key)
         limits = RATE_LIMITS.get(model_type, RATE_LIMITS['image'])
 
+        # Check if key is marked as invalid (API_KEY_INVALID — wrong or revoked key)
+        invalid_key = f"{KEY_PREFIX}{key_id}:invalid"
+        is_invalid = self.redis.get(invalid_key) == "true"
+
+        if is_invalid:
+            return {
+                'key_id': key_id,
+                'model_type': model_type,
+                'rpm_used': 0,
+                'rpm_limit': 0,
+                'daily_used': 0,
+                'daily_limit': 0,
+                'is_available': False,
+                'is_free_tier': False,
+                'is_invalid': True,
+                'is_daily_exhausted': False
+            }
+
         # Check if key is marked as free tier (permanently unusable)
         free_tier_key = f"{KEY_PREFIX}{key_id}:{model_type}:free_tier"
         is_free_tier = self.redis.get(free_tier_key) == "true"
@@ -146,6 +164,7 @@ class ApiKeyManager:
                 'daily_limit': 0,
                 'is_available': False,
                 'is_free_tier': True,
+                'is_invalid': False,
                 'is_daily_exhausted': False
             }
 
@@ -166,6 +185,7 @@ class ApiKeyManager:
                 'daily_limit': limits['daily'],
                 'is_available': False,
                 'is_free_tier': False,
+                'is_invalid': False,
                 'is_daily_exhausted': True
             }
 
@@ -187,6 +207,7 @@ class ApiKeyManager:
             'daily_limit': daily_limit,
             'is_available': rpm_used < rpm_limit and daily_used < daily_limit,
             'is_free_tier': False,
+            'is_invalid': False,
             'is_daily_exhausted': False
         }
 
@@ -213,6 +234,11 @@ class ApiKeyManager:
             key = self.keys[idx]
             usage = self.get_key_usage(key, model_type)
 
+            # Skip invalid keys (API_KEY_INVALID)
+            if usage.get('is_invalid'):
+                logger.debug(f"Skipping key #{idx + 1} ({usage['key_id']}) - INVALID KEY")
+                continue
+
             # Skip free tier keys
             if usage.get('is_free_tier'):
                 logger.debug(f"Skipping key #{idx + 1} ({usage['key_id']}) - FREE TIER")
@@ -229,7 +255,9 @@ class ApiKeyManager:
         status = self.get_all_keys_status(model_type)
         logger.error(f"All {len(self.keys)} API keys exhausted for {model_type} model!")
         for i, s in enumerate(status):
-            if s.get('is_free_tier'):
+            if s.get('is_invalid'):
+                logger.error(f"  Key #{i + 1} ({s['key_id']}): INVALID (API_KEY_INVALID)")
+            elif s.get('is_free_tier'):
                 logger.error(f"  Key #{i + 1} ({s['key_id']}): FREE TIER (no billing)")
             elif s.get('is_daily_exhausted'):
                 logger.error(f"  Key #{i + 1} ({s['key_id']}): DAILY LIMIT (resets at midnight PT)")
@@ -269,16 +297,37 @@ class ApiKeyManager:
             seconds_until_midnight = self._get_seconds_until_midnight_pt()
             self.redis.expire(daily_key, seconds_until_midnight)
 
-    def record_failure(self, key: str, model_type: str = 'image', is_rate_limit: bool = False):
+    def record_invalid_key(self, key: str):
+        """
+        Mark a key as permanently invalid (API_KEY_INVALID from Google).
+        Applies across all model types. Expires after 24h so keys can be
+        re-validated if the user fixes them.
+
+        Args:
+            key: The API key that returned INVALID_ARGUMENT
+        """
+        key_id = self._get_key_id(key)
+        invalid_key = f"{KEY_PREFIX}{key_id}:invalid"
+        # Mark invalid for 24h (auto-clears so updated keys get retried)
+        self.redis.set(invalid_key, "true", ex=86400)
+        logger.warning(f"Key {key_id} marked INVALID for 24h (API_KEY_INVALID)")
+
+    def record_failure(self, key: str, model_type: str = 'image', is_rate_limit: bool = False, is_invalid_key: bool = False):
         """
         Record that a request failed.
         If rate limit error, mark this key as temporarily exhausted for that model (60s RPM cooldown).
+        If invalid key error, mark permanently invalid (24h).
 
         Args:
             key: The API key that failed
             model_type: 'text' or 'image' (default: 'image')
             is_rate_limit: Whether this was a 429 rate limit error
+            is_invalid_key: Whether this was a 400 API_KEY_INVALID error
         """
+        if is_invalid_key:
+            self.record_invalid_key(key)
+            return
+
         if is_rate_limit:
             key_id = self._get_key_id(key)
             limits = RATE_LIMITS.get(model_type, RATE_LIMITS['image'])
@@ -374,6 +423,10 @@ class ApiKeyManager:
             rpm_key = f"{KEY_PREFIX}{key_id}:{mtype}:rpm"
             daily_key = f"{KEY_PREFIX}{key_id}:{mtype}:daily"
             self.redis.delete(rpm_key, daily_key)
+
+        # Also clear invalid flag
+        invalid_key = f"{KEY_PREFIX}{key_id}:invalid"
+        self.redis.delete(invalid_key)
 
         logger.info(f"Manually reset counters for key {key_id} ({model_type or 'all models'})")
 

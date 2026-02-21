@@ -360,7 +360,7 @@ def _get_client(timeout: int = REQUEST_TIMEOUT):
     return client, api_key
 
 
-def _record_api_usage(api_key: str, success: bool = True, is_rate_limit: bool = False, model_type: str = 'text'):
+def _record_api_usage(api_key: str, success: bool = True, is_rate_limit: bool = False, is_invalid_key: bool = False, model_type: str = 'text'):
     """
     Record API usage for the given key and model type.
 
@@ -368,6 +368,7 @@ def _record_api_usage(api_key: str, success: bool = True, is_rate_limit: bool = 
         api_key: The API key that was used
         success: Whether the request succeeded
         is_rate_limit: Whether this was a 429 rate limit error
+        is_invalid_key: Whether this was a 400 API_KEY_INVALID error
         model_type: 'text' or 'image' (default: 'text' for analysis calls)
     """
     try:
@@ -376,7 +377,7 @@ def _record_api_usage(api_key: str, success: bool = True, is_rate_limit: bool = 
         if success:
             manager.record_usage(api_key, model_type=model_type)
         else:
-            manager.record_failure(api_key, model_type=model_type, is_rate_limit=is_rate_limit)
+            manager.record_failure(api_key, model_type=model_type, is_rate_limit=is_rate_limit, is_invalid_key=is_invalid_key)
     except ImportError:
         pass  # Manager not available, skip tracking
 
@@ -2051,17 +2052,26 @@ CRITICAL RULES:
             return analysis
 
         except Exception as e:
-            # Record rate limit failures so the key manager can skip this key
-            is_rate_limit = '429' in str(e) or 'RESOURCE_EXHAUSTED' in str(e)
-            _record_api_usage(api_key, success=False, is_rate_limit=is_rate_limit)
+            error_str = str(e)
+            is_rate_limit = '429' in error_str or 'RESOURCE_EXHAUSTED' in error_str
+            is_invalid_key = 'INVALID_ARGUMENT' in error_str or 'API_KEY_INVALID' in error_str or 'API key not valid' in error_str
+
+            # Record failure so the key manager can skip this key
+            _record_api_usage(api_key, success=False, is_rate_limit=is_rate_limit, is_invalid_key=is_invalid_key)
 
             if is_rate_limit:
                 # Rate limits should not be retried here - let the caller handle
-                log.error(f"Analysis rate limited: {str(e)}")
-                raise GeminiServiceError(f'Analysis failed: {str(e)}')
+                log.error(f"Analysis rate limited: {error_str}")
+                raise GeminiServiceError(f'Analysis failed: {error_str}')
 
-            log.error(f"Analysis attempt {attempt} failed: {str(e)}", exc_info=(attempt == max_analysis_retries))
-            last_error = GeminiServiceError(f'Analysis failed: {str(e)}')
+            if is_invalid_key:
+                log.error(f"Analysis attempt {attempt} failed: INVALID KEY {api_key[:8]}, will skip in future")
+                # Don't count as a "real" retry — get a new key and try again
+                last_error = GeminiServiceError(f'Analysis failed: {error_str}')
+                continue
+
+            log.error(f"Analysis attempt {attempt} failed: {error_str}", exc_info=(attempt == max_analysis_retries))
+            last_error = GeminiServiceError(f'Analysis failed: {error_str}')
 
     # All retries exhausted
     log.error(f"Analysis failed after {max_analysis_retries} attempts")

@@ -403,6 +403,12 @@ class BatchProcessor:
                 # DEBUG: log the raw error to understand what Google returns
                 logger.warning(f"Key {api_key[:8]} raw error: {str(e)[:200]}")
 
+                # Check for INVALID KEY error (wrong or revoked API key)
+                if 'invalid_argument' in error_str or 'api_key_invalid' in error_str or 'api key not valid' in error_str:
+                    logger.error(f"Key {api_key[:8]} is INVALID (API_KEY_INVALID). Marking and skipping.")
+                    _record_api_usage(api_key, success=False, is_invalid_key=True, model_type='image')
+                    continue
+
                 # Check for FREE TIER error (billing not enabled for this model)
                 if 'free_tier' in error_str or 'limit: 0' in error_str:
                     logger.error(f"Key {api_key[:8]} is FREE TIER - no quota for image model! Skipping this key.")

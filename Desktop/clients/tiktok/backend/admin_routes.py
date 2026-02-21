@@ -6,6 +6,7 @@ import os
 import re
 import secrets
 import subprocess
+import threading
 import time
 from functools import wraps
 from flask import Blueprint, request, jsonify
@@ -65,7 +66,9 @@ def mask_key(key: str) -> str:
 
 
 def restart_worker_services() -> bool:
-    """Restart image-queue-processor and celery-worker to pick up new env vars"""
+    """Restart all services to pick up new env vars.
+    Workers restart immediately; tiktok-slideshow restarts after a short
+    delay so the current HTTP response can be sent first."""
     try:
         # Only restart on Linux (production server)
         if os.name != 'posix' or not os.path.exists('/etc/systemd/system'):
@@ -84,6 +87,23 @@ def restart_worker_services() -> bool:
                 logger.error(f"Failed to restart {service}: {result.stderr}")
             else:
                 logger.info(f"Restarted {service}")
+
+        # Restart the main Flask app after a delay so the response is sent first
+        def _delayed_restart():
+            time.sleep(2)
+            try:
+                subprocess.run(
+                    ['systemctl', 'restart', 'tiktok-slideshow'],
+                    capture_output=True, text=True, timeout=30
+                )
+                # This log may not appear since the process is restarting
+                logger.info("Restarted tiktok-slideshow")
+            except Exception as e:
+                logger.error(f"Failed to restart tiktok-slideshow: {e}")
+
+        t = threading.Thread(target=_delayed_restart, daemon=True)
+        t.start()
+        logger.info("Scheduled tiktok-slideshow restart in 2s")
 
         return True
     except Exception as e:
@@ -269,7 +289,7 @@ def update_api_keys():
             'status': 'updated',
             'updated': updated,
             'services_restarted': services_restarted,
-            'message': f'Updated: {", ".join(updated)}. Workers restarted: {services_restarted}'
+            'message': f'Updated: {", ".join(updated)}. All services restarting (app restarts in ~2s).'
         })
 
     except Exception as e:
