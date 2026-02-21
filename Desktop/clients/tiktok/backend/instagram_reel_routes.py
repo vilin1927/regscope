@@ -533,6 +533,36 @@ def start_generation():
     if asset_type not in ('photos', 'videos', 'both'):
         return jsonify({'error': 'asset_type must be photos, videos, or both'}), 400
 
+    # Validate that selected characters have assets matching the requested type
+    required_types = set()
+    if asset_type in ('photos', 'both'):
+        required_types.update(['before_photo', 'after_photo'])
+    if asset_type in ('videos', 'both'):
+        required_types.update(['before_video', 'after_video'])
+
+    has_valid_character = False
+    for char_id in character_ids:
+        assets = get_ig_assets_by_character(char_id)
+        asset_types_present = {a['asset_type'] for a in assets}
+        if asset_type == 'photos' and 'before_photo' in asset_types_present and 'after_photo' in asset_types_present:
+            has_valid_character = True
+            break
+        elif asset_type == 'videos' and 'before_video' in asset_types_present and 'after_video' in asset_types_present:
+            has_valid_character = True
+            break
+        elif asset_type == 'both':
+            has_photos = 'before_photo' in asset_types_present and 'after_photo' in asset_types_present
+            has_videos = 'before_video' in asset_types_present and 'after_video' in asset_types_present
+            if has_photos or has_videos:
+                has_valid_character = True
+                break
+
+    if not has_valid_character:
+        type_label = {'photos': 'photo', 'videos': 'video', 'both': 'photo or video'}.get(asset_type, asset_type)
+        return jsonify({
+            'error': f'No selected characters have {type_label} assets. Upload {type_label}s first or change Asset Type.'
+        }), 400
+
     # Handle clip_texts: new per-clip mode or legacy hook_text/cta_text
     clip_texts_json = None
     if clip_texts and isinstance(clip_texts, list):
