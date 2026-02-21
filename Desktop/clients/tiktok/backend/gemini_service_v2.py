@@ -1961,7 +1961,7 @@ CRITICAL RULES:
             mime_type=_get_image_mime_type(product_path)
         ))
 
-    max_analysis_retries = 2
+    max_analysis_retries = 4
     last_error = None
 
     for attempt in range(1, max_analysis_retries + 1):
@@ -2055,18 +2055,27 @@ CRITICAL RULES:
             error_str = str(e)
             is_rate_limit = '429' in error_str or 'RESOURCE_EXHAUSTED' in error_str
             is_invalid_key = 'INVALID_ARGUMENT' in error_str or 'API_KEY_INVALID' in error_str or 'API key not valid' in error_str
+            is_overloaded = '503' in error_str or 'UNAVAILABLE' in error_str
 
             # Record failure so the key manager can skip this key
             _record_api_usage(api_key, success=False, is_rate_limit=is_rate_limit, is_invalid_key=is_invalid_key)
 
-            if is_rate_limit:
-                # Rate limits should not be retried here - let the caller handle
-                log.error(f"Analysis rate limited: {error_str}")
-                raise GeminiServiceError(f'Analysis failed: {error_str}')
-
             if is_invalid_key:
                 log.error(f"Analysis attempt {attempt} failed: INVALID KEY {api_key[:8]}, will skip in future")
-                # Don't count as a "real" retry — get a new key and try again
+                last_error = GeminiServiceError(f'Analysis failed: {error_str}')
+                continue
+
+            if is_rate_limit:
+                # Rotate to next key and retry (this key is exhausted, others may work)
+                log.warning(f"Analysis attempt {attempt} rate limited (key {api_key[:8]}), rotating to next key...")
+                last_error = GeminiServiceError(f'Analysis failed: {error_str}')
+                continue
+
+            if is_overloaded:
+                # 503 = temporary Google overload, wait and retry with same or different key
+                backoff = 10 * attempt  # 10s, 20s, 30s, 40s
+                log.warning(f"Analysis attempt {attempt} got 503 UNAVAILABLE, backing off {backoff}s...")
+                time.sleep(backoff)
                 last_error = GeminiServiceError(f'Analysis failed: {error_str}')
                 continue
 
