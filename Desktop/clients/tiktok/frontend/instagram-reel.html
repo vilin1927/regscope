@@ -711,16 +711,33 @@
 
             async uploadAssetFiles(charId, assetType, files) {
                 this.uploadingKey = charId + '_' + assetType;
+
+                // Client-side size check (500MB total)
+                let totalSize = 0;
+                for (const f of files) totalSize += f.size;
+                if (totalSize > 500 * 1024 * 1024) {
+                    alert(`Files too large (${(totalSize / 1024 / 1024).toFixed(0)}MB). Maximum is 500MB total.`);
+                    this.uploadingKey = null;
+                    return;
+                }
+
                 const formData = new FormData();
                 formData.append('asset_type', assetType);
                 for (const f of files) formData.append('files', f);
 
                 try {
-                    await fetch(`/api/instagram-reel/characters/${charId}/assets`, {
+                    const resp = await fetch(`/api/instagram-reel/characters/${charId}/assets`, {
                         method: 'POST', body: formData
                     });
+                    if (!resp.ok) {
+                        const data = await resp.json().catch(() => ({}));
+                        alert(data.error || `Upload failed (HTTP ${resp.status})`);
+                    }
                     await this.loadCharacters();
-                } catch (e) { console.error('Upload failed', e); }
+                } catch (e) {
+                    console.error('Upload failed', e);
+                    alert('Upload failed: connection error or file too large');
+                }
                 this.uploadingKey = null;
             },
 

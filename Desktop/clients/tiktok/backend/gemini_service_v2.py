@@ -1976,7 +1976,8 @@ CRITICAL RULES:
                 model=TEXT_MODEL,
                 contents=contents,
                 config=types.GenerateContentConfig(
-                    safety_settings=SAFETY_SETTINGS  # Allow benign lifestyle content analysis
+                    safety_settings=SAFETY_SETTINGS,  # Allow benign lifestyle content analysis
+                    response_mime_type='application/json',  # Force structured JSON output
                 )
             )
             elapsed = time.time() - start_time
