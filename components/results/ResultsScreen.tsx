@@ -1,11 +1,13 @@
 "use client";
 
+import { useState } from "react";
 import { motion } from "framer-motion";
 import { RotateCcw, AlertTriangle } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { StatsBar } from "./StatsBar";
 import { BusinessProfileSummary } from "./BusinessProfileSummary";
 import { RegulationList } from "./RegulationList";
+import { ExpertContactModal } from "@/components/ui/ExpertContactModal";
 import type { MatchedRegulation } from "@/data/regulations/types";
 import type { BusinessProfile } from "@/data/questionnaire/types";
 
@@ -15,6 +17,8 @@ interface ResultsScreenProps {
   complianceChecks: Record<string, boolean>;
   onComplianceChange: (regulationId: string, checked: boolean) => void;
   onReset: () => void;
+  isPro?: boolean;
+  onUnlock?: () => void;
 }
 
 export function ResultsScreen({
@@ -23,8 +27,11 @@ export function ResultsScreen({
   complianceChecks,
   onComplianceChange,
   onReset,
+  isPro = true,
+  onUnlock,
 }: ResultsScreenProps) {
   const t = useTranslations("Results");
+  const [expertModalCategory, setExpertModalCategory] = useState<string | null>(null);
 
   const highPriority = regulations.filter(
     (r) => r.riskLevel === "hoch"
@@ -90,7 +97,17 @@ export function ResultsScreen({
         regulations={regulations}
         complianceChecks={complianceChecks}
         onComplianceChange={onComplianceChange}
+        onExpertContact={setExpertModalCategory}
+        isPro={isPro}
+        onUnlock={onUnlock}
       />
+
+      {expertModalCategory && (
+        <ExpertContactModal
+          category={expertModalCategory}
+          onClose={() => setExpertModalCategory(null)}
+        />
+      )}
     </motion.div>
   );
 }

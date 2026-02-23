@@ -20,6 +20,8 @@ import { AdminUsersScreen } from "../admin/AdminUsersScreen";
 import { useAuth } from "@/hooks/useAuth";
 import { useScanHistory } from "@/hooks/useScanHistory";
 import { useProcessing } from "@/hooks/useProcessing";
+import { useSubscription } from "@/hooks/useSubscription";
+import { UpgradeModal } from "@/components/ui/UpgradeModal";
 import type { Screen } from "@/types";
 import type { BusinessProfile } from "@/data/questionnaire/types";
 
@@ -48,6 +50,8 @@ export function ComplyRadarApp() {
 
   const auth = useAuth();
   const scans = useScanHistory(auth.userId, auth.isGuest);
+  const subscription = useSubscription();
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
 
   const processing = useProcessing({
     onComplete: (matched) => {
@@ -124,6 +128,15 @@ export function ComplyRadarApp() {
 
   const hasResults = scans.matchedRegulations.length > 0;
 
+  // Live compliance score for dashboard widget
+  const complianceScore = hasResults
+    ? Math.round(
+        (Object.values(scans.complianceChecks).filter(Boolean).length /
+          scans.matchedRegulations.length) *
+          100
+      )
+    : undefined;
+
   if (currentScreen === "auth") {
     return (
       <AuthScreen
@@ -176,6 +189,8 @@ export function ComplyRadarApp() {
                 scanCount={scans.scanHistory.length}
                 regulationsFound={scans.scanHistory[0]?.regulationCount ?? 0}
                 lastScanDate={scans.scanHistory[0]?.date}
+                complianceScore={complianceScore}
+                regulationCount={scans.matchedRegulations.length}
               />
             )}
 
@@ -211,6 +226,8 @@ export function ComplyRadarApp() {
                 complianceChecks={scans.complianceChecks}
                 onComplianceChange={scans.handleComplianceChange}
                 onReset={() => { scans.resetScan(); startScan(); }}
+                isPro={subscription.isPro}
+                onUnlock={() => setShowUpgradeModal(true)}
               />
             )}
 
@@ -229,6 +246,8 @@ export function ComplyRadarApp() {
                 key="risk-analysis"
                 scanId={scans.currentScanId ?? undefined}
                 hasResults={hasResults}
+                isPro={subscription.isPro}
+                onUnlock={() => setShowUpgradeModal(true)}
               />
             )}
 
@@ -245,6 +264,8 @@ export function ComplyRadarApp() {
                 key="recommendations"
                 scanId={scans.currentScanId ?? undefined}
                 hasResults={hasResults}
+                isPro={subscription.isPro}
+                onUnlock={() => setShowUpgradeModal(true)}
               />
             )}
 
@@ -263,6 +284,10 @@ export function ComplyRadarApp() {
                 isGuest={auth.isGuest}
                 onSignOut={handleSignOut}
                 onLegal={(page) => setCurrentScreen(page)}
+                isPro={subscription.isPro}
+                onTogglePlan={() =>
+                  subscription.setPlan(subscription.isPro ? "free" : "pro")
+                }
               />
             )}
 
@@ -277,6 +302,13 @@ export function ComplyRadarApp() {
           </AnimatePresence>
         </div>
       </main>
+
+      {showUpgradeModal && (
+        <UpgradeModal
+          onUpgrade={subscription.upgrade}
+          onClose={() => setShowUpgradeModal(false)}
+        />
+      )}
     </div>
   );
 }

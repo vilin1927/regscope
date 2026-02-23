@@ -26,7 +26,8 @@
     "regulationsFound": "Vorschriften gefunden",
     "scansCompleted": "Scans durchgeführt",
     "lastScan": "Letzter Scan",
-    "noScansYet": "Noch keine Scans"
+    "noScansYet": "Noch keine Scans",
+    "basedOnRegulations": "Basierend auf {count} Vorschriften"
   },
   "Questionnaire": {
     "stepOf": "Schritt {step} von {total}",
@@ -468,6 +469,39 @@
     "noUsers": "Noch keine Benutzer",
     "previewLoading": "Vorschau wird geladen...",
     "previewError": "Vorschau konnte nicht geladen werden"
+  },
+  "Expert": {
+    "consultExpert": "Experte kontaktieren",
+    "modalTitle": "Expertenberatung anfordern",
+    "name": "Name",
+    "namePlaceholder": "Ihr vollständiger Name",
+    "email": "E-Mail",
+    "emailPlaceholder": "name@beispiel.de",
+    "category": "Bereich",
+    "message": "Nachricht",
+    "messagePlaceholder": "Beschreiben Sie kurz Ihr Anliegen...",
+    "send": "Anfrage senden",
+    "successTitle": "Anfrage gesendet!",
+    "successMessage": "Ein Experte wird sich innerhalb von 24 Stunden bei Ihnen melden.",
+    "close": "Schließen"
+  },
+  "Paywall": {
+    "moreRegulations": "{count} weitere Vorschriften",
+    "unlockAll": "Alle freischalten",
+    "moreRisks": "{count} weitere Risiken",
+    "moreRecommendations": "{count} weitere Empfehlungen",
+    "proTitle": "ComplyRadar Pro",
+    "proSubtitle": "Vollständiger Zugriff auf alle Compliance-Daten",
+    "proPricing": "ab 29 EUR/Monat",
+    "proFeature1": "Alle Vorschriften einsehen",
+    "proFeature2": "Vollständige Risikoanalyse",
+    "proFeature3": "Alle Empfehlungen",
+    "proFeature4": "Experten-Kontakt",
+    "upgradeCta": "Jetzt freischalten",
+    "upgradeSuccess": "Pro-Zugang aktiviert!",
+    "demoPlan": "Demo-Modus",
+    "free": "Free",
+    "pro": "Pro"
   },
   "Common": {
     "yes": "Ja",

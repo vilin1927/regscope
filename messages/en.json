@@ -26,7 +26,8 @@
     "regulationsFound": "Regulations Found",
     "scansCompleted": "Scans Completed",
     "lastScan": "Last Scan",
-    "noScansYet": "No scans yet"
+    "noScansYet": "No scans yet",
+    "basedOnRegulations": "Based on {count} regulations"
   },
   "Questionnaire": {
     "stepOf": "Step {step} of {total}",
@@ -468,6 +469,39 @@
     "noUsers": "No users yet",
     "previewLoading": "Loading preview...",
     "previewError": "Failed to load preview"
+  },
+  "Expert": {
+    "consultExpert": "Consult Expert",
+    "modalTitle": "Request Expert Consultation",
+    "name": "Name",
+    "namePlaceholder": "Your full name",
+    "email": "Email",
+    "emailPlaceholder": "name@example.com",
+    "category": "Area",
+    "message": "Message",
+    "messagePlaceholder": "Briefly describe your concern...",
+    "send": "Send Request",
+    "successTitle": "Request Sent!",
+    "successMessage": "An expert will contact you within 24 hours.",
+    "close": "Close"
+  },
+  "Paywall": {
+    "moreRegulations": "{count} more regulations",
+    "unlockAll": "Unlock All",
+    "moreRisks": "{count} more risks",
+    "moreRecommendations": "{count} more recommendations",
+    "proTitle": "ComplyRadar Pro",
+    "proSubtitle": "Full access to all compliance data",
+    "proPricing": "from 29 EUR/month",
+    "proFeature1": "View all regulations",
+    "proFeature2": "Full risk analysis",
+    "proFeature3": "All recommendations",
+    "proFeature4": "Expert contact",
+    "upgradeCta": "Unlock Now",
+    "upgradeSuccess": "Pro access activated!",
+    "demoPlan": "Demo Mode",
+    "free": "Free",
+    "pro": "Pro"
   },
   "Common": {
     "yes": "Yes",

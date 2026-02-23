@@ -1,14 +1,18 @@
 "use client";
 
+import { useState } from "react";
 import { motion } from "framer-motion";
-import { ShieldAlert, AlertTriangle, Loader2, BarChart3, RefreshCw } from "lucide-react";
+import { ShieldAlert, AlertTriangle, Loader2, BarChart3, RefreshCw, UserPlus } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useRiskAnalysis } from "@/hooks/useRiskAnalysis";
+import { ExpertContactModal } from "@/components/ui/ExpertContactModal";
 import type { RiskSeverity } from "@/types/addons";
 
 interface RiskAnalysisScreenProps {
   scanId?: string;
   hasResults: boolean;
+  isPro?: boolean;
+  onUnlock?: () => void;
 }
 
 const severityColors: Record<RiskSeverity, string> = {
@@ -21,8 +25,13 @@ const severityColors: Record<RiskSeverity, string> = {
 export function RiskAnalysisScreen({
   scanId,
   hasResults,
+  isPro = true,
+  onUnlock,
 }: RiskAnalysisScreenProps) {
   const t = useTranslations("RiskAnalysis");
+  const tExpert = useTranslations("Expert");
+  const tPaywall = useTranslations("Paywall");
+  const [expertModalOpen, setExpertModalOpen] = useState(false);
   const { report, isLoading, isGenerating, error, generate, regenerate } =
     useRiskAnalysis(scanId);
 
@@ -226,39 +235,61 @@ export function RiskAnalysisScreen({
             </tr>
           </thead>
           <tbody>
-            {report.items.map((item) => (
-              <tr
-                key={item.regulationId}
-                className="border-b border-gray-100 last:border-0"
-              >
-                <td className="px-4 py-3 font-medium text-gray-900">
-                  {item.regulationName}
-                </td>
-                <td className="px-4 py-3">
-                  <span
-                    className={`px-2 py-1 rounded-full text-xs font-medium ${severityColors[item.severity]}`}
-                  >
-                    {t(`severity.${item.severity}`)}
-                  </span>
-                </td>
-                <td className="px-4 py-3 text-gray-600">
-                  {item.complianceGap}
-                </td>
-                <td className="px-4 py-3 text-gray-600">{item.deadline}</td>
-                <td className="px-4 py-3 text-gray-600">
-                  {item.potentialPenalty}
-                </td>
-              </tr>
-            ))}
+            {report.items.map((item, i) => {
+              if (!isPro && i > 0) return null;
+              return (
+                <tr
+                  key={item.regulationId}
+                  className="border-b border-gray-100 last:border-0"
+                >
+                  <td className="px-4 py-3 font-medium text-gray-900">
+                    {item.regulationName}
+                  </td>
+                  <td className="px-4 py-3">
+                    <span
+                      className={`px-2 py-1 rounded-full text-xs font-medium ${severityColors[item.severity]}`}
+                    >
+                      {t(`severity.${item.severity}`)}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-gray-600">
+                    {item.complianceGap}
+                  </td>
+                  <td className="px-4 py-3 text-gray-600">{item.deadline}</td>
+                  <td className="px-4 py-3 text-gray-600">
+                    {item.potentialPenalty}
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
+
+      {/* Freemium blur for remaining rows */}
+      {!isPro && report.items.length > 1 && (
+        <div className="mt-4 relative rounded-xl border border-gray-200 bg-white p-6 text-center">
+          <div className="absolute inset-0 bg-white/60 backdrop-blur-sm rounded-xl" />
+          <div className="relative z-10">
+            <p className="text-sm font-medium text-gray-700 mb-2">
+              {tPaywall("moreRisks", { count: report.items.length - 1 })}
+            </p>
+            <button
+              onClick={onUnlock}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
+            >
+              {tPaywall("unlockAll")}
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Mitigation details */}
       <div className="mt-4 space-y-3">
         <h2 className="font-semibold text-gray-900">{t("mitigations")}</h2>
         {report.items
           .filter((item) => item.mitigation)
+          .filter((_, i) => isPro || i === 0)
           .map((item) => (
             <div
               key={item.regulationId}
@@ -271,6 +302,24 @@ export function RiskAnalysisScreen({
             </div>
           ))}
       </div>
+
+      {/* Expert contact button */}
+      <div className="mt-6">
+        <button
+          onClick={() => setExpertModalOpen(true)}
+          className="inline-flex items-center gap-2 px-4 py-2 border border-blue-200 text-blue-600 rounded-lg text-sm font-medium hover:bg-blue-50 transition-colors"
+        >
+          <UserPlus className="w-4 h-4" />
+          {tExpert("consultExpert")}
+        </button>
+      </div>
+
+      {expertModalOpen && (
+        <ExpertContactModal
+          category={t("title")}
+          onClose={() => setExpertModalOpen(false)}
+        />
+      )}
     </motion.div>
   );
 }

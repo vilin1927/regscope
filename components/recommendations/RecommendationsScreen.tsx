@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { motion } from "framer-motion";
 import {
   Lightbulb,
@@ -11,15 +12,19 @@ import {
   Info,
   BarChart3,
   RefreshCw,
+  UserPlus,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useRecommendations } from "@/hooks/useRecommendations";
+import { ExpertContactModal } from "@/components/ui/ExpertContactModal";
 import type { RecommendationTimeline } from "@/types/addons";
 
 interface RecommendationsScreenProps {
   scanId?: string;
   hasResults: boolean;
   hasRiskReport?: boolean;
+  isPro?: boolean;
+  onUnlock?: () => void;
 }
 
 const timelineColors: Record<RecommendationTimeline, string> = {
@@ -32,8 +37,13 @@ export function RecommendationsScreen({
   scanId,
   hasResults,
   hasRiskReport,
+  isPro = true,
+  onUnlock,
 }: RecommendationsScreenProps) {
   const t = useTranslations("Recommendations");
+  const tExpert = useTranslations("Expert");
+  const tPaywall = useTranslations("Paywall");
+  const [expertModalOpen, setExpertModalOpen] = useState(false);
   const { report, isLoading, isGenerating, error, generate, regenerate } =
     useRecommendations(scanId);
 
@@ -219,64 +229,104 @@ export function RecommendationsScreen({
                 </span>
               </div>
               <div className="space-y-3">
-                {grouped[timeline].map((item, i) => (
-                  <div
-                    key={`${timeline}-${i}`}
-                    className="bg-white border border-gray-200 rounded-xl p-4"
-                  >
-                    <div className="flex items-start gap-3">
-                      <div
-                        className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 mt-0.5 ${
-                          item.type === "insurance"
-                            ? "bg-amber-100"
-                            : "bg-blue-100"
-                        }`}
-                      >
-                        {item.type === "insurance" ? (
-                          <Shield className="w-3.5 h-3.5 text-amber-600" />
-                        ) : (
-                          <Check className="w-3.5 h-3.5 text-blue-600" />
-                        )}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1">
-                          <p className="text-sm font-medium text-gray-900">
-                            {item.title}
-                          </p>
-                          {item.type === "insurance" && (
-                            <span className="text-xs bg-amber-50 text-amber-700 px-1.5 py-0.5 rounded font-medium">
-                              {t("insurance")}
-                            </span>
+                {grouped[timeline].map((item, i) => {
+                  if (!isPro && i > 0) return null;
+                  return (
+                    <div
+                      key={`${timeline}-${i}`}
+                      className="bg-white border border-gray-200 rounded-xl p-4"
+                    >
+                      <div className="flex items-start gap-3">
+                        <div
+                          className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 mt-0.5 ${
+                            item.type === "insurance"
+                              ? "bg-amber-100"
+                              : "bg-blue-100"
+                          }`}
+                        >
+                          {item.type === "insurance" ? (
+                            <Shield className="w-3.5 h-3.5 text-amber-600" />
+                          ) : (
+                            <Check className="w-3.5 h-3.5 text-blue-600" />
                           )}
                         </div>
-                        <p className="text-sm text-gray-600 mb-2">
-                          {item.description}
-                        </p>
-                        <div className="flex items-center gap-3">
-                          <div className="flex items-center gap-1">
-                            <Clock className="w-3 h-3 text-gray-400" />
-                            <span className="text-xs text-gray-500">
-                              {t(`timeline.${item.timeline}`)}
-                            </span>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <p className="text-sm font-medium text-gray-900">
+                              {item.title}
+                            </p>
+                            {item.type === "insurance" && (
+                              <span className="text-xs bg-amber-50 text-amber-700 px-1.5 py-0.5 rounded font-medium">
+                                {t("insurance")}
+                              </span>
+                            )}
                           </div>
-                          {item.regulationName && (
-                            <span className="text-xs text-gray-400">
-                              {item.regulationName}
-                            </span>
-                          )}
+                          <p className="text-sm text-gray-600 mb-2">
+                            {item.description}
+                          </p>
+                          <div className="flex items-center gap-3">
+                            <div className="flex items-center gap-1">
+                              <Clock className="w-3 h-3 text-gray-400" />
+                              <span className="text-xs text-gray-500">
+                                {t(`timeline.${item.timeline}`)}
+                              </span>
+                            </div>
+                            {item.regulationName && (
+                              <span className="text-xs text-gray-400">
+                                {item.regulationName}
+                              </span>
+                            )}
+                          </div>
                         </div>
-                      </div>
-                      <div className="shrink-0">
-                        <span className="text-xs font-bold text-gray-400">
-                          P{item.priority}
-                        </span>
+                        <div className="shrink-0">
+                          <span className="text-xs font-bold text-gray-400">
+                            P{item.priority}
+                          </span>
+                        </div>
                       </div>
                     </div>
+                  );
+                })}
+                {/* Freemium blur for remaining items */}
+                {!isPro && grouped[timeline].length > 1 && (
+                  <div className="relative rounded-xl border border-gray-200 bg-white p-6 text-center">
+                    <div className="absolute inset-0 bg-white/60 backdrop-blur-sm rounded-xl" />
+                    <div className="relative z-10">
+                      <p className="text-sm font-medium text-gray-700 mb-2">
+                        {tPaywall("moreRecommendations", {
+                          count: grouped[timeline].length - 1,
+                        })}
+                      </p>
+                      <button
+                        onClick={onUnlock}
+                        className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
+                      >
+                        {tPaywall("unlockAll")}
+                      </button>
+                    </div>
                   </div>
-                ))}
+                )}
               </div>
             </div>
           )
+      )}
+
+      {/* Expert contact button */}
+      <div className="mt-2 mb-6">
+        <button
+          onClick={() => setExpertModalOpen(true)}
+          className="inline-flex items-center gap-2 px-4 py-2 border border-blue-200 text-blue-600 rounded-lg text-sm font-medium hover:bg-blue-50 transition-colors"
+        >
+          <UserPlus className="w-4 h-4" />
+          {tExpert("consultExpert")}
+        </button>
+      </div>
+
+      {expertModalOpen && (
+        <ExpertContactModal
+          category={t("title")}
+          onClose={() => setExpertModalOpen(false)}
+        />
       )}
     </motion.div>
   );

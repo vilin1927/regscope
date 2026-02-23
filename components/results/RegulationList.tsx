@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronDown, ChevronRight } from "lucide-react";
+import { ChevronDown, ChevronRight, UserPlus } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { RegulationCard } from "./RegulationCard";
 import type { MatchedRegulation } from "@/data/regulations/types";
@@ -11,6 +11,9 @@ interface RegulationListProps {
   regulations: MatchedRegulation[];
   complianceChecks: Record<string, boolean>;
   onComplianceChange: (regulationId: string, checked: boolean) => void;
+  onExpertContact?: (category: string) => void;
+  isPro?: boolean;
+  onUnlock?: () => void;
 }
 
 const categoryOrder: RegulationCategory[] = [
@@ -27,8 +30,13 @@ export function RegulationList({
   regulations,
   complianceChecks,
   onComplianceChange,
+  onExpertContact,
+  isPro = true,
+  onUnlock,
 }: RegulationListProps) {
   const t = useTranslations("Results");
+  const tExpert = useTranslations("Expert");
+  const tPaywall = useTranslations("Paywall");
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
 
   const grouped = categoryOrder
@@ -66,8 +74,10 @@ export function RegulationList({
 
           {!collapsed[group.category] && (
             <div className="space-y-4 ml-7">
-              {group.items.map((reg) => {
+              {group.items.map((reg, i) => {
                 const idx = cardIndex++;
+                // Free users: only first item per category is visible
+                if (!isPro && i > 0) return null;
                 return (
                   <RegulationCard
                     key={reg.id}
@@ -80,6 +90,35 @@ export function RegulationList({
                   />
                 );
               })}
+              {/* Freemium blur overlay for remaining cards */}
+              {!isPro && group.items.length > 1 && (
+                <div className="relative rounded-xl border border-gray-200 bg-white p-6 text-center">
+                  <div className="absolute inset-0 bg-white/60 backdrop-blur-sm rounded-xl" />
+                  <div className="relative z-10">
+                    <p className="text-sm font-medium text-gray-700 mb-2">
+                      {tPaywall("moreRegulations", { count: group.items.length - 1 })}
+                    </p>
+                    <button
+                      onClick={onUnlock}
+                      className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
+                    >
+                      {tPaywall("unlockAll")}
+                    </button>
+                  </div>
+                </div>
+              )}
+              {/* Expert contact button per category */}
+              {onExpertContact && (
+                <button
+                  onClick={() =>
+                    onExpertContact(t(`category.${group.category}`))
+                  }
+                  className="inline-flex items-center gap-2 px-4 py-2 border border-blue-200 text-blue-600 rounded-lg text-sm font-medium hover:bg-blue-50 transition-colors"
+                >
+                  <UserPlus className="w-4 h-4" />
+                  {tExpert("consultExpert")}
+                </button>
+              )}
             </div>
           )}
         </div>

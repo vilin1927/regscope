@@ -3,12 +3,15 @@
 import { motion } from "framer-motion";
 import { ChevronRight, ScanSearch, FileText, Clock } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { ComplianceScoreWidget } from "./ComplianceScoreWidget";
 
 interface DashboardScreenProps {
   onStartScan: () => void;
   scanCount?: number;
   lastScanDate?: string;
   regulationsFound?: number;
+  complianceScore?: number;
+  regulationCount?: number;
 }
 
 export function DashboardScreen({
@@ -16,6 +19,8 @@ export function DashboardScreen({
   scanCount = 0,
   lastScanDate,
   regulationsFound = 0,
+  complianceScore,
+  regulationCount = 0,
 }: DashboardScreenProps) {
   const t = useTranslations("Dashboard");
 
@@ -50,6 +55,13 @@ export function DashboardScreen({
           </div>
         </div>
       </div>
+
+      {complianceScore !== undefined && regulationCount > 0 && (
+        <ComplianceScoreWidget
+          score={complianceScore}
+          regulationCount={regulationCount}
+        />
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {[

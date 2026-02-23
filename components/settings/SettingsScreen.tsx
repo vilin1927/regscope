@@ -10,6 +10,8 @@ interface SettingsScreenProps {
   isGuest?: boolean;
   onSignOut?: () => void;
   onLegal?: (page: "impressum" | "datenschutz") => void;
+  isPro?: boolean;
+  onTogglePlan?: () => void;
 }
 
 export function SettingsScreen({
@@ -17,11 +19,14 @@ export function SettingsScreen({
   isGuest,
   onSignOut,
   onLegal,
+  isPro,
+  onTogglePlan,
 }: SettingsScreenProps) {
   const t = useTranslations("Settings");
   const tAuth = useTranslations("Auth");
   const tLegal = useTranslations("Legal");
   const tCommon = useTranslations("Common");
+  const tPaywall = useTranslations("Paywall");
   const locale = useLocale();
   const router = useRouter();
   const pathname = usePathname();
@@ -128,6 +133,40 @@ export function SettingsScreen({
               className="text-sm text-blue-600 hover:text-blue-800 font-medium transition-colors"
             >
               {tLegal("datenschutz")}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Demo plan toggle (admin) */}
+      {onTogglePlan && (
+        <div className="bg-white rounded-xl border border-gray-200 p-6 mt-4">
+          <h2 className="font-semibold text-gray-900 mb-2">
+            {tPaywall("demoPlan")}
+          </h2>
+          <p className="text-sm text-gray-500 mb-4">
+            Free/Pro Demo-Umschaltung für Präsentationen
+          </p>
+          <div className="flex gap-3">
+            <button
+              onClick={!isPro ? undefined : onTogglePlan}
+              className={`flex-1 py-3 rounded-lg text-sm font-medium transition-colors ${
+                !isPro
+                  ? "bg-blue-100 text-blue-700 border-2 border-blue-300"
+                  : "bg-gray-100 text-gray-700 border-2 border-transparent hover:bg-gray-200"
+              }`}
+            >
+              {tPaywall("free")}
+            </button>
+            <button
+              onClick={isPro ? undefined : onTogglePlan}
+              className={`flex-1 py-3 rounded-lg text-sm font-medium transition-colors ${
+                isPro
+                  ? "bg-blue-100 text-blue-700 border-2 border-blue-300"
+                  : "bg-gray-100 text-gray-700 border-2 border-transparent hover:bg-gray-200"
+              }`}
+            >
+              {tPaywall("pro")}
             </button>
           </div>
         </div>
