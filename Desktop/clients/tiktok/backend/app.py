@@ -821,5 +821,6 @@ def list_all_jobs():
 
 if __name__ == '__main__':
     port = int(os.getenv('PORT', 5001))
-    logger.info(f"Starting Flask server on port {port}")
-    app.run(debug=False, host='0.0.0.0', port=port)
+    host = os.getenv('HOST', '0.0.0.0')
+    logger.info(f"Starting Flask server on {host}:{port}")
+    app.run(debug=False, host=host, port=port)
