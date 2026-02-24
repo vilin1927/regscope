@@ -150,13 +150,16 @@ def upload_assets(character_id):
     os.makedirs(type_dir, exist_ok=True)
 
     uploaded = []
+    skipped = []
     for f in files:
         if not f or not f.filename:
             continue
+        original_name = secure_filename(f.filename) if f.filename else 'unknown'
         if not _allowed_file(f.filename, allowed_ext):
+            skipped.append(f"{original_name} (wrong format)")
+            logger.warning(f"File skipped - wrong format: {original_name}")
             continue
 
-        original_name = secure_filename(f.filename)
         unique_name = f"{uuid.uuid4().hex[:8]}_{original_name}"
         file_path = os.path.join(type_dir, unique_name)
         f.save(file_path)
@@ -166,14 +169,17 @@ def upload_assets(character_id):
             try:
                 result = subprocess.run(
                     ['ffprobe', '-v', 'error', file_path],
-                    capture_output=True, timeout=10
+                    capture_output=True, timeout=30
                 )
                 if result.returncode != 0:
-                    logger.warning(f"Invalid video file skipped: {original_name}")
+                    stderr = result.stderr.decode('utf-8', errors='replace')[:200]
+                    logger.warning(f"Invalid video file skipped: {original_name} - {stderr}")
+                    skipped.append(f"{original_name} (invalid video)")
                     os.remove(file_path)
                     continue
             except subprocess.TimeoutExpired:
                 logger.warning(f"ffprobe timeout on video file: {original_name}")
+                skipped.append(f"{original_name} (validation timeout)")
                 os.remove(file_path)
                 continue
         else:
@@ -181,8 +187,9 @@ def upload_assets(character_id):
                 from PIL import Image
                 img = Image.open(file_path)
                 img.verify()
-            except Exception:
-                logger.warning(f"Invalid image file skipped: {original_name}")
+            except Exception as e:
+                logger.warning(f"Invalid image file skipped: {original_name} - {e}")
+                skipped.append(f"{original_name} (invalid image)")
                 os.remove(file_path)
                 continue
 
@@ -194,8 +201,9 @@ def upload_assets(character_id):
         )
         uploaded.append({'id': asset_id, 'filename': original_name, 'type': asset_type})
 
-    logger.info(f"Uploaded {len(uploaded)} {asset_type} assets for {character['character_name']}")
-    return jsonify({'uploaded': uploaded, 'count': len(uploaded)})
+    logger.info(f"Uploaded {len(uploaded)} {asset_type} assets for {character['character_name']}" +
+                (f", skipped {len(skipped)}: {skipped}" if skipped else ""))
+    return jsonify({'uploaded': uploaded, 'count': len(uploaded), 'skipped': skipped})
 
 
 @ig_reel_bp.route('/characters/<character_id>/assets', methods=['GET'])

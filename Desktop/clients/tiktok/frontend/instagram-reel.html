@@ -247,9 +247,9 @@
                                      @dragover.prevent="$event.currentTarget.classList.add('dragover')"
                                      @dragleave.prevent="$event.currentTarget.classList.remove('dragover')"
                                      @drop.prevent="handleAssetDrop($event, char.id, assetType)"
-                                     @click="$refs['file_'+char.id+'_'+assetType].click()">
+                                     @click="document.getElementById('file_'+char.id+'_'+assetType).click()">
                                     <p class="text-gray-400 text-sm">Drop files or click to upload</p>
-                                    <input type="file" multiple :ref="'file_'+char.id+'_'+assetType"
+                                    <input type="file" multiple :id="'file_'+char.id+'_'+assetType"
                                         @change="handleAssetSelect($event, char.id, assetType)"
                                         :accept="assetType.includes('video') ? '.mp4,.mov' : '.jpg,.jpeg,.png,.webp'"
                                         class="hidden">
@@ -922,6 +922,16 @@
                         try { data = JSON.parse(result.body || '{}'); } catch {}
                         this.uploadError = data.error || `Upload failed (HTTP ${result.status})`;
                         this.uploadErrorKey = charId + '_' + assetType;
+                    } else {
+                        let data = {};
+                        try { data = JSON.parse(result.body || '{}'); } catch {}
+                        if (data.count === 0 && files.length > 0) {
+                            this.uploadError = `No files were accepted. Check file format (photos: jpg/png/webp, videos: mp4/mov).`;
+                            this.uploadErrorKey = charId + '_' + assetType;
+                        } else if (data.skipped && data.skipped.length > 0) {
+                            this.uploadError = `${data.count} uploaded, ${data.skipped.length} rejected: ${data.skipped.join(', ')}`;
+                            this.uploadErrorKey = charId + '_' + assetType;
+                        }
                     }
                     await this.loadCharacters();
                 } catch (e) {
