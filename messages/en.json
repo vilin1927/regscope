@@ -488,7 +488,11 @@
     "trialActive": "Trial active",
     "trialExpired": "Trial expired",
     "previewLoading": "Loading preview...",
-    "previewError": "Failed to load preview"
+    "previewError": "Failed to load preview",
+    "actions": "Actions",
+    "grantTrial": "Grant trial",
+    "revokeTrial": "Revoke trial",
+    "restartTrial": "Restart trial"
   },
   "Expert": {
     "consultExpert": "Consult Expert",

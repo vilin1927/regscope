@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
-import { Users, UserPlus, Loader2 } from "lucide-react";
+import { Users, UserPlus, Loader2, Play, RotateCcw, XCircle } from "lucide-react";
 import { useTranslations } from "next-intl";
 
 interface UserRecord {
@@ -44,6 +44,7 @@ export function AdminUsersScreen() {
   const t = useTranslations("Admin");
   const [data, setData] = useState<UsersData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [updatingUserId, setUpdatingUserId] = useState<string | null>(null);
 
   const fetchUsers = useCallback(async () => {
     setIsLoading(true);
@@ -58,6 +59,27 @@ export function AdminUsersScreen() {
       setIsLoading(false);
     }
   }, []);
+
+  const updatePlan = useCallback(
+    async (userId: string, action: "start_trial" | "revoke_trial") => {
+      setUpdatingUserId(userId);
+      try {
+        const res = await fetch("/api/admin/users/plan", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ userId, action }),
+        });
+        if (res.ok) {
+          await fetchUsers();
+        }
+      } catch {
+        // ignore
+      } finally {
+        setUpdatingUserId(null);
+      }
+    },
+    [fetchUsers]
+  );
 
   useEffect(() => {
     fetchUsers();
@@ -131,6 +153,7 @@ export function AdminUsersScreen() {
                       <th className="px-5 py-3">{t("lastScan")}</th>
                       <th className="px-5 py-3">Newsletter</th>
                       <th className="px-5 py-3">{t("signedUp")}</th>
+                      <th className="px-5 py-3">{t("actions")}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -188,6 +211,48 @@ export function AdminUsersScreen() {
                         </td>
                         <td className="px-5 py-3 text-gray-500 text-xs">
                           {formatDate(user.createdAt)}
+                        </td>
+                        <td className="px-5 py-3">
+                          {updatingUserId === user.id ? (
+                            <Loader2 className="w-4 h-4 animate-spin text-gray-400" />
+                          ) : (() => {
+                            const status = getTrialStatus(user.trialStartedAt);
+                            if (status === "none") {
+                              return (
+                                <button
+                                  onClick={() => updatePlan(user.id, "start_trial")}
+                                  className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium text-green-700 bg-green-50 rounded-lg hover:bg-green-100 transition-colors"
+                                  title={t("grantTrial")}
+                                >
+                                  <Play className="w-3 h-3" />
+                                  {t("grantTrial")}
+                                </button>
+                              );
+                            }
+                            if (status === "active") {
+                              return (
+                                <button
+                                  onClick={() => updatePlan(user.id, "revoke_trial")}
+                                  className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium text-red-700 bg-red-50 rounded-lg hover:bg-red-100 transition-colors"
+                                  title={t("revokeTrial")}
+                                >
+                                  <XCircle className="w-3 h-3" />
+                                  {t("revokeTrial")}
+                                </button>
+                              );
+                            }
+                            // expired
+                            return (
+                              <button
+                                onClick={() => updatePlan(user.id, "start_trial")}
+                                className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium text-amber-700 bg-amber-50 rounded-lg hover:bg-amber-100 transition-colors"
+                                title={t("restartTrial")}
+                              >
+                                <RotateCcw className="w-3 h-3" />
+                                {t("restartTrial")}
+                              </button>
+                            );
+                          })()}
                         </td>
                       </tr>
                     ))}
