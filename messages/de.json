@@ -488,7 +488,11 @@
     "trialActive": "Testphase aktiv",
     "trialExpired": "Testphase abgelaufen",
     "previewLoading": "Vorschau wird geladen...",
-    "previewError": "Vorschau konnte nicht geladen werden"
+    "previewError": "Vorschau konnte nicht geladen werden",
+    "actions": "Aktionen",
+    "grantTrial": "Testphase starten",
+    "revokeTrial": "Testphase entziehen",
+    "restartTrial": "Testphase neu starten"
   },
   "Expert": {
     "consultExpert": "Experte kontaktieren",
