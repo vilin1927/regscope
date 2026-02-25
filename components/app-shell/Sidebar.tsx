@@ -183,8 +183,8 @@ export function Sidebar({
 
   return (
     <>
-      {/* Desktop sidebar — always visible */}
-      <aside className="hidden md:flex w-64 bg-white border-r border-gray-200 flex-col shrink-0">
+      {/* Desktop sidebar — always visible, pinned to viewport height */}
+      <aside className="hidden md:flex w-64 bg-white border-r border-gray-200 flex-col shrink-0 h-screen sticky top-0">
         {sidebarContent}
       </aside>
 
