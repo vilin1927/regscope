@@ -41,9 +41,9 @@ export function Sidebar({
   const { plan, trialStatus } = useSubscriptionContext();
 
   const sidebarContent = (
-    <>
+    <div className="flex flex-col h-full">
       {/* Logo */}
-      <div className="p-6 border-b border-gray-100">
+      <div className="p-6 border-b border-gray-100 shrink-0">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-blue-700 rounded-xl flex items-center justify-center">
             <ScanSearch className="w-5 h-5 text-white" />
@@ -142,8 +142,8 @@ export function Sidebar({
         />
       </nav>
 
-      {/* User section */}
-      <div className="p-4 border-t border-gray-100">
+      {/* User section — pinned to bottom */}
+      <div className="shrink-0 p-4 border-t border-gray-100 mt-auto">
         <div className="flex items-center gap-3 px-3 py-2 rounded-lg bg-gray-50">
           <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
             <span className="text-sm font-medium text-blue-600">
@@ -178,7 +178,7 @@ export function Sidebar({
           </div>
         </div>
       </div>
-    </>
+    </div>
   );
 
   return (
