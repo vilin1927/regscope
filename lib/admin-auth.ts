@@ -19,7 +19,8 @@ export async function requireAdmin() {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (user?.email !== process.env.ADMIN_EMAIL) {
+  const adminEmails = (process.env.ADMIN_EMAIL || "").split(",").map((e) => e.trim().toLowerCase());
+  if (!user?.email || !adminEmails.includes(user.email.toLowerCase())) {
     return {
       error: NextResponse.json({ error: "Zugriff verweigert" }, { status: 403 }),
     };
