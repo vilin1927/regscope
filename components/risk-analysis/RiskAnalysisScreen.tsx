@@ -2,18 +2,17 @@
 
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { ShieldAlert, AlertTriangle, Loader2, BarChart3, RefreshCw, UserPlus } from "lucide-react";
+import { ShieldAlert, AlertTriangle, Loader2, BarChart3, RefreshCw } from "lucide-react";
+import { ScrollableRow } from "@/components/ui/ScrollableRow";
+import { screenVariants, screenTransition } from "@/lib/motion";
 import { useTranslations } from "next-intl";
 import { useRiskAnalysis } from "@/hooks/useRiskAnalysis";
 import { ExpertContactModal } from "@/components/ui/ExpertContactModal";
+import { ExpertAvatar } from "@/components/ui/ExpertAvatar";
+import { getExpertForCategory } from "@/data/experts";
+import { useScanContext } from "@/components/providers/ScanProvider";
+import { useSubscriptionContext } from "@/components/providers/SubscriptionProvider";
 import type { RiskSeverity } from "@/types/addons";
-
-interface RiskAnalysisScreenProps {
-  scanId?: string;
-  hasResults: boolean;
-  isPro?: boolean;
-  onUnlock?: () => void;
-}
 
 const severityColors: Record<RiskSeverity, string> = {
   kritisch: "bg-red-100 text-red-800",
@@ -22,14 +21,15 @@ const severityColors: Record<RiskSeverity, string> = {
   niedrig: "bg-green-100 text-green-700",
 };
 
-export function RiskAnalysisScreen({
-  scanId,
-  hasResults,
-  isPro = true,
-  onUnlock,
-}: RiskAnalysisScreenProps) {
+const generalExpert = getExpertForCategory("general");
+
+export function RiskAnalysisScreen() {
+  const { currentScanId, hasResults } = useScanContext();
+  const scanId = currentScanId ?? undefined;
+  const { isPro, onUnlock } = useSubscriptionContext();
   const t = useTranslations("RiskAnalysis");
   const tExpert = useTranslations("Expert");
+  const tExperts = useTranslations("Experts");
   const tPaywall = useTranslations("Paywall");
   const [expertModalOpen, setExpertModalOpen] = useState(false);
   const { report, isLoading, isGenerating, error, generate, regenerate } =
@@ -39,9 +39,11 @@ export function RiskAnalysisScreen({
   if (!hasResults || !scanId) {
     return (
       <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, y: -20 }}
+        variants={screenVariants}
+        initial="initial"
+        animate="animate"
+        exit="exit"
+        transition={screenTransition}
         className="max-w-3xl mx-auto"
       >
         <div className="flex items-center gap-3 mb-6">
@@ -62,9 +64,11 @@ export function RiskAnalysisScreen({
   if (isLoading) {
     return (
       <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, y: -20 }}
+        variants={screenVariants}
+        initial="initial"
+        animate="animate"
+        exit="exit"
+        transition={screenTransition}
         className="max-w-3xl mx-auto"
       >
         <div className="flex items-center gap-3 mb-6">
@@ -85,9 +89,11 @@ export function RiskAnalysisScreen({
   if (isGenerating) {
     return (
       <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, y: -20 }}
+        variants={screenVariants}
+        initial="initial"
+        animate="animate"
+        exit="exit"
+        transition={screenTransition}
         className="max-w-3xl mx-auto"
       >
         <div className="flex items-center gap-3 mb-6">
@@ -109,9 +115,11 @@ export function RiskAnalysisScreen({
   if (!report) {
     return (
       <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, y: -20 }}
+        variants={screenVariants}
+        initial="initial"
+        animate="animate"
+        exit="exit"
+        transition={screenTransition}
         className="max-w-3xl mx-auto"
       >
         <div className="flex items-center gap-3 mb-6">
@@ -157,34 +165,56 @@ export function RiskAnalysisScreen({
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -20 }}
+      variants={screenVariants}
+      initial="initial"
+      animate="animate"
+      exit="exit"
+      transition={screenTransition}
       className="max-w-3xl mx-auto"
     >
-      <div className="flex items-center gap-3 mb-6">
-        <div className="w-12 h-12 bg-red-100 rounded-xl flex items-center justify-center">
+      <div className="flex items-start gap-3 mb-4">
+        <div className="w-12 h-12 bg-red-100 rounded-xl flex items-center justify-center shrink-0">
           <ShieldAlert className="w-6 h-6 text-red-600" />
         </div>
-        <div className="flex-1">
-          <h1 className="text-2xl font-bold text-gray-900">{t("title")}</h1>
-          <p className="text-gray-500 text-sm mt-1">
-            {t("foundIssues", { count: report.items.length })}
+        <div className="flex-1 min-w-0">
+          <div className="flex flex-wrap items-start justify-between gap-2">
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">{t("title")}</h1>
+              <p className="text-gray-500 text-sm mt-1">
+                {t("foundIssues", { count: report.items.length })}
+              </p>
+            </div>
+            <button
+              onClick={regenerate}
+              disabled={isGenerating}
+              className="shrink-0 flex items-center gap-2 px-4 py-2 text-sm font-medium text-red-600 border border-red-200 rounded-lg hover:bg-red-50 disabled:opacity-50"
+            >
+              {isGenerating ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <RefreshCw className="w-4 h-4" />
+              )}
+              {t("rerun")}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Expert contact chip — under header */}
+      <button
+        onClick={() => setExpertModalOpen(true)}
+        className="inline-flex items-center gap-2.5 pl-1.5 pr-3.5 py-1.5 mb-4 bg-white border border-gray-200 rounded-full text-sm hover:border-blue-300 hover:shadow-sm transition-all"
+      >
+        <ExpertAvatar expert={generalExpert} size="sm" />
+        <div className="text-left">
+          <p className="text-xs font-semibold text-gray-900 leading-tight">
+            {tExperts(`${generalExpert.i18nKey}.name`)}
+          </p>
+          <p className="text-[11px] text-blue-600 leading-tight">
+            {tExpert("consultExpert")}
           </p>
         </div>
-        <button
-          onClick={regenerate}
-          disabled={isGenerating}
-          className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-red-600 border border-red-200 rounded-lg hover:bg-red-50 disabled:opacity-50"
-        >
-          {isGenerating ? (
-            <Loader2 className="w-4 h-4 animate-spin" />
-          ) : (
-            <RefreshCw className="w-4 h-4" />
-          )}
-          {t("rerun")}
-        </button>
-      </div>
+      </button>
 
       {/* Summary */}
       {report.summary && (
@@ -213,57 +243,59 @@ export function RiskAnalysisScreen({
       </div>
 
       {/* Risk table */}
-      <div className="bg-white border border-gray-200 rounded-xl overflow-hidden overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="bg-gray-50 border-b border-gray-200">
-              <th className="text-left px-4 py-3 font-semibold text-gray-700">
-                {t("regulation")}
-              </th>
-              <th className="text-left px-4 py-3 font-semibold text-gray-700">
-                {t("severityCol")}
-              </th>
-              <th className="text-left px-4 py-3 font-semibold text-gray-700">
-                {t("gap")}
-              </th>
-              <th className="text-left px-4 py-3 font-semibold text-gray-700">
-                {t("deadline")}
-              </th>
-              <th className="text-left px-4 py-3 font-semibold text-gray-700">
-                {t("penalty")}
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {report.items.map((item, i) => {
-              if (!isPro && i > 0) return null;
-              return (
-                <tr
-                  key={item.regulationId}
-                  className="border-b border-gray-100 last:border-0"
-                >
-                  <td className="px-4 py-3 font-medium text-gray-900">
-                    {item.regulationName}
-                  </td>
-                  <td className="px-4 py-3">
-                    <span
-                      className={`px-2 py-1 rounded-full text-xs font-medium ${severityColors[item.severity]}`}
-                    >
-                      {t(`severity.${item.severity}`)}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-gray-600">
-                    {item.complianceGap}
-                  </td>
-                  <td className="px-4 py-3 text-gray-600">{item.deadline}</td>
-                  <td className="px-4 py-3 text-gray-600">
-                    {item.potentialPenalty}
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+      <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+        <ScrollableRow fadeColor="white">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="bg-gray-50 border-b border-gray-200">
+                <th className="text-left px-4 py-3 font-semibold text-gray-700 whitespace-nowrap">
+                  {t("regulation")}
+                </th>
+                <th className="text-left px-4 py-3 font-semibold text-gray-700 whitespace-nowrap">
+                  {t("severityCol")}
+                </th>
+                <th className="text-left px-4 py-3 font-semibold text-gray-700 whitespace-nowrap">
+                  {t("gap")}
+                </th>
+                <th className="text-left px-4 py-3 font-semibold text-gray-700 whitespace-nowrap">
+                  {t("deadline")}
+                </th>
+                <th className="text-left px-4 py-3 font-semibold text-gray-700 whitespace-nowrap">
+                  {t("penalty")}
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {report.items.map((item, i) => {
+                if (!isPro && i > 0) return null;
+                return (
+                  <tr
+                    key={item.regulationId}
+                    className="border-b border-gray-100 last:border-0"
+                  >
+                    <td className="px-4 py-3 font-medium text-gray-900">
+                      {item.regulationName}
+                    </td>
+                    <td className="px-4 py-3">
+                      <span
+                        className={`px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap ${severityColors[item.severity]}`}
+                      >
+                        {t(`severity.${item.severity}`)}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-gray-600">
+                      {item.complianceGap}
+                    </td>
+                    <td className="px-4 py-3 text-gray-600 whitespace-nowrap">{item.deadline}</td>
+                    <td className="px-4 py-3 text-gray-600">
+                      {item.potentialPenalty}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </ScrollableRow>
       </div>
 
       {/* Freemium blur for remaining rows */}
@@ -276,7 +308,7 @@ export function RiskAnalysisScreen({
             </p>
             <button
               onClick={onUnlock}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 active:scale-95 transition-all"
             >
               {tPaywall("unlockAll")}
             </button>
@@ -303,20 +335,9 @@ export function RiskAnalysisScreen({
           ))}
       </div>
 
-      {/* Expert contact button */}
-      <div className="mt-6">
-        <button
-          onClick={() => setExpertModalOpen(true)}
-          className="inline-flex items-center gap-2 px-4 py-2 border border-blue-200 text-blue-600 rounded-lg text-sm font-medium hover:bg-blue-50 transition-colors"
-        >
-          <UserPlus className="w-4 h-4" />
-          {tExpert("consultExpert")}
-        </button>
-      </div>
-
       {expertModalOpen && (
         <ExpertContactModal
-          category={t("title")}
+          categoryKey="general"
           onClose={() => setExpertModalOpen(false)}
         />
       )}

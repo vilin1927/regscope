@@ -18,89 +18,164 @@ import { NewsletterScreen } from "../newsletter/NewsletterScreen";
 import { AdminNewsletterScreen } from "../admin/AdminNewsletterScreen";
 import { AdminUsersScreen } from "../admin/AdminUsersScreen";
 import { useAuth } from "@/hooks/useAuth";
-import { useScanHistory } from "@/hooks/useScanHistory";
-import { useProcessing } from "@/hooks/useProcessing";
-import { useSubscription } from "@/hooks/useSubscription";
-import { UpgradeModal } from "@/components/ui/UpgradeModal";
+import { SubscriptionProvider } from "@/components/providers/SubscriptionProvider";
+import { ScanProvider, useScanContext } from "@/components/providers/ScanProvider";
+import { pathToScreen, pushUrl } from "@/lib/routes";
 import type { Screen } from "@/types";
 import type { BusinessProfile } from "@/data/questionnaire/types";
 
 export function ComplyRadarApp() {
-  const [currentScreen, setCurrentScreenState] = useState<Screen>(() => {
-    if (typeof window !== "undefined") {
-      const saved = sessionStorage.getItem("complyradar_screen");
-      if (saved) return saved as Screen;
-    }
-    return "auth";
-  });
-  const [prefillAnswers, setPrefillAnswers] = useState<BusinessProfile>();
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [processingError, setProcessingError] = useState<string>();
+  const auth = useAuth();
 
-  const setCurrentScreen = (screen: Screen) => {
+  return (
+    <SubscriptionProvider>
+      <ComplyRadarAppInner auth={auth} />
+    </SubscriptionProvider>
+  );
+}
+
+type AuthResult = ReturnType<typeof useAuth>;
+
+function ComplyRadarAppInner({ auth }: { auth: AuthResult }) {
+  const [currentScreen, setCurrentScreenState] = useState<Screen>("auth");
+  const [urlScanId, setUrlScanId] = useState<string | undefined>();
+  const [hydrated, setHydrated] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  // Restore screen from URL (or fallback to sessionStorage) after hydration
+  useEffect(() => {
+    const { screen, scanId } = pathToScreen(window.location.pathname);
+    // If URL has a real route, use it; otherwise fall back to sessionStorage
+    const isDefaultRoute = window.location.pathname.replace(/^\/(en|de)\/?$/, "") === "";
+    if (!isDefaultRoute && screen !== "auth") {
+      setCurrentScreenState(screen);
+      if (scanId) setUrlScanId(scanId);
+    } else {
+      const saved = sessionStorage.getItem("complyradar_screen");
+      if (saved) setCurrentScreenState(saved as Screen);
+    }
+    setHydrated(true);
+  }, []);
+
+  // Listen for browser back/forward
+  useEffect(() => {
+    const onPopState = (e: PopStateEvent) => {
+      if (e.state?.screen) {
+        setCurrentScreenState(e.state.screen as Screen);
+        setUrlScanId(e.state.scanId);
+      } else {
+        const { screen, scanId } = pathToScreen(window.location.pathname);
+        setCurrentScreenState(screen);
+        setUrlScanId(scanId);
+      }
+    };
+    window.addEventListener("popstate", onPopState);
+    return () => window.removeEventListener("popstate", onPopState);
+  }, []);
+
+  const setCurrentScreen = (screen: Screen, scanId?: string | null) => {
     setCurrentScreenState(screen);
+    if (scanId !== undefined) setUrlScanId(scanId ?? undefined);
     if (typeof window !== "undefined") {
       if (screen === "auth") {
         sessionStorage.removeItem("complyradar_screen");
       } else {
         sessionStorage.setItem("complyradar_screen", screen);
       }
+      pushUrl(screen, scanId);
     }
   };
 
-  const auth = useAuth();
-  const scans = useScanHistory(auth.userId, auth.isGuest);
-  const subscription = useSubscription();
-  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  return (
+    <ScanProvider
+      userId={auth.userId}
+      isGuest={auth.isGuest}
+      onProcessingComplete={(scanId) => setCurrentScreen("results", scanId)}
+    >
+      <ComplyRadarAppShell
+        auth={auth}
+        currentScreen={currentScreen}
+        setCurrentScreen={setCurrentScreen}
+        urlScanId={urlScanId}
+        hydrated={hydrated}
+        sidebarOpen={sidebarOpen}
+        setSidebarOpen={setSidebarOpen}
+      />
+    </ScanProvider>
+  );
+}
 
-  const processing = useProcessing({
-    onComplete: (matched) => {
-      setProcessingError(undefined);
-      scans.setMatchedRegulations(matched);
-      scans.saveScan(scans.businessProfile, matched);
-      setCurrentScreen("results");
-    },
-    onError: (message) => {
-      setProcessingError(message);
-    },
-  });
+interface ShellProps {
+  auth: AuthResult;
+  currentScreen: Screen;
+  setCurrentScreen: (screen: Screen, scanId?: string | null) => void;
+  urlScanId?: string;
+  hydrated: boolean;
+  sidebarOpen: boolean;
+  setSidebarOpen: (open: boolean) => void;
+}
+
+function ComplyRadarAppShell({
+  auth,
+  currentScreen,
+  setCurrentScreen,
+  urlScanId,
+  hydrated,
+  sidebarOpen,
+  setSidebarOpen,
+}: ShellProps) {
+  const scan = useScanContext();
+
+  // Deep-link: if URL has a scanId, load that scan on mount
+  useEffect(() => {
+    if (!hydrated || !urlScanId) return;
+    if (scan.scanHistory.length > 0 && scan.currentScanId !== urlScanId) {
+      const exists = scan.scanHistory.find((s) => s.id === urlScanId);
+      if (exists) {
+        scan.handleViewScan(urlScanId);
+      }
+    }
+  }, [hydrated, urlScanId, scan.scanHistory.length]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Navigate to dashboard once auth resolves
   // Fix #19: Also reset to dashboard if screen requires data we don't have
   useEffect(() => {
-    if (auth.isLoading) return;
+    if (!hydrated || auth.isLoading) return;
     if (auth.userId || auth.isGuest) {
       if (currentScreen === "auth") {
         setCurrentScreen("dashboard");
       } else if (
-        (currentScreen === "results" && scans.matchedRegulations.length === 0) ||
-        (currentScreen === "processing" && !processing.isProcessing)
+        scan.historyLoaded &&
+        !urlScanId &&
+        ((currentScreen === "results" && scan.matchedRegulations.length === 0) ||
+        (currentScreen === "processing" && !scan.isProcessing))
       ) {
         setCurrentScreen("dashboard");
       }
     } else if (currentScreen !== "impressum" && currentScreen !== "datenschutz") {
       setCurrentScreen("auth");
     }
-  }, [auth.isLoading, auth.userId, auth.isGuest]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [hydrated, auth.isLoading, auth.userId, auth.isGuest, scan.historyLoaded]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const startScan = () => {
-    setPrefillAnswers(undefined);
+    scan.setPrefillAnswers(undefined);
+    scan.resetScan();
     setCurrentScreen("questionnaire");
   };
 
   // Fix #17: Remove duplicate setBusinessProfile call
   const handleQuestionnaireComplete = (answers: BusinessProfile) => {
-    setProcessingError(undefined);
-    scans.resetScan();
-    scans.setBusinessProfile(answers);
-    processing.startProcessing(answers);
+    scan.setProcessingError(undefined);
+    scan.resetScan();
+    scan.setBusinessProfile(answers);
+    scan.startProcessing(answers);
     setCurrentScreen("processing");
   };
 
   // Fix #9: Clear all scan data on sign out (prevents guest/auth data mixing)
   const handleSignOut = async () => {
     await auth.handleSignOut();
-    scans.clearHistory();
+    scan.clearHistory();
     setCurrentScreen("auth");
   };
 
@@ -109,33 +184,25 @@ export function ComplyRadarApp() {
     if (screen === "questionnaire") {
       startScan();
     } else {
-      setCurrentScreen(screen);
+      // Include scanId in URL for scan-specific screens
+      const scanScreens: Screen[] = ["results", "risk-analysis", "recommendations"];
+      const sid = scanScreens.includes(screen) ? scan.currentScanId : null;
+      setCurrentScreen(screen, sid);
     }
   };
 
   const handleViewScan = (scanId: string) => {
-    scans.handleViewScan(scanId);
-    setCurrentScreen("results");
+    scan.handleViewScan(scanId);
+    setCurrentScreen("results", scanId);
   };
 
   const handleRerunScan = (scanId: string) => {
-    const profile = scans.handleRerunScan(scanId);
+    const profile = scan.handleRerunScan(scanId);
     if (profile) {
-      setPrefillAnswers(profile);
+      scan.setPrefillAnswers(profile);
       setCurrentScreen("questionnaire");
     }
   };
-
-  const hasResults = scans.matchedRegulations.length > 0;
-
-  // Live compliance score for dashboard widget
-  const complianceScore = hasResults
-    ? Math.round(
-        (Object.values(scans.complianceChecks).filter(Boolean).length /
-          scans.matchedRegulations.length) *
-          100
-      )
-    : undefined;
 
   if (currentScreen === "auth") {
     return (
@@ -170,7 +237,6 @@ export function ComplyRadarApp() {
       <Sidebar
         currentScreen={currentScreen}
         onNavigate={navigate}
-        hasResults={hasResults}
         userEmail={auth.userEmail}
         isGuest={auth.isGuest}
         open={sidebarOpen}
@@ -186,18 +252,17 @@ export function ComplyRadarApp() {
               <DashboardScreen
                 key="dashboard"
                 onStartScan={startScan}
-                scanCount={scans.scanHistory.length}
-                regulationsFound={scans.scanHistory[0]?.regulationCount ?? 0}
-                lastScanDate={scans.scanHistory[0]?.date}
-                complianceScore={complianceScore}
-                regulationCount={scans.matchedRegulations.length}
+                onViewResults={(scanId) => {
+                  scan.handleViewScan(scanId);
+                  setCurrentScreen("results", scanId);
+                }}
               />
             )}
 
             {currentScreen === "questionnaire" && (
               <QuestionnaireScreen
                 key="questionnaire"
-                initialAnswers={prefillAnswers}
+                initialAnswers={scan.prefillAnswers}
                 onComplete={handleQuestionnaireComplete}
               />
             )}
@@ -205,12 +270,12 @@ export function ComplyRadarApp() {
             {currentScreen === "processing" && (
               <ProcessingScreen
                 key="processing"
-                currentStep={processing.processingStep}
-                error={processingError}
+                currentStep={scan.processingStep}
+                error={scan.processingError}
                 onRetry={() => {
-                  setProcessingError(undefined);
-                  if (Object.keys(scans.businessProfile).length > 0) {
-                    processing.startProcessing(scans.businessProfile);
+                  scan.setProcessingError(undefined);
+                  if (Object.keys(scan.businessProfile).length > 0) {
+                    scan.startProcessing(scan.businessProfile);
                   } else {
                     setCurrentScreen("questionnaire");
                   }
@@ -221,20 +286,15 @@ export function ComplyRadarApp() {
             {currentScreen === "results" && (
               <ResultsScreen
                 key="results"
-                profile={scans.businessProfile}
-                regulations={scans.matchedRegulations}
-                complianceChecks={scans.complianceChecks}
-                onComplianceChange={scans.handleComplianceChange}
-                onReset={() => { scans.resetScan(); startScan(); }}
-                isPro={subscription.isPro}
-                onUnlock={() => setShowUpgradeModal(true)}
+                onReset={() => { scan.resetScan(); startScan(); }}
+                onBack={() => setCurrentScreen("scan-history")}
               />
             )}
 
             {currentScreen === "scan-history" && (
               <ScanHistoryScreen
                 key="scan-history"
-                scans={scans.scanHistory}
+                scans={scan.scanHistory}
                 onViewScan={handleViewScan}
                 onRerunScan={handleRerunScan}
                 onStartScan={startScan}
@@ -244,10 +304,6 @@ export function ComplyRadarApp() {
             {currentScreen === "risk-analysis" && (
               <RiskAnalysisScreen
                 key="risk-analysis"
-                scanId={scans.currentScanId ?? undefined}
-                hasResults={hasResults}
-                isPro={subscription.isPro}
-                onUnlock={() => setShowUpgradeModal(true)}
               />
             )}
 
@@ -262,10 +318,6 @@ export function ComplyRadarApp() {
             {currentScreen === "recommendations" && (
               <RecommendationsScreen
                 key="recommendations"
-                scanId={scans.currentScanId ?? undefined}
-                hasResults={hasResults}
-                isPro={subscription.isPro}
-                onUnlock={() => setShowUpgradeModal(true)}
               />
             )}
 
@@ -284,10 +336,6 @@ export function ComplyRadarApp() {
                 isGuest={auth.isGuest}
                 onSignOut={handleSignOut}
                 onLegal={(page) => setCurrentScreen(page)}
-                isPro={subscription.isPro}
-                onTogglePlan={() =>
-                  subscription.setPlan(subscription.isPro ? "free" : "pro")
-                }
               />
             )}
 
@@ -302,13 +350,6 @@ export function ComplyRadarApp() {
           </AnimatePresence>
         </div>
       </main>
-
-      {showUpgradeModal && (
-        <UpgradeModal
-          onUpgrade={subscription.upgrade}
-          onClose={() => setShowUpgradeModal(false)}
-        />
-      )}
     </div>
   );
 }

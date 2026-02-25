@@ -2,6 +2,7 @@
 
 import { motion } from "framer-motion";
 import { ScanSearch } from "lucide-react";
+import { screenVariants, screenTransition } from "@/lib/motion";
 import { useTranslations } from "next-intl";
 import { ScanHistoryCard } from "./ScanHistoryCard";
 import type { ScanRecord } from "@/types";
@@ -23,9 +24,11 @@ export function ScanHistoryScreen({
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -20 }}
+      variants={screenVariants}
+      initial="initial"
+      animate="animate"
+      exit="exit"
+      transition={screenTransition}
       className="max-w-4xl mx-auto"
     >
       <h1 className="text-2xl font-bold text-gray-900 mb-2">{t("title")}</h1>

@@ -2,36 +2,32 @@
 
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { RotateCcw, AlertTriangle } from "lucide-react";
+import { RotateCcw, AlertTriangle, ArrowLeft } from "lucide-react";
+import { screenVariants, screenTransition } from "@/lib/motion";
 import { useTranslations } from "next-intl";
 import { StatsBar } from "./StatsBar";
 import { BusinessProfileSummary } from "./BusinessProfileSummary";
 import { RegulationList } from "./RegulationList";
 import { ExpertContactModal } from "@/components/ui/ExpertContactModal";
-import type { MatchedRegulation } from "@/data/regulations/types";
-import type { BusinessProfile } from "@/data/questionnaire/types";
+import { useScanContext } from "@/components/providers/ScanProvider";
+import { useSubscriptionContext } from "@/components/providers/SubscriptionProvider";
+import type { RegulationCategory } from "@/data/regulations/types";
 
 interface ResultsScreenProps {
-  profile: BusinessProfile;
-  regulations: MatchedRegulation[];
-  complianceChecks: Record<string, boolean>;
-  onComplianceChange: (regulationId: string, checked: boolean) => void;
   onReset: () => void;
-  isPro?: boolean;
-  onUnlock?: () => void;
+  onBack?: () => void;
 }
 
-export function ResultsScreen({
-  profile,
-  regulations,
-  complianceChecks,
-  onComplianceChange,
-  onReset,
-  isPro = true,
-  onUnlock,
-}: ResultsScreenProps) {
+export function ResultsScreen({ onReset, onBack }: ResultsScreenProps) {
   const t = useTranslations("Results");
-  const [expertModalCategory, setExpertModalCategory] = useState<string | null>(null);
+  const [expertModalCategory, setExpertModalCategory] = useState<RegulationCategory | null>(null);
+  const {
+    businessProfile: profile,
+    matchedRegulations: regulations,
+    complianceChecks,
+    handleComplianceChange: onComplianceChange,
+  } = useScanContext();
+  const { isPro, onUnlock } = useSubscriptionContext();
 
   const highPriority = regulations.filter(
     (r) => r.riskLevel === "hoch"
@@ -47,11 +43,24 @@ export function ResultsScreen({
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -20 }}
+      variants={screenVariants}
+      initial="initial"
+      animate="animate"
+      exit="exit"
+      transition={screenTransition}
       className="max-w-4xl mx-auto"
     >
+      {/* Back link */}
+      {onBack && (
+        <button
+          onClick={onBack}
+          className="text-sm text-gray-500 hover:text-blue-600 flex items-center gap-1 mb-3 transition-colors"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          {t("backToHistory")}
+        </button>
+      )}
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
@@ -104,7 +113,7 @@ export function ResultsScreen({
 
       {expertModalCategory && (
         <ExpertContactModal
-          category={expertModalCategory}
+          categoryKey={expertModalCategory}
           onClose={() => setExpertModalCategory(null)}
         />
       )}

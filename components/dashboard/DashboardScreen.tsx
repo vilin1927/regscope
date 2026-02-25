@@ -1,34 +1,66 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { ChevronRight, ScanSearch, FileText, Clock } from "lucide-react";
+import { ChevronRight, ScanSearch, FileText } from "lucide-react";
+import { screenVariants, screenTransition } from "@/lib/motion";
 import { useTranslations } from "next-intl";
 import { ComplianceScoreWidget } from "./ComplianceScoreWidget";
+import { ScanTabs } from "./ScanTabs";
+import { CategoryBreakdown } from "./CategoryBreakdown";
+import { HowToImprove } from "./HowToImprove";
+import { useScanContext } from "@/components/providers/ScanProvider";
+import type { MatchedRegulation } from "@/data/regulations/types";
 
 interface DashboardScreenProps {
   onStartScan: () => void;
-  scanCount?: number;
-  lastScanDate?: string;
-  regulationsFound?: number;
-  complianceScore?: number;
-  regulationCount?: number;
+  onViewResults: (scanId: string) => void;
 }
 
-export function DashboardScreen({
-  onStartScan,
-  scanCount = 0,
-  lastScanDate,
-  regulationsFound = 0,
-  complianceScore,
-  regulationCount = 0,
-}: DashboardScreenProps) {
+export function DashboardScreen({ onStartScan, onViewResults }: DashboardScreenProps) {
+  const {
+    scanHistory,
+    complianceChecks,
+    getComplianceChecksForScan,
+  } = useScanContext();
   const t = useTranslations("Dashboard");
+
+  // Selected scan for dashboard display
+  const [selectedScanId, setSelectedScanId] = useState<string | null>(null);
+  const [selectedChecks, setSelectedChecks] = useState<Record<string, boolean>>({});
+
+  // Auto-select most recent scan
+  useEffect(() => {
+    if (scanHistory.length > 0 && !selectedScanId) {
+      setSelectedScanId(scanHistory[0].id);
+    }
+  }, [scanHistory, selectedScanId]);
+
+  // Load compliance checks when selected scan changes
+  useEffect(() => {
+    if (!selectedScanId) return;
+    let cancelled = false;
+    getComplianceChecksForScan(selectedScanId).then((checks) => {
+      if (!cancelled) setSelectedChecks(checks);
+    });
+    return () => { cancelled = true; };
+  }, [selectedScanId, getComplianceChecksForScan, complianceChecks]);
+
+  const selectedScan = scanHistory.find((s) => s.id === selectedScanId);
+  const selectedRegulations: MatchedRegulation[] = selectedScan?.matchedRegulations ?? [];
+  const checkedCount = Object.values(selectedChecks).filter(Boolean).length;
+  const totalCount = selectedRegulations.length;
+  const score = totalCount > 0 ? Math.round((checkedCount / totalCount) * 100) : 0;
+
+  const hasScans = scanHistory.length > 0;
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -20 }}
+      variants={screenVariants}
+      initial="initial"
+      animate="animate"
+      exit="exit"
+      transition={screenTransition}
       className="max-w-4xl mx-auto"
     >
       <h1 className="text-2xl font-bold text-gray-900 mb-2">
@@ -36,6 +68,7 @@ export function DashboardScreen({
       </h1>
       <p className="text-gray-600 mb-8">{t("subtitle")}</p>
 
+      {/* Start Scan CTA */}
       <div className="bg-gradient-to-br from-blue-600 to-blue-700 rounded-2xl p-8 text-white mb-8">
         <div className="flex items-start justify-between">
           <div>
@@ -56,45 +89,62 @@ export function DashboardScreen({
         </div>
       </div>
 
-      {complianceScore !== undefined && regulationCount > 0 && (
-        <ComplianceScoreWidget
-          score={complianceScore}
-          regulationCount={regulationCount}
-        />
-      )}
+      {/* Scan Tabs + Per-Scan Dashboard — only when scans exist */}
+      {hasScans && (
+        <>
+          <ScanTabs
+            scans={scanHistory}
+            selectedScanId={selectedScanId}
+            onSelect={setSelectedScanId}
+            onNewScan={onStartScan}
+          />
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        {[
-          {
-            v: String(regulationsFound),
-            l: t("regulationsFound"),
-            i: FileText,
-          },
-          {
-            v: String(scanCount),
-            l: t("scansCompleted"),
-            i: ScanSearch,
-          },
-          {
-            v: lastScanDate || t("noScansYet"),
-            l: t("lastScan"),
-            i: Clock,
-          },
-        ].map((s) => (
-          <div
-            key={s.l}
-            className="bg-white rounded-xl border border-gray-200 p-5 flex items-start gap-4"
-          >
-            <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center shrink-0">
-              <s.i className="w-5 h-5 text-gray-400" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-gray-900">{s.v}</p>
-              <p className="text-sm text-gray-500">{s.l}</p>
-            </div>
-          </div>
-        ))}
-      </div>
+          {selectedScan && totalCount > 0 && (
+            <>
+              <ComplianceScoreWidget
+                score={score}
+                regulationCount={totalCount}
+                checkedCount={checkedCount}
+              />
+
+              <HowToImprove
+                score={score}
+                lowestCategory={(() => {
+                  if (selectedRegulations.length === 0) return undefined;
+                  const cats = selectedRegulations.reduce<Record<string, { checked: number; total: number }>>((acc, reg) => {
+                    if (!acc[reg.category]) acc[reg.category] = { checked: 0, total: 0 };
+                    acc[reg.category].total++;
+                    if (selectedChecks[reg.id]) acc[reg.category].checked++;
+                    return acc;
+                  }, {});
+                  let lowest: { name: string; checked: number; total: number } | undefined;
+                  for (const [cat, data] of Object.entries(cats)) {
+                    const pct = data.total > 0 ? data.checked / data.total : 1;
+                    if (!lowest || pct < (lowest.total > 0 ? lowest.checked / lowest.total : 1)) {
+                      lowest = { name: cat, ...data };
+                    }
+                  }
+                  return lowest;
+                })()}
+                onViewResults={() => onViewResults(selectedScanId!)}
+              />
+
+              <button
+                onClick={() => onViewResults(selectedScanId!)}
+                className="w-full mb-6 px-4 py-3 bg-blue-600 text-white rounded-xl text-sm font-semibold hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
+              >
+                <FileText className="w-4 h-4" />
+                {t("viewFullResults")}
+              </button>
+
+              <CategoryBreakdown
+                regulations={selectedRegulations}
+                complianceChecks={selectedChecks}
+              />
+            </>
+          )}
+        </>
+      )}
     </motion.div>
   );
 }

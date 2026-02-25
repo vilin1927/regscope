@@ -27,7 +27,21 @@
     "scansCompleted": "Scans durchgeführt",
     "lastScan": "Letzter Scan",
     "noScansYet": "Noch keine Scans",
-    "basedOnRegulations": "Basierend auf {count} Vorschriften"
+    "basedOnRegulations": "Basierend auf {count} Vorschriften",
+    "complianceScore": "Compliance-Score",
+    "regulationsShort": "Vorschr.",
+    "newScanTab": "Neuer Scan",
+    "categoryBreakdown": "Compliance nach Kategorie",
+    "compliantOf": "{checked} von {total} erfüllt",
+    "viewResults": "Ergebnisse ansehen",
+    "viewFullResults": "Vollständige Ergebnisse ansehen",
+    "howToImproveTitle": "Compliance-Score verbessern",
+    "howToImproveSubtitle": "So steigern Sie Ihren Score",
+    "howToStep1": "Öffnen Sie die vollständigen Scan-Ergebnisse",
+    "howToStep2": "Markieren Sie erfüllte Vorschriften als \"Erfüllt\"",
+    "howToStep3": "Ihr Score aktualisiert sich automatisch",
+    "focusCategory": "Fokus-Bereich: {category} — nur {checked} von {total} erfüllt",
+    "yourScans": "Ihre Scans"
   },
   "Questionnaire": {
     "stepOf": "Schritt {step} von {total}",
@@ -259,6 +273,8 @@
     "profileYourBusiness": "Ihr Betrieb",
     "relevantRegulations": "Relevante Vorschriften",
     "newScan": "Neuer Scan",
+    "backToHistory": "Scan-Verlauf",
+    "allCategories": "Alle",
     "exportReport": "Bericht exportieren",
     "whyApplies": "Warum betrifft Sie das",
     "keyRequirements": "Wesentliche Anforderungen",
@@ -467,6 +483,10 @@
     "areas": "Bereiche",
     "noSubscribers": "Noch keine Abonnenten",
     "noUsers": "Noch keine Benutzer",
+    "plan": "Abo",
+    "planFree": "Free",
+    "trialActive": "Testphase aktiv",
+    "trialExpired": "Testphase abgelaufen",
     "previewLoading": "Vorschau wird geladen...",
     "previewError": "Vorschau konnte nicht geladen werden"
   },
@@ -483,7 +503,53 @@
     "send": "Anfrage senden",
     "successTitle": "Anfrage gesendet!",
     "successMessage": "Ein Experte wird sich innerhalb von 24 Stunden bei Ihnen melden.",
-    "close": "Schließen"
+    "close": "Schließen",
+    "more": "Mehr",
+    "less": "Weniger"
+  },
+  "Experts": {
+    "yourExpert": "Ihr Experte",
+    "fillFormHeading": "Füllen Sie das Formular aus, um Kontakt aufzunehmen",
+    "arbeitssicherheit": {
+      "name": "Klaus Weber",
+      "title": "Fachkraft für Arbeitssicherheit",
+      "bio": "Über 15 Jahre Erfahrung in Arbeitssicherheit für Handwerksbetriebe. Spezialisiert auf Gefährdungsbeurteilungen und Schutzmaßnahmen."
+    },
+    "arbeitsrecht": {
+      "name": "Sabine Braun",
+      "title": "Fachanwältin für Arbeitsrecht",
+      "bio": "Beratung zu Arbeitsverträgen, Kündigungsschutz und Arbeitnehmerrechten. Spezialisiert auf kleine und mittlere Betriebe."
+    },
+    "gewerberecht": {
+      "name": "Martin Hoffmann",
+      "title": "Berater für Gewerberecht",
+      "bio": "Experte für Gewerbeanmeldung, Handwerksrolle und gewerberechtliche Genehmigungen. Langjährige Beratungspraxis."
+    },
+    "umweltrecht": {
+      "name": "Andrea Fischer",
+      "title": "Umweltbeauftragte",
+      "bio": "Spezialistin für Umweltauflagen, Emissionsschutz und Abfallentsorgung in Handwerks- und Produktionsbetrieben."
+    },
+    "produktsicherheit": {
+      "name": "Thomas Richter",
+      "title": "Ingenieur für Produktsicherheit",
+      "bio": "CE-Kennzeichnung, Produkthaftung und Sicherheitsnormen. Unterstützung bei der Konformitätsbewertung Ihrer Produkte."
+    },
+    "datenschutz": {
+      "name": "Laura Klein",
+      "title": "Datenschutzbeauftragte",
+      "bio": "Zertifizierte Datenschutzbeauftragte mit Fokus auf DSGVO-Konformität für Handwerks- und Gewerbebetriebe."
+    },
+    "versicherungspflichten": {
+      "name": "Jens Neumann",
+      "title": "Versicherungsmakler",
+      "bio": "Unabhängiger Versicherungsmakler für Betriebshaftpflicht, Maschinenversicherung und Berufsunfähigkeit im Handwerk."
+    },
+    "general": {
+      "name": "Frank Schneider",
+      "title": "Compliance-Berater",
+      "bio": "Ganzheitliche Compliance-Beratung für Handwerksbetriebe. Überblick über alle regulatorischen Anforderungen."
+    }
   },
   "Paywall": {
     "moreRegulations": "{count} weitere Vorschriften",
@@ -493,15 +559,27 @@
     "proTitle": "ComplyRadar Pro",
     "proSubtitle": "Vollständiger Zugriff auf alle Compliance-Daten",
     "proPricing": "ab 29 EUR/Monat",
+    "trialSubtitle": "Testen Sie den vollen Zugriff — kostenlos",
+    "trialPricing": "1 Monat kostenlos",
+    "trialExpiredSubtitle": "Ihre Testphase ist abgelaufen",
+    "trialExpiredMessage": "Ihre kostenlose Testphase ist abgelaufen. Kontaktieren Sie uns für ein Abonnement.",
+    "startTrialCta": "Kostenlos testen",
+    "noCardRequired": "Keine Kreditkarte erforderlich",
+    "contactSales": "Schließen",
     "proFeature1": "Alle Vorschriften einsehen",
     "proFeature2": "Vollständige Risikoanalyse",
     "proFeature3": "Alle Empfehlungen",
     "proFeature4": "Experten-Kontakt",
     "upgradeCta": "Jetzt freischalten",
     "upgradeSuccess": "Pro-Zugang aktiviert!",
-    "demoPlan": "Demo-Modus",
+    "trialStarted": "Testphase gestartet!",
     "free": "Free",
-    "pro": "Pro"
+    "pro": "Pro",
+    "trialSection": "Testphase",
+    "trialActive": "Aktiv",
+    "trialExpired": "Abgelaufen",
+    "trialNone": "Nicht gestartet",
+    "resetTrial": "Testphase zurücksetzen"
   },
   "Common": {
     "yes": "Ja",

@@ -3,15 +3,15 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { useTranslations, useLocale } from "next-intl";
+import { screenVariants, screenTransition } from "@/lib/motion";
 import { useRouter, usePathname } from "@/src/i18n/navigation";
+import { useSubscriptionContext } from "@/components/providers/SubscriptionProvider";
 
 interface SettingsScreenProps {
   userEmail?: string;
   isGuest?: boolean;
   onSignOut?: () => void;
   onLegal?: (page: "impressum" | "datenschutz") => void;
-  isPro?: boolean;
-  onTogglePlan?: () => void;
 }
 
 export function SettingsScreen({
@@ -19,9 +19,8 @@ export function SettingsScreen({
   isGuest,
   onSignOut,
   onLegal,
-  isPro,
-  onTogglePlan,
 }: SettingsScreenProps) {
+  const { isPro, trialStatus, resetTrial } = useSubscriptionContext();
   const t = useTranslations("Settings");
   const tAuth = useTranslations("Auth");
   const tLegal = useTranslations("Legal");
@@ -38,9 +37,11 @@ export function SettingsScreen({
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -20 }}
+      variants={screenVariants}
+      initial="initial"
+      animate="animate"
+      exit="exit"
+      transition={screenTransition}
       className="max-w-2xl mx-auto"
     >
       <h1 className="text-2xl font-bold text-gray-900 mb-6">{t("title")}</h1>
@@ -138,39 +139,42 @@ export function SettingsScreen({
         </div>
       )}
 
-      {/* Demo plan toggle (admin) */}
-      {onTogglePlan && (
-        <div className="bg-white rounded-xl border border-gray-200 p-6 mt-4">
-          <h2 className="font-semibold text-gray-900 mb-2">
-            {tPaywall("demoPlan")}
-          </h2>
-          <p className="text-sm text-gray-500 mb-4">
-            Free/Pro Demo-Umschaltung für Präsentationen
-          </p>
-          <div className="flex gap-3">
-            <button
-              onClick={!isPro ? undefined : onTogglePlan}
-              className={`flex-1 py-3 rounded-lg text-sm font-medium transition-colors ${
-                !isPro
-                  ? "bg-blue-100 text-blue-700 border-2 border-blue-300"
-                  : "bg-gray-100 text-gray-700 border-2 border-transparent hover:bg-gray-200"
-              }`}
-            >
-              {tPaywall("free")}
-            </button>
-            <button
-              onClick={isPro ? undefined : onTogglePlan}
-              className={`flex-1 py-3 rounded-lg text-sm font-medium transition-colors ${
-                isPro
-                  ? "bg-blue-100 text-blue-700 border-2 border-blue-300"
-                  : "bg-gray-100 text-gray-700 border-2 border-transparent hover:bg-gray-200"
-              }`}
-            >
+      {/* Trial status */}
+      <div className="bg-white rounded-xl border border-gray-200 p-6 mt-4">
+        <h2 className="font-semibold text-gray-900 mb-2">
+          {tPaywall("trialSection")}
+        </h2>
+        <div className="flex items-center gap-2 mb-3">
+          <span
+            className={`inline-block text-xs font-medium px-2.5 py-1 rounded-full ${
+              trialStatus === "active"
+                ? "bg-green-100 text-green-700"
+                : trialStatus === "expired"
+                  ? "bg-red-100 text-red-700"
+                  : "bg-gray-100 text-gray-600"
+            }`}
+          >
+            {trialStatus === "active"
+              ? tPaywall("trialActive")
+              : trialStatus === "expired"
+                ? tPaywall("trialExpired")
+                : tPaywall("trialNone")}
+          </span>
+          {isPro && (
+            <span className="text-xs text-green-600 font-medium">
               {tPaywall("pro")}
-            </button>
-          </div>
+            </span>
+          )}
         </div>
-      )}
+        {trialStatus !== "none" && (
+          <button
+            onClick={resetTrial}
+            className="text-sm text-red-600 hover:text-red-800 font-medium transition-colors"
+          >
+            {tPaywall("resetTrial")}
+          </button>
+        )}
+      </div>
     </motion.div>
   );
 }

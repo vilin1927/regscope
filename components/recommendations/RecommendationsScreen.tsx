@@ -12,20 +12,16 @@ import {
   Info,
   BarChart3,
   RefreshCw,
-  UserPlus,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { screenVariants, screenTransition } from "@/lib/motion";
 import { useRecommendations } from "@/hooks/useRecommendations";
 import { ExpertContactModal } from "@/components/ui/ExpertContactModal";
+import { ExpertAvatar } from "@/components/ui/ExpertAvatar";
+import { getExpertForCategory } from "@/data/experts";
+import { useScanContext } from "@/components/providers/ScanProvider";
+import { useSubscriptionContext } from "@/components/providers/SubscriptionProvider";
 import type { RecommendationTimeline } from "@/types/addons";
-
-interface RecommendationsScreenProps {
-  scanId?: string;
-  hasResults: boolean;
-  hasRiskReport?: boolean;
-  isPro?: boolean;
-  onUnlock?: () => void;
-}
 
 const timelineColors: Record<RecommendationTimeline, string> = {
   sofort: "bg-red-100 text-red-700",
@@ -33,15 +29,16 @@ const timelineColors: Record<RecommendationTimeline, string> = {
   geplant: "bg-blue-100 text-blue-700",
 };
 
-export function RecommendationsScreen({
-  scanId,
-  hasResults,
-  hasRiskReport,
-  isPro = true,
-  onUnlock,
-}: RecommendationsScreenProps) {
+const generalExpert = getExpertForCategory("general");
+
+export function RecommendationsScreen() {
+  const { currentScanId, hasResults } = useScanContext();
+  const scanId = currentScanId ?? undefined;
+  const { isPro, onUnlock } = useSubscriptionContext();
+  const hasRiskReport = undefined;
   const t = useTranslations("Recommendations");
   const tExpert = useTranslations("Expert");
+  const tExperts = useTranslations("Experts");
   const tPaywall = useTranslations("Paywall");
   const [expertModalOpen, setExpertModalOpen] = useState(false);
   const { report, isLoading, isGenerating, error, generate, regenerate } =
@@ -51,10 +48,12 @@ export function RecommendationsScreen({
   if (!hasResults || !scanId) {
     return (
       <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, y: -20 }}
-        className="max-w-3xl mx-auto"
+        variants={screenVariants}
+        initial="initial"
+        animate="animate"
+        exit="exit"
+        transition={screenTransition}
+        className="max-w-3xl mx-auto overflow-hidden"
       >
         <div className="flex items-center gap-3 mb-6">
           <div className="w-12 h-12 bg-amber-100 rounded-xl flex items-center justify-center">
@@ -74,10 +73,12 @@ export function RecommendationsScreen({
   if (isLoading) {
     return (
       <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, y: -20 }}
-        className="max-w-3xl mx-auto"
+        variants={screenVariants}
+        initial="initial"
+        animate="animate"
+        exit="exit"
+        transition={screenTransition}
+        className="max-w-3xl mx-auto overflow-hidden"
       >
         <div className="flex items-center gap-3 mb-6">
           <div className="w-12 h-12 bg-amber-100 rounded-xl flex items-center justify-center">
@@ -97,10 +98,12 @@ export function RecommendationsScreen({
   if (isGenerating) {
     return (
       <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, y: -20 }}
-        className="max-w-3xl mx-auto"
+        variants={screenVariants}
+        initial="initial"
+        animate="animate"
+        exit="exit"
+        transition={screenTransition}
+        className="max-w-3xl mx-auto overflow-hidden"
       >
         <div className="flex items-center gap-3 mb-6">
           <div className="w-12 h-12 bg-amber-100 rounded-xl flex items-center justify-center">
@@ -121,10 +124,12 @@ export function RecommendationsScreen({
   if (!report) {
     return (
       <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, y: -20 }}
-        className="max-w-3xl mx-auto"
+        variants={screenVariants}
+        initial="initial"
+        animate="animate"
+        exit="exit"
+        transition={screenTransition}
+        className="max-w-3xl mx-auto overflow-hidden"
       >
         <div className="flex items-center gap-3 mb-6">
           <div className="w-12 h-12 bg-amber-100 rounded-xl flex items-center justify-center">
@@ -174,34 +179,56 @@ export function RecommendationsScreen({
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -20 }}
-      className="max-w-3xl mx-auto"
+      variants={screenVariants}
+      initial="initial"
+      animate="animate"
+      exit="exit"
+      transition={screenTransition}
+      className="max-w-3xl mx-auto overflow-hidden"
     >
-      <div className="flex items-center gap-3 mb-6">
-        <div className="w-12 h-12 bg-amber-100 rounded-xl flex items-center justify-center">
+      <div className="flex items-start gap-3 mb-4">
+        <div className="w-12 h-12 bg-amber-100 rounded-xl flex items-center justify-center shrink-0">
           <Lightbulb className="w-6 h-6 text-amber-600" />
         </div>
-        <div className="flex-1">
-          <h1 className="text-2xl font-bold text-gray-900">{t("title")}</h1>
-          <p className="text-gray-500 text-sm mt-1">
-            {t("foundActions", { count: report.items.length })}
+        <div className="flex-1 min-w-0">
+          <div className="flex flex-wrap items-start justify-between gap-2">
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">{t("title")}</h1>
+              <p className="text-gray-500 text-sm mt-1">
+                {t("foundActions", { count: report.items.length })}
+              </p>
+            </div>
+            <button
+              onClick={regenerate}
+              disabled={isGenerating}
+              className="shrink-0 flex items-center gap-2 px-4 py-2 text-sm font-medium text-amber-600 border border-amber-200 rounded-lg hover:bg-amber-50 disabled:opacity-50"
+            >
+              {isGenerating ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <RefreshCw className="w-4 h-4" />
+              )}
+              {t("rerun")}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Expert contact chip — under header */}
+      <button
+        onClick={() => setExpertModalOpen(true)}
+        className="inline-flex items-center gap-2.5 pl-1.5 pr-3.5 py-1.5 mb-4 bg-white border border-gray-200 rounded-full text-sm hover:border-blue-300 hover:shadow-sm transition-all"
+      >
+        <ExpertAvatar expert={generalExpert} size="sm" />
+        <div className="text-left">
+          <p className="text-xs font-semibold text-gray-900 leading-tight">
+            {tExperts(`${generalExpert.i18nKey}.name`)}
+          </p>
+          <p className="text-[11px] text-blue-600 leading-tight">
+            {tExpert("consultExpert")}
           </p>
         </div>
-        <button
-          onClick={regenerate}
-          disabled={isGenerating}
-          className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-amber-600 border border-amber-200 rounded-lg hover:bg-amber-50 disabled:opacity-50"
-        >
-          {isGenerating ? (
-            <Loader2 className="w-4 h-4 animate-spin" />
-          ) : (
-            <RefreshCw className="w-4 h-4" />
-          )}
-          {t("rerun")}
-        </button>
-      </div>
+      </button>
 
       {/* Summary */}
       {report.summary && (
@@ -299,7 +326,7 @@ export function RecommendationsScreen({
                       </p>
                       <button
                         onClick={onUnlock}
-                        className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
+                        className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 active:scale-95 transition-all"
                       >
                         {tPaywall("unlockAll")}
                       </button>
@@ -311,20 +338,9 @@ export function RecommendationsScreen({
           )
       )}
 
-      {/* Expert contact button */}
-      <div className="mt-2 mb-6">
-        <button
-          onClick={() => setExpertModalOpen(true)}
-          className="inline-flex items-center gap-2 px-4 py-2 border border-blue-200 text-blue-600 rounded-lg text-sm font-medium hover:bg-blue-50 transition-colors"
-        >
-          <UserPlus className="w-4 h-4" />
-          {tExpert("consultExpert")}
-        </button>
-      </div>
-
       {expertModalOpen && (
         <ExpertContactModal
-          category={t("title")}
+          categoryKey="general"
           onClose={() => setExpertModalOpen(false)}
         />
       )}

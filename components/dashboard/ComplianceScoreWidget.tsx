@@ -5,11 +5,13 @@ import { useTranslations } from "next-intl";
 interface ComplianceScoreWidgetProps {
   score: number;
   regulationCount: number;
+  checkedCount?: number;
 }
 
 export function ComplianceScoreWidget({
   score,
   regulationCount,
+  checkedCount,
 }: ComplianceScoreWidgetProps) {
   const t = useTranslations("Dashboard");
 
@@ -58,9 +60,15 @@ export function ComplianceScoreWidget({
       <p className="text-sm font-semibold text-gray-900">
         {t("complianceScore")}
       </p>
-      <p className="text-xs text-gray-500">
-        {t("basedOnRegulations", { count: regulationCount })}
-      </p>
+      {checkedCount !== undefined ? (
+        <p className="text-xs text-gray-500">
+          {t("compliantOf", { checked: checkedCount, total: regulationCount })}
+        </p>
+      ) : (
+        <p className="text-xs text-gray-500">
+          {t("basedOnRegulations", { count: regulationCount })}
+        </p>
+      )}
     </div>
   );
 }

@@ -11,15 +11,16 @@ import {
   Send,
   Users,
   X,
+  Sparkles,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { NavItem } from "./NavItem";
+import { useSubscriptionContext } from "@/components/providers/SubscriptionProvider";
 import type { Screen } from "@/types";
 
 interface SidebarProps {
   currentScreen: Screen;
   onNavigate: (screen: Screen) => void;
-  hasResults: boolean;
   userEmail?: string;
   isGuest?: boolean;
   open: boolean;
@@ -29,7 +30,6 @@ interface SidebarProps {
 export function Sidebar({
   currentScreen,
   onNavigate,
-  hasResults,
   userEmail,
   isGuest,
   open,
@@ -37,6 +37,8 @@ export function Sidebar({
 }: SidebarProps) {
   const t = useTranslations("Nav");
   const tApp = useTranslations("App");
+  const tPaywall = useTranslations("Paywall");
+  const { plan, trialStatus } = useSubscriptionContext();
 
   const sidebarContent = (
     <>
@@ -68,12 +70,8 @@ export function Sidebar({
         <NavItem
           icon={LayoutDashboard}
           label={t("dashboard")}
-          active={
-            currentScreen === "dashboard" || currentScreen === "results"
-          }
-          onClick={() =>
-            onNavigate(hasResults ? "results" : "dashboard")
-          }
+          active={currentScreen === "dashboard"}
+          onClick={() => onNavigate("dashboard")}
         />
         <NavItem
           icon={ScanSearch}
@@ -87,7 +85,7 @@ export function Sidebar({
         <NavItem
           icon={History}
           label={t("scanHistory")}
-          active={currentScreen === "scan-history"}
+          active={currentScreen === "scan-history" || currentScreen === "results"}
           onClick={() => onNavigate("scan-history")}
         />
 
@@ -153,11 +151,29 @@ export function Sidebar({
             </span>
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-gray-900 truncate">
-              {isGuest ? "Gast" : userEmail || "User"}
-            </p>
+            <div className="flex items-center gap-2">
+              <p className="text-sm font-medium text-gray-900 truncate">
+                {isGuest ? "Gast" : userEmail || "User"}
+              </p>
+              {/* Plan badge */}
+              {plan === "pro" ? (
+                <span className="inline-flex items-center gap-0.5 shrink-0 px-1.5 py-0.5 bg-blue-100 text-blue-700 text-[10px] font-bold rounded-full uppercase">
+                  <Sparkles className="w-2.5 h-2.5" />
+                  {tPaywall("pro")}
+                </span>
+              ) : (
+                <span className="shrink-0 px-1.5 py-0.5 bg-gray-200 text-gray-600 text-[10px] font-bold rounded-full uppercase">
+                  {tPaywall("free")}
+                </span>
+              )}
+            </div>
             {isGuest && (
               <p className="text-xs text-gray-500">Gastmodus</p>
+            )}
+            {plan === "pro" && trialStatus === "active" && (
+              <p className="text-[10px] text-blue-500 font-medium">
+                {tPaywall("trialActive")}
+              </p>
             )}
           </div>
         </div>

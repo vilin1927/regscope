@@ -2,6 +2,7 @@
 
 import { motion } from "framer-motion";
 import { ArrowLeft } from "lucide-react";
+import { screenVariants, screenTransition } from "@/lib/motion";
 import { useTranslations } from "next-intl";
 
 interface LegalScreenProps {
@@ -99,9 +100,11 @@ export function LegalScreen({ page, onBack }: LegalScreenProps) {
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -20 }}
+      variants={screenVariants}
+      initial="initial"
+      animate="animate"
+      exit="exit"
+      transition={screenTransition}
       className="max-w-3xl mx-auto"
     >
       <button

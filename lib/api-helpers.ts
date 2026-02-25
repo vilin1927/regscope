@@ -40,11 +40,11 @@ export async function createSupabaseServerClient() {
 }
 
 export async function requireAuth(supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>) {
-  const { data: { session } } = await supabase.auth.getSession();
-  if (!session?.user?.id) {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user?.id) {
     return { userId: null, error: "Anmeldung erforderlich" };
   }
-  return { userId: session.user.id, error: null };
+  return { userId: user.id, error: null };
 }
 
 export async function callOpenAI(

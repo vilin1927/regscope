@@ -14,6 +14,7 @@ interface ScanHistoryState {
   complianceChecks: Record<string, boolean>;
   currentScanId: string | null;
   scanLoadError?: string;
+  historyLoaded: boolean;
 }
 
 interface ScanHistoryActions {
@@ -23,6 +24,7 @@ interface ScanHistoryActions {
   setMatchedRegulations: (regs: MatchedRegulation[]) => void;
   setBusinessProfile: (profile: BusinessProfile) => void;
   handleComplianceChange: (regulationId: string, checked: boolean) => Promise<void>;
+  getComplianceChecksForScan: (scanId: string) => Promise<Record<string, boolean>>;
   resetScan: () => void;
   clearHistory: () => void;
 }
@@ -37,13 +39,17 @@ export function useScanHistory(
   const [complianceChecks, setComplianceChecks] = useState<Record<string, boolean>>({});
   const [currentScanId, setCurrentScanId] = useState<string | null>(null);
   const [scanLoadError, setScanLoadError] = useState<string>();
+  const [historyLoaded, setHistoryLoaded] = useState(false);
 
   const supabaseRef = useRef(createClient());
   const supabase = supabaseRef.current;
 
   // Load scan history when userId changes
   useEffect(() => {
-    if (!userId || isGuest) return;
+    if (!userId || isGuest) {
+      setHistoryLoaded(true);
+      return;
+    }
 
     const load = async () => {
       try {
@@ -91,6 +97,8 @@ export function useScanHistory(
       } catch (err) {
         console.error("Failed to load scan history:", err);
         setScanLoadError("Failed to load scan history");
+      } finally {
+        setHistoryLoaded(true);
       }
     };
     load();
@@ -117,6 +125,30 @@ export function useScanHistory(
       } catch {
         // compliance_checks table may not exist yet — that's ok
       }
+    },
+    [userId, isGuest, supabase]
+  );
+
+  // Get compliance checks for a specific scan without updating global state
+  const getComplianceChecksForScan = useCallback(
+    async (scanId: string): Promise<Record<string, boolean>> => {
+      if (!userId || isGuest) return {};
+      try {
+        const { data } = await supabase
+          .from("compliance_checks")
+          .select("regulation_id, checked")
+          .eq("scan_id", scanId);
+        if (data) {
+          const checks: Record<string, boolean> = {};
+          for (const row of data) {
+            checks[row.regulation_id] = row.checked;
+          }
+          return checks;
+        }
+      } catch {
+        // compliance_checks table may not exist yet
+      }
+      return {};
     },
     [userId, isGuest, supabase]
   );
@@ -235,12 +267,14 @@ export function useScanHistory(
     complianceChecks,
     currentScanId,
     scanLoadError,
+    historyLoaded,
     saveScan,
     handleViewScan,
     handleRerunScan,
     setMatchedRegulations,
     setBusinessProfile,
     handleComplianceChange,
+    getComplianceChecksForScan,
     resetScan,
     clearHistory,
   };
