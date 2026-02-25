@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { ScanSearch } from "lucide-react";
+import { screenVariants, screenTransition } from "@/lib/motion";
 import { useTranslations } from "next-intl";
 import { AuthForm } from "./AuthForm";
 
@@ -21,8 +22,10 @@ export function AuthScreen({ onAuth, onGuest, onLegal, error }: AuthScreenProps)
   return (
     <div className="min-h-screen bg-[#f8fafc] flex items-center justify-center p-4 sm:p-6">
       <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
+        variants={screenVariants}
+        initial="initial"
+        animate="animate"
+        transition={screenTransition}
         className="w-full max-w-md"
       >
         <div className="text-center mb-8">

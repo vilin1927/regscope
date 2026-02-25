@@ -2,6 +2,7 @@
 
 import { motion } from "framer-motion";
 import { Mail, Loader2, Check } from "lucide-react";
+import { screenVariants, screenTransition } from "@/lib/motion";
 import { useTranslations } from "next-intl";
 import { useNewsletterPreferences } from "@/hooks/useNewsletterPreferences";
 import type { RegulationCategory } from "@/data/regulations/types";
@@ -31,16 +32,18 @@ export function NewsletterScreen({ userId, isGuest }: NewsletterScreenProps) {
   if (isGuest || !userId) {
     return (
       <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, y: -20 }}
+        variants={screenVariants}
+        initial="initial"
+        animate="animate"
+        exit="exit"
+        transition={screenTransition}
         className="max-w-2xl mx-auto"
       >
-        <div className="flex items-center gap-3 mb-6">
-          <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
-            <Mail className="w-6 h-6 text-blue-600" />
+        <div className="flex items-center gap-4 mb-6">
+          <div className="w-10 h-10 sm:w-12 sm:h-12 bg-blue-100 rounded-xl flex items-center justify-center shrink-0">
+            <Mail className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600" />
           </div>
-          <h1 className="text-2xl font-bold text-gray-900">{t("title")}</h1>
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">{t("title")}</h1>
         </div>
         <div className="bg-white border border-gray-200 rounded-xl p-12 text-center">
           <Mail className="w-12 h-12 text-gray-300 mx-auto mb-4" />
@@ -53,16 +56,18 @@ export function NewsletterScreen({ userId, isGuest }: NewsletterScreenProps) {
   if (isLoading) {
     return (
       <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, y: -20 }}
+        variants={screenVariants}
+        initial="initial"
+        animate="animate"
+        exit="exit"
+        transition={screenTransition}
         className="max-w-2xl mx-auto"
       >
-        <div className="flex items-center gap-3 mb-6">
-          <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
-            <Mail className="w-6 h-6 text-blue-600" />
+        <div className="flex items-center gap-4 mb-6">
+          <div className="w-10 h-10 sm:w-12 sm:h-12 bg-blue-100 rounded-xl flex items-center justify-center shrink-0">
+            <Mail className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600" />
           </div>
-          <h1 className="text-2xl font-bold text-gray-900">{t("title")}</h1>
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">{t("title")}</h1>
         </div>
         <div className="bg-white border border-gray-200 rounded-xl p-12 text-center">
           <Loader2 className="w-8 h-8 text-blue-500 mx-auto mb-3 animate-spin" />
@@ -82,17 +87,19 @@ export function NewsletterScreen({ userId, isGuest }: NewsletterScreenProps) {
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -20 }}
+      variants={screenVariants}
+      initial="initial"
+      animate="animate"
+      exit="exit"
+      transition={screenTransition}
       className="max-w-2xl mx-auto"
     >
-      <div className="flex items-center gap-3 mb-6">
-        <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
-          <Mail className="w-6 h-6 text-blue-600" />
+      <div className="flex items-start gap-4 mb-6">
+        <div className="w-10 h-10 sm:w-12 sm:h-12 bg-blue-100 rounded-xl flex items-center justify-center shrink-0">
+          <Mail className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600" />
         </div>
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">{t("title")}</h1>
+        <div className="min-w-0">
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">{t("title")}</h1>
           <p className="text-gray-500 text-sm mt-1">{t("description")}</p>
         </div>
       </div>
@@ -104,21 +111,21 @@ export function NewsletterScreen({ userId, isGuest }: NewsletterScreenProps) {
       )}
 
       {/* Opt-in toggle */}
-      <div className="bg-white border border-gray-200 rounded-xl p-6 mb-4">
-        <div className="flex items-center justify-between">
-          <div>
+      <div className="bg-white border border-gray-200 rounded-xl p-4 sm:p-6 mb-4">
+        <div className="flex items-start justify-between gap-4">
+          <div className="min-w-0 flex-1">
             <h2 className="font-semibold text-gray-900">{t("optIn")}</h2>
             <p className="text-sm text-gray-500 mt-1">{t("optInDesc")}</p>
           </div>
           <button
             onClick={() => update({ optedIn: !preferences.optedIn })}
-            className={`relative w-12 h-7 rounded-full transition-colors ${
+            className={`relative w-14 h-8 rounded-full transition-colors shrink-0 mt-0.5 ${
               preferences.optedIn ? "bg-blue-600" : "bg-gray-300"
             }`}
           >
             <div
-              className={`absolute top-1 w-5 h-5 bg-white rounded-full shadow transition-transform ${
-                preferences.optedIn ? "left-6" : "left-1"
+              className={`absolute top-1.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${
+                preferences.optedIn ? "left-7" : "left-1.5"
               }`}
             />
           </button>
@@ -126,8 +133,8 @@ export function NewsletterScreen({ userId, isGuest }: NewsletterScreenProps) {
       </div>
 
       {/* Areas */}
-      <div className="bg-white border border-gray-200 rounded-xl p-6 mb-4">
-        <h2 className="font-semibold text-gray-900 mb-3">{t("areas")}</h2>
+      <div className="bg-white border border-gray-200 rounded-xl p-4 sm:p-6 mb-4">
+        <h2 className="font-semibold text-gray-900 mb-2">{t("areas")}</h2>
         <p className="text-sm text-gray-500 mb-4">{t("areasDesc")}</p>
         <div className="space-y-2">
           {COMPLIANCE_AREAS.map((area) => {
@@ -169,9 +176,9 @@ export function NewsletterScreen({ userId, isGuest }: NewsletterScreenProps) {
       )}
 
       {/* Newsletter info */}
-      <div className="bg-white border border-gray-200 rounded-xl p-6">
-        <div className="flex items-center gap-3">
-          <Mail className="w-5 h-5 text-blue-500" />
+      <div className="bg-white border border-gray-200 rounded-xl p-4 sm:p-6">
+        <div className="flex items-start gap-3">
+          <Mail className="w-5 h-5 text-blue-500 shrink-0 mt-0.5" />
           <p className="text-sm text-gray-600">{t("previewInfo")}</p>
         </div>
       </div>

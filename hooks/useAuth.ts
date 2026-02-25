@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { createClient } from "@/lib/supabase/client";
 
 interface AuthState {
@@ -40,7 +40,8 @@ export function useAuth(): AuthState & AuthActions {
     }
   };
 
-  const supabase = createClient();
+  const supabaseRef = useRef(createClient());
+  const supabase = supabaseRef.current;
 
   useEffect(() => {
     const checkAuth = async () => {

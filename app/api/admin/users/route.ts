@@ -32,6 +32,11 @@ export async function GET() {
       .from("newsletter_preferences")
       .select("user_id, opted_in, frequency");
 
+    // Fetch trial info from profiles
+    const { data: profiles } = await adminSupabase!
+      .from("profiles")
+      .select("id, trial_started_at");
+
     // Build user list
     const now = new Date();
     const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
@@ -42,6 +47,7 @@ export async function GET() {
       const newsletter = (newsletters || []).find(
         (n) => n.user_id === user.id
       );
+      const profile = (profiles || []).find((p) => p.id === user.id);
 
       return {
         id: user.id,
@@ -54,6 +60,7 @@ export async function GET() {
           : null,
         newsletterOptedIn: newsletter?.opted_in || false,
         newsletterFrequency: newsletter?.frequency || null,
+        trialStartedAt: profile?.trial_started_at || null,
       };
     });
 

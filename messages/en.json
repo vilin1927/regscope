@@ -26,7 +26,22 @@
     "regulationsFound": "Regulations Found",
     "scansCompleted": "Scans Completed",
     "lastScan": "Last Scan",
-    "noScansYet": "No scans yet"
+    "noScansYet": "No scans yet",
+    "basedOnRegulations": "Based on {count} regulations",
+    "complianceScore": "Compliance Score",
+    "regulationsShort": "regs",
+    "newScanTab": "New Scan",
+    "categoryBreakdown": "Compliance by Category",
+    "compliantOf": "{checked} of {total} compliant",
+    "viewResults": "View Results",
+    "viewFullResults": "View Full Results",
+    "howToImproveTitle": "Improve Your Compliance Score",
+    "howToImproveSubtitle": "How to increase your score",
+    "howToStep1": "Open the full scan results",
+    "howToStep2": "Mark fulfilled regulations as \"Fulfilled\"",
+    "howToStep3": "Your score updates automatically",
+    "focusCategory": "Focus area: {category} — only {checked} of {total} fulfilled",
+    "yourScans": "Your Scans"
   },
   "Questionnaire": {
     "stepOf": "Step {step} of {total}",
@@ -258,6 +273,8 @@
     "profileYourBusiness": "Your Business",
     "relevantRegulations": "Relevant Regulations",
     "newScan": "New Scan",
+    "backToHistory": "Scan History",
+    "allCategories": "All",
     "exportReport": "Export Report",
     "whyApplies": "Why this applies to you",
     "keyRequirements": "Key Requirements",
@@ -466,8 +483,103 @@
     "areas": "Areas",
     "noSubscribers": "No subscribers yet",
     "noUsers": "No users yet",
+    "plan": "Plan",
+    "planFree": "Free",
+    "trialActive": "Trial active",
+    "trialExpired": "Trial expired",
     "previewLoading": "Loading preview...",
     "previewError": "Failed to load preview"
+  },
+  "Expert": {
+    "consultExpert": "Consult Expert",
+    "modalTitle": "Request Expert Consultation",
+    "name": "Name",
+    "namePlaceholder": "Your full name",
+    "email": "Email",
+    "emailPlaceholder": "name@example.com",
+    "category": "Area",
+    "message": "Message",
+    "messagePlaceholder": "Briefly describe your concern...",
+    "send": "Send Request",
+    "successTitle": "Request Sent!",
+    "successMessage": "An expert will contact you within 24 hours.",
+    "close": "Close",
+    "more": "More",
+    "less": "Less"
+  },
+  "Experts": {
+    "yourExpert": "Your Expert",
+    "fillFormHeading": "Fill out the form below to get in touch",
+    "arbeitssicherheit": {
+      "name": "Klaus Weber",
+      "title": "Workplace Safety Specialist",
+      "bio": "Over 15 years of experience in workplace safety for trade businesses. Specialized in risk assessments and protective measures."
+    },
+    "arbeitsrecht": {
+      "name": "Sabine Braun",
+      "title": "Employment Law Attorney",
+      "bio": "Advice on employment contracts, dismissal protection, and employee rights. Specialized in small and medium businesses."
+    },
+    "gewerberecht": {
+      "name": "Martin Hoffmann",
+      "title": "Commercial Law Consultant",
+      "bio": "Expert in business registration, trade register, and commercial permits. Extensive consulting experience."
+    },
+    "umweltrecht": {
+      "name": "Andrea Fischer",
+      "title": "Environmental Compliance Officer",
+      "bio": "Specialist in environmental regulations, emission control, and waste disposal for trade and manufacturing businesses."
+    },
+    "produktsicherheit": {
+      "name": "Thomas Richter",
+      "title": "Product Safety Engineer",
+      "bio": "CE marking, product liability, and safety standards. Support with conformity assessment of your products."
+    },
+    "datenschutz": {
+      "name": "Laura Klein",
+      "title": "Data Protection Officer",
+      "bio": "Certified data protection officer focused on GDPR compliance for trade and commercial businesses."
+    },
+    "versicherungspflichten": {
+      "name": "Jens Neumann",
+      "title": "Insurance Broker",
+      "bio": "Independent insurance broker for public liability, machinery insurance, and disability coverage in the trades."
+    },
+    "general": {
+      "name": "Frank Schneider",
+      "title": "Compliance Consultant",
+      "bio": "Holistic compliance consulting for trade businesses. Overview of all regulatory requirements."
+    }
+  },
+  "Paywall": {
+    "moreRegulations": "{count} more regulations",
+    "unlockAll": "Unlock All",
+    "moreRisks": "{count} more risks",
+    "moreRecommendations": "{count} more recommendations",
+    "proTitle": "ComplyRadar Pro",
+    "proSubtitle": "Full access to all compliance data",
+    "proPricing": "from 29 EUR/month",
+    "trialSubtitle": "Try full access — for free",
+    "trialPricing": "1 month free",
+    "trialExpiredSubtitle": "Your trial has expired",
+    "trialExpiredMessage": "Your free trial has expired. Contact us for a subscription.",
+    "startTrialCta": "Start Free Trial",
+    "noCardRequired": "No credit card required",
+    "contactSales": "Close",
+    "proFeature1": "View all regulations",
+    "proFeature2": "Full risk analysis",
+    "proFeature3": "All recommendations",
+    "proFeature4": "Expert contact",
+    "upgradeCta": "Unlock Now",
+    "upgradeSuccess": "Pro access activated!",
+    "trialStarted": "Trial started!",
+    "free": "Free",
+    "pro": "Pro",
+    "trialSection": "Trial",
+    "trialActive": "Active",
+    "trialExpired": "Expired",
+    "trialNone": "Not started",
+    "resetTrial": "Reset Trial"
   },
   "Common": {
     "yes": "Yes",

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTranslations } from "next-intl";
+import { screenVariants, screenTransition } from "@/lib/motion";
 import { ProgressBar } from "./ProgressBar";
 import { LayerRenderer } from "./LayerRenderer";
 import { questionnaireLayers } from "@/data/questionnaire/layers";
@@ -118,9 +119,11 @@ export function QuestionnaireScreen({
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -20 }}
+      variants={screenVariants}
+      initial="initial"
+      animate="animate"
+      exit="exit"
+      transition={screenTransition}
       className="max-w-2xl mx-auto"
     >
       <ProgressBar

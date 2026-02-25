@@ -3,7 +3,9 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { useTranslations, useLocale } from "next-intl";
+import { screenVariants, screenTransition } from "@/lib/motion";
 import { useRouter, usePathname } from "@/src/i18n/navigation";
+import { useSubscriptionContext } from "@/components/providers/SubscriptionProvider";
 
 interface SettingsScreenProps {
   userEmail?: string;
@@ -18,10 +20,12 @@ export function SettingsScreen({
   onSignOut,
   onLegal,
 }: SettingsScreenProps) {
+  const { isPro, trialStatus, resetTrial } = useSubscriptionContext();
   const t = useTranslations("Settings");
   const tAuth = useTranslations("Auth");
   const tLegal = useTranslations("Legal");
   const tCommon = useTranslations("Common");
+  const tPaywall = useTranslations("Paywall");
   const locale = useLocale();
   const router = useRouter();
   const pathname = usePathname();
@@ -33,9 +37,11 @@ export function SettingsScreen({
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -20 }}
+      variants={screenVariants}
+      initial="initial"
+      animate="animate"
+      exit="exit"
+      transition={screenTransition}
       className="max-w-2xl mx-auto"
     >
       <h1 className="text-2xl font-bold text-gray-900 mb-6">{t("title")}</h1>
@@ -132,6 +138,43 @@ export function SettingsScreen({
           </div>
         </div>
       )}
+
+      {/* Trial status */}
+      <div className="bg-white rounded-xl border border-gray-200 p-6 mt-4">
+        <h2 className="font-semibold text-gray-900 mb-2">
+          {tPaywall("trialSection")}
+        </h2>
+        <div className="flex items-center gap-2 mb-3">
+          <span
+            className={`inline-block text-xs font-medium px-2.5 py-1 rounded-full ${
+              trialStatus === "active"
+                ? "bg-green-100 text-green-700"
+                : trialStatus === "expired"
+                  ? "bg-red-100 text-red-700"
+                  : "bg-gray-100 text-gray-600"
+            }`}
+          >
+            {trialStatus === "active"
+              ? tPaywall("trialActive")
+              : trialStatus === "expired"
+                ? tPaywall("trialExpired")
+                : tPaywall("trialNone")}
+          </span>
+          {isPro && (
+            <span className="text-xs text-green-600 font-medium">
+              {tPaywall("pro")}
+            </span>
+          )}
+        </div>
+        {trialStatus !== "none" && (
+          <button
+            onClick={resetTrial}
+            className="text-sm text-red-600 hover:text-red-800 font-medium transition-colors"
+          >
+            {tPaywall("resetTrial")}
+          </button>
+        )}
+      </div>
     </motion.div>
   );
 }

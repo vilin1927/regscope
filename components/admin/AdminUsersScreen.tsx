@@ -14,6 +14,7 @@ interface UserRecord {
   latestComplianceScore: number | null;
   newsletterOptedIn: boolean;
   newsletterFrequency: string | null;
+  trialStartedAt: string | null;
 }
 
 interface UsersData {
@@ -22,6 +23,8 @@ interface UsersData {
   newUsersThisWeek: number;
 }
 
+const TRIAL_DURATION_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
+
 function formatDate(dateStr: string | null): string {
   if (!dateStr) return "—";
   return new Date(dateStr).toLocaleDateString("de-DE", {
@@ -29,6 +32,12 @@ function formatDate(dateStr: string | null): string {
     month: "short",
     year: "numeric",
   });
+}
+
+function getTrialStatus(trialStartedAt: string | null): "none" | "active" | "expired" {
+  if (!trialStartedAt) return "none";
+  const elapsed = Date.now() - new Date(trialStartedAt).getTime();
+  return elapsed < TRIAL_DURATION_MS ? "active" : "expired";
 }
 
 export function AdminUsersScreen() {
@@ -116,6 +125,7 @@ export function AdminUsersScreen() {
                   <thead>
                     <tr className="border-b border-gray-100 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       <th className="px-5 py-3">{t("email")}</th>
+                      <th className="px-5 py-3">{t("plan")}</th>
                       <th className="px-5 py-3">{t("scans")}</th>
                       <th className="px-5 py-3">{t("score")}</th>
                       <th className="px-5 py-3">{t("lastScan")}</th>
@@ -131,6 +141,28 @@ export function AdminUsersScreen() {
                       >
                         <td className="px-5 py-3 text-gray-900">
                           {user.email}
+                        </td>
+                        <td className="px-5 py-3">
+                          {(() => {
+                            const status = getTrialStatus(user.trialStartedAt);
+                            if (status === "active")
+                              return (
+                                <span className="inline-flex px-2 py-0.5 rounded-full text-xs font-medium bg-green-50 text-green-700">
+                                  {t("trialActive")}
+                                </span>
+                              );
+                            if (status === "expired")
+                              return (
+                                <span className="inline-flex px-2 py-0.5 rounded-full text-xs font-medium bg-red-50 text-red-700">
+                                  {t("trialExpired")}
+                                </span>
+                              );
+                            return (
+                              <span className="text-xs text-gray-400">
+                                {t("planFree")}
+                              </span>
+                            );
+                          })()}
                         </td>
                         <td className="px-5 py-3 text-gray-600">
                           {user.totalScans}
