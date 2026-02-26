@@ -941,9 +941,9 @@ https://vm.tiktok.com/abc..."
                         </svg>
                         <h3 class="text-lg font-semibold text-green-400">Generation Complete!</h3>
                     </div>
-                    <p class="text-gray-300 mb-4" x-text="result.message"></p>
+                    <p class="text-gray-300 mb-4" x-text="result?.message"></p>
                     <a
-                        :href="result.folder_link"
+                        :href="result?.folder_link"
                         target="_blank"
                         class="inline-flex items-center px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
                     >
@@ -953,7 +953,7 @@ https://vm.tiktok.com/abc..."
                         Open Google Drive Folder
                     </a>
                     <div class="mt-4 text-sm text-gray-400">
-                        <p>Generated <span x-text="result.stats?.generated_slides || 0"></span> slides</p>
+                        <p>Generated <span x-text="result?.stats?.generated_slides || 0"></span> slides</p>
                     </div>
                 </div>
 

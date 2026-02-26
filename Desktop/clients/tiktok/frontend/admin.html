@@ -301,9 +301,9 @@
                                     </div>
                                 </template>
                                 <div x-show="stuckJobsResult?.cleaned && !stuckJobsResult?.dry_run" class="mt-2 text-green-400 text-xs">
-                                    Cleaned: <span x-text="stuckJobsResult.cleaned.jobs"></span> jobs,
-                                    <span x-text="stuckJobsResult.cleaned.links"></span> links,
-                                    <span x-text="stuckJobsResult.cleaned.batches"></span> batches
+                                    Cleaned: <span x-text="stuckJobsResult?.cleaned?.jobs"></span> jobs,
+                                    <span x-text="stuckJobsResult?.cleaned?.links"></span> links,
+                                    <span x-text="stuckJobsResult?.cleaned?.batches"></span> batches
                                 </div>
                             </div>
                         </div>
