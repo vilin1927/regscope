@@ -395,6 +395,8 @@ def get_status(batch_id: str):
         status = 'failed'
     elif completed == total:
         status = 'completed'
+    elif completed + failed == total and failed > 0:
+        status = 'partial'
     elif completed > 0 or failed > 0:
         status = 'processing'
     else:
