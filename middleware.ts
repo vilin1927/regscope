@@ -31,7 +31,12 @@ export default async function proxy(request: NextRequest) {
     }
   );
 
-  await supabase.auth.getUser();
+  // Use getSession() instead of getUser() to avoid a network call to Supabase.
+  // getUser() validates the JWT server-side which can exceed Vercel's edge
+  // middleware timeout (1.5 s on Hobby). getSession() reads from the cookie
+  // locally, which is sufficient for keeping the session alive in middleware.
+  // Actual getUser() validation should happen in server components / route handlers.
+  await supabase.auth.getSession();
 
   // 2. For API / static routes, return the Supabase-refreshed response directly
   const { pathname } = request.nextUrl;
