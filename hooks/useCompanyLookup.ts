@@ -37,6 +37,16 @@ export function useCompanyLookup() {
       const data = await response.json();
 
       if (!response.ok) {
+        // 404 = no results found, not an error
+        if (response.status === 404) {
+          setState((prev) => ({
+            ...prev,
+            isSearching: false,
+            results: [],
+            error: null,
+          }));
+          return;
+        }
         setState((prev) => ({
           ...prev,
           isSearching: false,
