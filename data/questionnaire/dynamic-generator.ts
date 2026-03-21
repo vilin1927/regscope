@@ -92,7 +92,7 @@ Generiere die branchenspezifischen Fragen als JSON.`;
     GENERATION_PROMPT,
     userPrompt,
     undefined,
-    3000
+    5000
   );
 
   if (error || !content) {

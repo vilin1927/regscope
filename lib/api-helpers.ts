@@ -101,7 +101,16 @@ export async function callOpenAI(
     const content = completion.choices?.[0]?.message?.content;
 
     if (!content) {
-      return { content: "", error: "Leere Antwort von OpenAI" };
+      const finishReason = completion.choices?.[0]?.finish_reason;
+      const refusal = completion.choices?.[0]?.message?.refusal;
+      console.error("OpenAI empty response:", JSON.stringify({
+        finishReason,
+        refusal,
+        model: completion.model,
+        usage: completion.usage,
+        choicesLength: completion.choices?.length,
+      }));
+      return { content: "", error: refusal || `Leere Antwort von OpenAI (finish: ${finishReason})` };
     }
 
     return { content, error: null };
