@@ -11,6 +11,7 @@ export type Screen =
   | "recommendations"
   | "admin-newsletter"
   | "admin-users"
+  | "admin-templates"
   | "settings"
   | "impressum"
   | "datenschutz";

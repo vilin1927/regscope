@@ -32,6 +32,8 @@ export function screenToPath(screen: Screen, scanId?: string | null): string {
       return "/admin/newsletter";
     case "admin-users":
       return "/admin/users";
+    case "admin-templates":
+      return "/admin/templates";
     case "settings":
       return "/settings";
     case "impressum":
@@ -90,6 +92,8 @@ export function pathToScreen(pathname: string): { screen: Screen; scanId?: strin
       return { screen: "admin-newsletter" };
     case "/admin/users":
       return { screen: "admin-users" };
+    case "/admin/templates":
+      return { screen: "admin-templates" };
     case "/settings":
       return { screen: "settings" };
     case "/impressum":
