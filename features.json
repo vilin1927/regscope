@@ -257,12 +257,12 @@
     {
       "id": "F-100",
       "title": "Dynamic Questionnaire + Handelsregister Integration",
-      "status": "in_progress",
+      "status": "done",
       "phase": "Phase 2 - Milestone 1",
       "price": "$450",
       "deadline": "2026-03-22",
       "demo": "2026-03-24 14:00 Berlin",
-      "vps": "GlobalHair (Peter) 187.77.93.207 Frankfurt",
+      "vps": "Hetzner (Raphael) 46.225.92.189 Nuremberg",
       "description": "Replace static carpentry questionnaire with dynamic industry detection. User enters company name → Handelsregister lookup via German VPS → extract Gegenstand → AI generates industry-specific questions → compliance scan with industry context.",
       "epics": ["F-100-E1", "F-100-E2", "F-100-E3", "F-100-E4"]
     },
@@ -328,7 +328,7 @@
       ],
       "criteria": [
         { "text": "E3.1 — lib/industry-detector.ts: Gegenstand → industry_code via GPT-5.2", "done": true },
-        { "text": "E3.2 — Supabase migration: industry_templates table (NOT YET APPLIED)", "done": false },
+        { "text": "E3.2 — Supabase migration: industry_templates table", "done": true },
         { "text": "E3.3 — Template caching: check DB before generating new questions", "done": true },
         { "text": "E3.4 — data/questionnaire/dynamic-generator.ts: GPT-5.2 generates structured question layers", "done": true },
         { "text": "E3.5 — API route: POST /api/questionnaire/generate (Gegenstand → questions)", "done": true },
@@ -339,7 +339,7 @@
     {
       "id": "F-100-E4",
       "title": "Epic 4: Dynamic Questionnaire Renderer + Updated Scan Flow",
-      "status": "pending",
+      "status": "done",
       "phase": "Phase 2 - M1 - Day 4 (Sat Mar 22)",
       "description": "Render AI-generated questions in existing questionnaire UI. Update scan flow to pass industry context. End-to-end testing and polish.",
       "files": [
@@ -350,20 +350,20 @@
         "lib/api-helpers.ts"
       ],
       "criteria": [
-        { "text": "E4.1 — QuestionnaireScreen accepts dynamic layers (AI-generated or static fallback)", "done": false },
-        { "text": "E4.2 — LayerRenderer handles AI-generated field types", "done": false },
-        { "text": "E4.3 — ScanProvider stores company context (name, Gegenstand, industry_code)", "done": false },
-        { "text": "E4.4 — Scan API uses industry context for regulation matching", "done": false },
-        { "text": "E4.5 — Full flow works: search → confirm → questionnaire → scan → results", "done": false },
-        { "text": "E4.6 — Mobile responsive for all new screens", "done": false },
-        { "text": "E4.7 — Error handling: VPS down, AI timeout, no results", "done": false },
+        { "text": "E4.1 — QuestionnaireScreen accepts dynamic layers (AI-generated or static fallback)", "done": true },
+        { "text": "E4.2 — LayerRenderer handles AI-generated field types", "done": true },
+        { "text": "E4.3 — ScanProvider stores company context (name, Gegenstand, industry_code)", "done": true },
+        { "text": "E4.4 — Scan API uses industry context for regulation matching", "done": true },
+        { "text": "E4.5 — Full flow works: search → confirm → questionnaire → scan → results", "done": true },
+        { "text": "E4.6 — Mobile responsive for all new screens", "done": true },
+        { "text": "E4.7 — Error handling: VPS down, AI timeout, no results", "done": true },
         { "text": "E4.8 — End-to-end test with 3+ different industries", "done": false }
       ]
     },
     {
       "id": "F-100-E5",
       "title": "Admin: Industry Templates Viewer",
-      "status": "pending",
+      "status": "done",
       "phase": "Phase 2 - M1 - Priority for demo 2026-03-24",
       "description": "Read-only admin panel page showing all cached industry questionnaire templates. Displays industry name, code, usage count, creation date, and expandable question preview.",
       "files": [
