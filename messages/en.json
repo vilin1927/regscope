@@ -15,6 +15,7 @@
     "admin": "ADMIN",
     "newsletterSend": "Newsletter Send",
     "adminUsers": "Users",
+    "adminTemplates": "Templates",
     "system": "SYSTEM",
     "settings": "Settings"
   },
@@ -492,7 +493,8 @@
     "actions": "Actions",
     "grantTrial": "Grant trial",
     "revokeTrial": "Revoke trial",
-    "restartTrial": "Restart trial"
+    "restartTrial": "Restart trial",
+    "templates": "Industry Templates"
   },
   "Expert": {
     "consultExpert": "Consult Expert",

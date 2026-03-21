@@ -10,6 +10,7 @@ import {
   Settings,
   Send,
   Users,
+  FileText,
   X,
   Sparkles,
 } from "lucide-react";
@@ -127,6 +128,12 @@ export function Sidebar({
               label={t("adminUsers")}
               active={currentScreen === "admin-users"}
               onClick={() => onNavigate("admin-users")}
+            />
+            <NavItem
+              icon={FileText}
+              label={t("adminTemplates")}
+              active={currentScreen === "admin-templates"}
+              onClick={() => onNavigate("admin-templates")}
             />
           </>
         )}

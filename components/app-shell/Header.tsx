@@ -24,6 +24,7 @@ const screenTitleKeys: Record<Screen, string> = {
   recommendations: "Recommendations.title",
   "admin-newsletter": "Admin.newsletter",
   "admin-users": "Admin.users",
+  "admin-templates": "Admin.templates",
   settings: "Settings.title",
   impressum: "Legal.impressum",
   datenschutz: "Legal.datenschutz",

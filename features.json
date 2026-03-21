@@ -361,6 +361,25 @@
       ]
     },
     {
+      "id": "F-100-E5",
+      "title": "Admin: Industry Templates Viewer",
+      "status": "pending",
+      "phase": "Phase 2 - M1 - Priority for demo 2026-03-24",
+      "description": "Read-only admin panel page showing all cached industry questionnaire templates. Displays industry name, code, usage count, creation date, and expandable question preview.",
+      "files": [
+        "components/admin/AdminTemplatesScreen.tsx",
+        "app/api/admin/templates/route.ts"
+      ],
+      "criteria": [
+        { "text": "New 'Templates' item in admin sidebar navigation", "done": false },
+        { "text": "API route GET /api/admin/templates fetches from industry_templates table", "done": false },
+        { "text": "Table view: industry name (DE), industry code, usage count, created date", "done": false },
+        { "text": "Expandable row showing actual questions (layer titles + field labels)", "done": false },
+        { "text": "Empty state when no templates exist yet", "done": false },
+        { "text": "Mobile responsive", "done": false }
+      ]
+    },
+    {
       "id": "F-101",
       "title": "Stripe + Paywall",
       "status": "awaiting_approval",

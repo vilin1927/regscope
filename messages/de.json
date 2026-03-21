@@ -15,6 +15,7 @@
     "admin": "ADMIN",
     "newsletterSend": "Newsletter-Versand",
     "adminUsers": "Benutzer",
+    "adminTemplates": "Vorlagen",
     "system": "SYSTEM",
     "settings": "Einstellungen"
   },
@@ -492,7 +493,8 @@
     "actions": "Aktionen",
     "grantTrial": "Testphase starten",
     "revokeTrial": "Testphase entziehen",
-    "restartTrial": "Testphase neu starten"
+    "restartTrial": "Testphase neu starten",
+    "templates": "Branchen-Vorlagen"
   },
   "Expert": {
     "consultExpert": "Experte kontaktieren",

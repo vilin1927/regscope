@@ -17,6 +17,7 @@ import { RecommendationsScreen } from "../recommendations/RecommendationsScreen"
 import { NewsletterScreen } from "../newsletter/NewsletterScreen";
 import { AdminNewsletterScreen } from "../admin/AdminNewsletterScreen";
 import { AdminUsersScreen } from "../admin/AdminUsersScreen";
+import { AdminTemplatesScreen } from "../admin/AdminTemplatesScreen";
 import { CompanySearchScreen } from "../company-search/CompanySearchScreen";
 import { useAuth } from "@/hooks/useAuth";
 import { SubscriptionProvider } from "@/components/providers/SubscriptionProvider";
@@ -417,6 +418,10 @@ function ComplyRadarAppShell({
 
             {currentScreen === "admin-users" && (
               <AdminUsersScreen key="admin-users" />
+            )}
+
+            {currentScreen === "admin-templates" && (
+              <AdminTemplatesScreen key="admin-templates" />
             )}
 
             {currentScreen === "settings" && (
