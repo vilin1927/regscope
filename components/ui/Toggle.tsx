@@ -24,10 +24,10 @@ export function Toggle({
           : "bg-gray-50 border-2 border-transparent hover:bg-gray-100"
       }`}
     >
-      <div className="flex items-center justify-between mb-1">
+      <div className="flex items-start justify-between gap-3">
         <span className="font-medium text-gray-900 text-sm">{label}</span>
         <div
-          className={`w-5 h-5 rounded-full flex items-center justify-center ${
+          className={`w-5 h-5 shrink-0 rounded-full flex items-center justify-center mt-0.5 ${
             checked ? "bg-blue-600" : "bg-gray-300"
           }`}
         >
