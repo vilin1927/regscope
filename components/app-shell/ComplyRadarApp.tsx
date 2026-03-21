@@ -365,7 +365,7 @@ function ComplyRadarAppShell({
                 onRetry={() => {
                   scan.setProcessingError(undefined);
                   if (Object.keys(scan.businessProfile).length > 0) {
-                    scan.startProcessing(scan.businessProfile);
+                    scan.startProcessing(scan.businessProfile, scan.companyContext);
                   } else {
                     setCurrentScreen("questionnaire");
                   }
