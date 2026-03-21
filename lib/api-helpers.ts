@@ -61,8 +61,8 @@ export async function callOpenAI(
   }
 
   const controller = new AbortController();
-  // 50s timeout — leave 10s buffer for Vercel cleanup/response
-  const timeout = setTimeout(() => controller.abort(), 50_000);
+  // 90s timeout — self-hosted on Hetzner, no Vercel time limit
+  const timeout = setTimeout(() => controller.abort(), 90_000);
 
   // Link external signal if provided
   if (signal) {
