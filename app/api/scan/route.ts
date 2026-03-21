@@ -340,12 +340,16 @@ export async function POST(request: Request) {
     const profileObj = profile as Record<string, unknown>;
 
     // Determine scan mode: dynamic (with company context) or static (carpentry fallback)
-    const isDynamic = companyContext?.industryCode && companyContext.industryCode !== "HANDWERK_TISCHLEREI";
+    // Use dynamic if we have company context with industry code (non-carpentry) or Gegenstand
+    const isDynamic = companyContext && (
+      (companyContext.industryCode && companyContext.industryCode !== "HANDWERK_TISCHLEREI") ||
+      companyContext.gegenstand
+    );
 
     let regulations: MatchedRegulation[];
 
     if (isDynamic) {
-      console.info(`Dynamic scan for industry: ${companyContext!.industryCode} (${companyContext!.name})`);
+      console.info(`Dynamic scan for industry: ${companyContext!.industryCode || "unknown"} (${companyContext!.name})`);
       regulations = await runDynamicScan(profileObj, companyContext!);
     } else {
       // Static carpentry mode — validate required fields
