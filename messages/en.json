@@ -591,5 +591,16 @@
     "save": "Save",
     "cancel": "Cancel",
     "loading": "Loading..."
+  },
+  "CompanySearch": {
+    "title": "Search Company",
+    "subtitle": "Search for your company in the German Trade Registry so we can generate the right questions for your industry.",
+    "placeholder": "Enter company name (e.g. Ali's Bäckerei GmbH)",
+    "gegenstand": "Business Purpose",
+    "noGegenstand": "No business purpose available. Industry will be determined from the company name.",
+    "resultsCount": "{count, plural, one {# result} other {# results}} found",
+    "noResults": "No results found. Try a different search term.",
+    "confirm": "Continue",
+    "skip": "Continue without search"
   }
 }

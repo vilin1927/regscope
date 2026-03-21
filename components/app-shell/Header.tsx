@@ -14,6 +14,7 @@ interface HeaderProps {
 const screenTitleKeys: Record<Screen, string> = {
   auth: "Nav.dashboard",
   dashboard: "Nav.dashboard",
+  "company-search": "CompanySearch.title",
   questionnaire: "Nav.newScan",
   processing: "Processing.title",
   results: "Results.title",

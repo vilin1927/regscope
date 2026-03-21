@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { AnimatePresence } from "framer-motion";
+import { useState, useEffect, useCallback } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import { Sidebar } from "./Sidebar";
 import { Header } from "./Header";
 import { DashboardScreen } from "../dashboard/DashboardScreen";
@@ -17,12 +17,14 @@ import { RecommendationsScreen } from "../recommendations/RecommendationsScreen"
 import { NewsletterScreen } from "../newsletter/NewsletterScreen";
 import { AdminNewsletterScreen } from "../admin/AdminNewsletterScreen";
 import { AdminUsersScreen } from "../admin/AdminUsersScreen";
+import { CompanySearchScreen } from "../company-search/CompanySearchScreen";
 import { useAuth } from "@/hooks/useAuth";
 import { SubscriptionProvider } from "@/components/providers/SubscriptionProvider";
 import { ScanProvider, useScanContext } from "@/components/providers/ScanProvider";
 import { pathToScreen, pushUrl } from "@/lib/routes";
 import type { Screen } from "@/types";
-import type { BusinessProfile } from "@/data/questionnaire/types";
+import type { BusinessProfile, QuestionnaireLayer } from "@/data/questionnaire/types";
+import type { CompanyResult } from "@/lib/handelsregister-client";
 
 export function ComplyRadarApp() {
   const auth = useAuth();
@@ -157,9 +159,72 @@ function ComplyRadarAppShell({
     }
   }, [hydrated, auth.isLoading, auth.userId, auth.isGuest, scan.historyLoaded]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  const [dynamicLayers, setDynamicLayers] = useState<QuestionnaireLayer[] | undefined>();
+  const [isGeneratingQuestions, setIsGeneratingQuestions] = useState(false);
+
+  const fetchDynamicQuestions = useCallback(async (gegenstand: string, companyName: string, company: CompanyResult) => {
+    setIsGeneratingQuestions(true);
+    try {
+      const res = await fetch("/api/questionnaire/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ gegenstand, companyName }),
+      });
+      const data = await res.json();
+      if (res.ok && data.layers) {
+        setDynamicLayers(data.layers);
+        // Store industry classification in company context
+        if (data.classification) {
+          scan.setCompanyContext({
+            name: company.name,
+            registerNum: company.register_num,
+            state: company.state,
+            gegenstand: company.gegenstand,
+            industryCode: data.classification.industry_code,
+            industryLabel: data.classification.industry_label_de,
+          });
+        }
+      } else {
+        setDynamicLayers(undefined);
+      }
+    } catch {
+      setDynamicLayers(undefined);
+    } finally {
+      setIsGeneratingQuestions(false);
+    }
+  }, [scan]);
+
   const startScan = () => {
     scan.setPrefillAnswers(undefined);
     scan.resetScan();
+    scan.setCompanyContext(undefined);
+    setDynamicLayers(undefined);
+    setCurrentScreen("company-search");
+  };
+
+  const handleCompanyConfirmed = (company: CompanyResult) => {
+    scan.setCompanyContext({
+      name: company.name,
+      registerNum: company.register_num,
+      state: company.state,
+      gegenstand: company.gegenstand,
+    });
+
+    if (company.gegenstand) {
+      // Generate dynamic questions, then navigate
+      fetchDynamicQuestions(company.gegenstand, company.name, company).then(() => {
+        setCurrentScreen("questionnaire");
+      });
+    } else {
+      // No Gegenstand — fall back to static questionnaire
+      setDynamicLayers(undefined);
+      setCurrentScreen("questionnaire");
+    }
+  };
+
+  const handleSkipCompanySearch = () => {
+    scan.setCompanyContext(undefined);
+    setDynamicLayers(undefined);
     setCurrentScreen("questionnaire");
   };
 
@@ -168,7 +233,7 @@ function ComplyRadarAppShell({
     scan.setProcessingError(undefined);
     scan.resetScan();
     scan.setBusinessProfile(answers);
-    scan.startProcessing(answers);
+    scan.startProcessing(answers, scan.companyContext);
     setCurrentScreen("processing");
   };
 
@@ -181,7 +246,7 @@ function ComplyRadarAppShell({
 
   const navigate = (screen: Screen) => {
     setSidebarOpen(false);
-    if (screen === "questionnaire") {
+    if (screen === "questionnaire" || screen === "company-search") {
       startScan();
     } else {
       // Include scanId in URL for scan-specific screens
@@ -259,10 +324,35 @@ function ComplyRadarAppShell({
               />
             )}
 
+            {currentScreen === "company-search" && (
+              isGeneratingQuestions ? (
+                <motion.div
+                  key="generating-questions"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="max-w-md mx-auto text-center py-16"
+                >
+                  <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                    <svg className="w-8 h-8 text-blue-600 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 12a9 9 0 1 1-6.219-8.56" /></svg>
+                  </div>
+                  <h2 className="text-lg font-bold text-gray-900 mb-2">Fragebogen wird erstellt...</h2>
+                  <p className="text-sm text-gray-500">Branchenspezifische Fragen werden generiert</p>
+                </motion.div>
+              ) : (
+                <CompanySearchScreen
+                  key="company-search"
+                  onCompanyConfirmed={handleCompanyConfirmed}
+                  onSkip={handleSkipCompanySearch}
+                />
+              )
+            )}
+
             {currentScreen === "questionnaire" && (
               <QuestionnaireScreen
                 key="questionnaire"
                 initialAnswers={scan.prefillAnswers}
+                dynamicLayers={dynamicLayers}
                 onComplete={handleQuestionnaireComplete}
               />
             )}
