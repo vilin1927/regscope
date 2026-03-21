@@ -1,0 +1,441 @@
+{
+  "project": "ComplyRadar (RegScope)",
+  "lastUpdated": "2026-03-19",
+  "features": [
+    {
+      "id": "F-001",
+      "title": "7-Layer Carpentry Questionnaire",
+      "status": "done",
+      "description": "Multi-step questionnaire for German carpentry businesses: Company info, Employees, Premises & Safety, Products & Sales, Procurement, Environment, Insurance. Conditional logic, field validation, 'no company yet' toggle.",
+      "files": [
+        "data/questionnaire/layers.ts",
+        "data/questionnaire/types.ts",
+        "components/questionnaire/",
+        "lib/validation.ts"
+      ],
+      "criteria": [
+        { "text": "7 layers render correctly with all field types", "done": true },
+        { "text": "Conditional fields show/hide based on answers", "done": true },
+        { "text": "'No company yet' toggle switches to planning mode", "done": true },
+        { "text": "Required field validation enforced per layer", "done": true },
+        { "text": "Conditional field cleanup on answer change", "done": true }
+      ]
+    },
+    {
+      "id": "F-002",
+      "title": "AI-Powered Regulation Scan",
+      "status": "done",
+      "description": "OpenAI GPT-5.2 integration via /api/scan. Takes business profile, returns matched regulations with risk levels, requirements, penalties, and personalized 'why this applies' explanations.",
+      "files": [
+        "app/api/scan/route.ts",
+        "data/regulations/carpentry-regulations.ts",
+        "data/regulations/types.ts",
+        "lib/api-helpers.ts"
+      ],
+      "criteria": [
+        { "text": "Scan returns matched regulations with risk levels", "done": true },
+        { "text": "Server-side auth check + guest fallback", "done": true },
+        { "text": "Rate limiting (30 req/min per IP)", "done": true },
+        { "text": "60s timeout with AbortController", "done": true },
+        { "text": "JSON parse error handling (502 on malformed)", "done": true }
+      ]
+    },
+    {
+      "id": "F-003",
+      "title": "Results Dashboard",
+      "status": "done",
+      "description": "Stats bar, business profile summary, regulation cards grouped by category. Risk badges (High/Medium/Low), key requirements, penalty warnings, compliance checkboxes, official source links.",
+      "files": [
+        "components/results/",
+        "components/dashboard/"
+      ],
+      "criteria": [
+        { "text": "Stats bar: Regulations Found, High Priority, EU Coverage, Compliance Score", "done": true },
+        { "text": "Regulation cards with jurisdiction badges", "done": true },
+        { "text": "Risk level badges with color coding", "done": true },
+        { "text": "Compliance checkboxes persist to Supabase", "done": true },
+        { "text": "Null-safe rendering with fallback values", "done": true }
+      ]
+    },
+    {
+      "id": "F-004",
+      "title": "Authentication & User Persistence",
+      "status": "done",
+      "description": "Supabase Auth with email/password. Sign up, sign in, sign out with confirmation dialog. Guest mode (1 scan, no persistence). Session persistence across refreshes.",
+      "files": [
+        "components/auth/",
+        "hooks/useAuth.ts",
+        "lib/supabase/"
+      ],
+      "criteria": [
+        { "text": "Sign up with password validation (8+ chars, uppercase, number)", "done": true },
+        { "text": "Sign in flow works", "done": true },
+        { "text": "Guest mode allows 1 scan without auth", "done": true },
+        { "text": "Logout confirmation dialog", "done": true },
+        { "text": "Session persists across browser refreshes", "done": true }
+      ]
+    },
+    {
+      "id": "F-005",
+      "title": "Scan History",
+      "status": "done",
+      "description": "View past scans with date, business name, regulation count, compliance score. Re-open full results from any previous scan. Compliance checks loaded per scan.",
+      "files": [
+        "hooks/useScanHistory.ts",
+        "components/scan-history/"
+      ],
+      "criteria": [
+        { "text": "Past scans listed with metadata", "done": true },
+        { "text": "Re-open full results from any scan", "done": true },
+        { "text": "Compliance checks loaded per scan via currentScanId", "done": true },
+        { "text": "History cleared on sign-out", "done": true }
+      ]
+    },
+    {
+      "id": "F-006",
+      "title": "Internationalization (i18n)",
+      "status": "done",
+      "description": "Bilingual German (default) + English via next-intl. Locale routing (/de, /en). Language switcher in header. All UI strings in translation files.",
+      "files": [
+        "messages/de.json",
+        "messages/en.json",
+        "src/i18n/",
+        "middleware.ts"
+      ],
+      "criteria": [
+        { "text": "German and English translations complete", "done": true },
+        { "text": "Locale-based routing works (/de, /en)", "done": true },
+        { "text": "Language switcher with flag emojis", "done": true },
+        { "text": "Dynamic metadata with hreflang SEO", "done": true }
+      ]
+    },
+    {
+      "id": "F-007",
+      "title": "Risk Analysis (Phase 2 Addon)",
+      "status": "done",
+      "description": "AI-powered gap analysis with severity table, deadlines, penalty exposure, and mitigation recommendations. Persists to Supabase risk_reports table.",
+      "files": [
+        "app/api/risk-analysis/route.ts",
+        "hooks/useRiskAnalysis.ts",
+        "components/risk-analysis/"
+      ],
+      "criteria": [
+        { "text": "AI generates gap analysis from scan results", "done": true },
+        { "text": "Severity table with penalties and deadlines", "done": true },
+        { "text": "Persists to Supabase", "done": true },
+        { "text": "60s Vercel function timeout configured", "done": true }
+      ]
+    },
+    {
+      "id": "F-008",
+      "title": "Recommendations (Phase 2 Addon)",
+      "status": "done",
+      "description": "Prioritized action list grouped by timeline (immediate/short-term/planned). Action vs insurance distinction. Enriched by risk analysis when available.",
+      "files": [
+        "app/api/recommendations/route.ts",
+        "hooks/useRecommendations.ts",
+        "components/recommendations/"
+      ],
+      "criteria": [
+        { "text": "Prioritized action items generated", "done": true },
+        { "text": "Grouped by timeline", "done": true },
+        { "text": "Insurance suggestions included", "done": true },
+        { "text": "Enriched by risk analysis when available", "done": true }
+      ]
+    },
+    {
+      "id": "F-009",
+      "title": "Newsletter System (Phase 2 Addon)",
+      "status": "done",
+      "description": "Preference management (opt-in, frequency, areas). React Email template for digest emails. Admin send endpoint via Resend API.",
+      "files": [
+        "app/api/newsletter/preferences/route.ts",
+        "app/api/send-newsletter/route.ts",
+        "hooks/useNewsletterPreferences.ts",
+        "components/newsletter/",
+        "emails/newsletter-digest.tsx"
+      ],
+      "criteria": [
+        { "text": "User can opt-in/out and set frequency", "done": true },
+        { "text": "Preference auto-saves to Supabase", "done": true },
+        { "text": "React Email template renders digest", "done": true },
+        { "text": "Admin can send newsletter via Resend", "done": true }
+      ]
+    },
+    {
+      "id": "F-010",
+      "title": "Admin Panel",
+      "status": "done",
+      "description": "Admin users management, newsletter send/preview, subscriber list. Multi-admin support via comma-separated ADMIN_EMAIL. Trial plan controls per user.",
+      "files": [
+        "lib/admin-auth.ts",
+        "app/api/admin/",
+        "components/admin/"
+      ],
+      "criteria": [
+        { "text": "Admin auth via ADMIN_EMAIL env var", "done": true },
+        { "text": "Multi-admin support (comma-separated emails)", "done": true },
+        { "text": "User list with plan management", "done": true },
+        { "text": "Newsletter preview and send", "done": true },
+        { "text": "Subscriber list view", "done": true }
+      ]
+    },
+    {
+      "id": "F-011",
+      "title": "Freemium Model & Trial System",
+      "status": "done",
+      "description": "Free plan (basic scan) vs Pro plan (risk analysis, recommendations, newsletter). 30-day trial via localStorage + Supabase sync. Admin can control trial per user.",
+      "files": [
+        "hooks/useSubscription.ts",
+        "app/api/trial/route.ts",
+        "app/api/admin/users/plan/route.ts"
+      ],
+      "criteria": [
+        { "text": "Free vs Pro feature gating works", "done": true },
+        { "text": "30-day trial starts on user action", "done": true },
+        { "text": "Trial syncs to Supabase for admin visibility", "done": true },
+        { "text": "Admin can set/reset user plan", "done": true }
+      ]
+    },
+    {
+      "id": "F-012",
+      "title": "Expert Profiles",
+      "status": "done",
+      "description": "Compliance expert profiles with photos, specializations, and contact buttons. Displayed on dashboard and results pages.",
+      "files": [
+        "data/experts.ts",
+        "public/experts/"
+      ],
+      "criteria": [
+        { "text": "Expert cards with photos and specializations", "done": true },
+        { "text": "Contact button per expert", "done": true }
+      ]
+    },
+    {
+      "id": "F-013",
+      "title": "Mobile Responsive Design",
+      "status": "done",
+      "description": "All UI components work on mobile. Sidebar responsive behavior. Tailwind responsive prefixes used throughout.",
+      "files": [
+        "components/app-shell/",
+        "components/ui/"
+      ],
+      "criteria": [
+        { "text": "Sidebar works on mobile", "done": true },
+        { "text": "Questionnaire mobile-friendly", "done": true },
+        { "text": "Results cards stack properly on small screens", "done": true }
+      ]
+    },
+    {
+      "id": "F-014",
+      "title": "Legal Pages",
+      "status": "done",
+      "description": "Impressum and Datenschutzerklaerung (Privacy Policy) pages with proper German legal content.",
+      "files": [
+        "components/legal/"
+      ],
+      "criteria": [
+        { "text": "Impressum page renders", "done": true },
+        { "text": "Datenschutz page renders", "done": true }
+      ]
+    },
+    {
+      "id": "F-015",
+      "title": "URL Routing (Shallow)",
+      "status": "done",
+      "description": "Screen state synced to URL via pushState. Scan-specific URLs include scanId. Back/forward browser navigation works.",
+      "files": [
+        "lib/routes.ts",
+        "app/[locale]/[...path]/page.tsx"
+      ],
+      "criteria": [
+        { "text": "Each screen has a unique URL path", "done": true },
+        { "text": "Scan-specific routes include scanId", "done": true },
+        { "text": "Browser back/forward works", "done": true }
+      ]
+    },
+    {
+      "id": "F-100",
+      "title": "Dynamic Questionnaire + Handelsregister Integration",
+      "status": "in_progress",
+      "phase": "Phase 2 - Milestone 1",
+      "price": "$450",
+      "deadline": "2026-03-22",
+      "demo": "2026-03-24 14:00 Berlin",
+      "vps": "GlobalHair (Peter) 187.77.93.207 Frankfurt",
+      "description": "Replace static carpentry questionnaire with dynamic industry detection. User enters company name → Handelsregister lookup via German VPS → extract Gegenstand → AI generates industry-specific questions → compliance scan with industry context.",
+      "epics": ["F-100-E1", "F-100-E2", "F-100-E3", "F-100-E4"]
+    },
+    {
+      "id": "F-100-E1",
+      "title": "Epic 1: Python Microservice on VPS",
+      "status": "done",
+      "phase": "Phase 2 - M1 - Day 1 (Wed Mar 19)",
+      "description": "Deploy Flask REST API wrapping handelsregister_extended.py on Peter's GlobalHair VPS (187.77.93.207, Frankfurt). Expose /api/company endpoint for company lookup + Gegenstand extraction.",
+      "files": [
+        "test/handelsregister-test/handelsregister_extended.py"
+      ],
+      "criteria": [
+        { "text": "E1.1 — Flask app with /api/company?search=X endpoint", "done": true },
+        { "text": "E1.2 — /health endpoint for monitoring", "done": true },
+        { "text": "E1.3 — Error handling (no results, timeout, rate limit)", "done": true },
+        { "text": "E1.4 — API key auth (X-API-Key header)", "done": true },
+        { "text": "E1.5 — Deploy to VPS (187.77.93.207) with systemd service", "done": true },
+        { "text": "E1.6 — Nginx reverse proxy (SSL deferred — IP-only for now)", "done": true },
+        { "text": "E1.7 — Test: curl from external IP returns company data", "done": true }
+      ]
+    },
+    {
+      "id": "F-100-E2",
+      "title": "Epic 2: Next.js Integration + Company Search UI",
+      "status": "done",
+      "phase": "Phase 2 - M1 - Day 2 (Thu Mar 20)",
+      "description": "Connect Vercel app to VPS microservice. Build company search screen where user enters company name, sees results, confirms selection.",
+      "files": [
+        "lib/handelsregister-client.ts",
+        "app/api/handelsregister/route.ts",
+        "hooks/useCompanyLookup.ts",
+        "components/company-search/CompanySearchScreen.tsx",
+        "components/company-search/CompanySearchInput.tsx",
+        "lib/routes.ts",
+        "app/[locale]/page.tsx",
+        "messages/de.json",
+        "messages/en.json"
+      ],
+      "criteria": [
+        { "text": "E2.1 — lib/handelsregister-client.ts: VPS API wrapper with timeout + retry", "done": true },
+        { "text": "E2.2 — app/api/handelsregister/route.ts: proxy route (hides VPS URL + API key)", "done": true },
+        { "text": "E2.3 — hooks/useCompanyLookup.ts: search state, loading, error, results", "done": true },
+        { "text": "E2.4 — CompanySearchScreen: full-page search with input + results list", "done": true },
+        { "text": "E2.5 — CompanySearchInput: debounced input, loading spinner, result cards", "done": true },
+        { "text": "E2.6 — Company confirmation: 'Is this your company?' with Gegenstand preview", "done": true },
+        { "text": "E2.7 — Add 'company-search' screen to lib/routes.ts + page.tsx", "done": true },
+        { "text": "E2.8 — i18n strings in de.json + en.json (CompanySearch namespace)", "done": true },
+        { "text": "E2.9 — Mobile responsive (works on phone screens)", "done": true }
+      ]
+    },
+    {
+      "id": "F-100-E3",
+      "title": "Epic 3: AI Industry Detection + Question Generation",
+      "status": "done",
+      "phase": "Phase 2 - M1 - Day 3 (Fri Mar 21)",
+      "description": "AI classifies Gegenstand into industry code, generates industry-specific compliance questions, caches templates in Supabase for reuse.",
+      "files": [
+        "lib/industry-detector.ts",
+        "data/questionnaire/dynamic-generator.ts",
+        "app/api/questionnaire/generate/route.ts",
+        "supabase/migration-m1.sql"
+      ],
+      "criteria": [
+        { "text": "E3.1 — lib/industry-detector.ts: Gegenstand → industry_code via GPT-5.2", "done": true },
+        { "text": "E3.2 — Supabase migration: industry_templates table (NOT YET APPLIED)", "done": false },
+        { "text": "E3.3 — Template caching: check DB before generating new questions", "done": true },
+        { "text": "E3.4 — data/questionnaire/dynamic-generator.ts: GPT-5.2 generates structured question layers", "done": true },
+        { "text": "E3.5 — API route: POST /api/questionnaire/generate (Gegenstand → questions)", "done": true },
+        { "text": "E3.6 — Output format matches existing QuestionnaireLayer/QuestionField types", "done": true },
+        { "text": "E3.7 — Fallback: if AI fails, use static carpentry questionnaire", "done": true }
+      ]
+    },
+    {
+      "id": "F-100-E4",
+      "title": "Epic 4: Dynamic Questionnaire Renderer + Updated Scan Flow",
+      "status": "pending",
+      "phase": "Phase 2 - M1 - Day 4 (Sat Mar 22)",
+      "description": "Render AI-generated questions in existing questionnaire UI. Update scan flow to pass industry context. End-to-end testing and polish.",
+      "files": [
+        "components/questionnaire/QuestionnaireScreen.tsx",
+        "components/questionnaire/LayerRenderer.tsx",
+        "components/providers/ScanProvider.tsx",
+        "app/api/scan/route.ts",
+        "lib/api-helpers.ts"
+      ],
+      "criteria": [
+        { "text": "E4.1 — QuestionnaireScreen accepts dynamic layers (AI-generated or static fallback)", "done": false },
+        { "text": "E4.2 — LayerRenderer handles AI-generated field types", "done": false },
+        { "text": "E4.3 — ScanProvider stores company context (name, Gegenstand, industry_code)", "done": false },
+        { "text": "E4.4 — Scan API uses industry context for regulation matching", "done": false },
+        { "text": "E4.5 — Full flow works: search → confirm → questionnaire → scan → results", "done": false },
+        { "text": "E4.6 — Mobile responsive for all new screens", "done": false },
+        { "text": "E4.7 — Error handling: VPS down, AI timeout, no results", "done": false },
+        { "text": "E4.8 — End-to-end test with 3+ different industries", "done": false }
+      ]
+    },
+    {
+      "id": "F-101",
+      "title": "Stripe + Paywall",
+      "status": "awaiting_approval",
+      "phase": "Phase 2 - Milestone 2",
+      "price": "$170",
+      "description": "Real payment integration replacing trial system. Stripe Checkout for €190/6mo subscription. Webhook handles subscription lifecycle. Plan syncs to Supabase profiles.",
+      "files": [],
+      "criteria": [
+        { "text": "Stripe Checkout flow (€190/6mo)", "done": false },
+        { "text": "Webhook handles subscription events", "done": false },
+        { "text": "Plan status syncs to Supabase profiles", "done": false },
+        { "text": "Paywall blocks Pro features for non-subscribers", "done": false }
+      ]
+    },
+    {
+      "id": "F-102",
+      "title": "Referral System + Expert Connection",
+      "status": "awaiting_approval",
+      "phase": "Phase 2 - Milestone 3",
+      "price": "$135",
+      "description": "User referral tracking with unique codes. Referrer gets credit/discount when referee subscribes. Dashboard shows referral stats.",
+      "files": [],
+      "criteria": [
+        { "text": "Unique referral codes per user", "done": false },
+        { "text": "Referral tracking on signup", "done": false },
+        { "text": "Credit/discount applied on conversion", "done": false },
+        { "text": "Referral stats in user dashboard", "done": false }
+      ]
+    },
+    {
+      "id": "F-103",
+      "title": "Expert Improvements",
+      "status": "awaiting_approval",
+      "phase": "Phase 2 - Milestone 4",
+      "price": "$80",
+      "description": "Add tags/specializations to experts. Better matching between user's industry and relevant experts. Improved expert cards UI.",
+      "files": [
+        "data/experts.ts",
+        "components/experts/"
+      ],
+      "criteria": [
+        { "text": "Expert tags/specializations added", "done": false },
+        { "text": "Industry-to-expert matching logic", "done": false },
+        { "text": "Improved expert card design", "done": false }
+      ]
+    },
+    {
+      "id": "F-104",
+      "title": "Expert Analytics (Click Tracking)",
+      "status": "backlog",
+      "phase": "Future - After M1-M4 Live",
+      "price": "TBD",
+      "description": "Track clicks on 'Ask a Question' and 'Get Help' buttons. Calculate conversion probability for consultant pricing model. Analytics dashboard for admin.",
+      "files": [],
+      "criteria": [
+        { "text": "Click tracking on expert contact buttons", "done": false },
+        { "text": "Conversion rate calculation", "done": false },
+        { "text": "Admin analytics dashboard", "done": false },
+        { "text": "Data export for pricing model", "done": false }
+      ],
+      "notes": "From Raphael (2026-03-16): 'If 100 people click help button, ~20% convert to consultation @ €300 each = €6,000 value. Could charge €50/mo for consultant listing.' Future feature for transparent consultant pricing."
+    },
+    {
+      "id": "F-199",
+      "title": "Automated Regulation Updates",
+      "status": "backlog",
+      "phase": "Future",
+      "price": "TBD",
+      "description": "Monitor EUR-Lex and German legal databases for regulation changes. Auto-notify affected users. Long-term roadmap.",
+      "files": [],
+      "criteria": [
+        { "text": "Regulation change detection", "done": false },
+        { "text": "Affected user notification", "done": false },
+        { "text": "Newsletter includes regulation updates", "done": false }
+      ]
+    }
+  ]
+}

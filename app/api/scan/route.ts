@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { carpentryRegulations } from "@/data/regulations/carpentry-regulations";
+import { callOpenAI } from "@/lib/api-helpers";
 import type {
   Regulation,
   MatchedRegulation,
@@ -10,6 +11,8 @@ import type {
   RegulationCategory,
   RiskLevel,
 } from "@/data/regulations/types";
+
+export const maxDuration = 60;
 
 // Simple in-memory rate limiter (per-IP, resets on cold start)
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
@@ -57,12 +60,16 @@ const VALID_CATEGORIES: RegulationCategory[] = [
 const VALID_RISK_LEVELS: RiskLevel[] = ["hoch", "mittel", "niedrig"];
 const VALID_STATUSES: ComplianceStatus[] = ["erfuellt", "pruefung", "fehlend"];
 
-const REQUIRED_PROFILE_FIELDS = [
-  "industry",
-  "employeeCount",
-];
+interface CompanyContext {
+  name: string;
+  gegenstand: string | null;
+  industryCode?: string;
+  industryLabel?: string;
+}
 
-function validateResponse(
+// --- Static mode: carpentry with reference regulation database ---
+
+function validateStaticResponse(
   parsed: unknown,
   regulationMap: Map<string, Regulation>
 ): MatchedRegulation[] {
@@ -83,7 +90,6 @@ function validateResponse(
     const status = r.status as ComplianceStatus;
     if (!VALID_STATUSES.includes(status)) continue;
 
-    // Validate enum fields from AI response, fallback to source data
     const jurisdiction = VALID_JURISDICTIONS.includes(r.jurisdiction as Jurisdiction)
       ? (r.jurisdiction as Jurisdiction)
       : sourceReg.jurisdiction;
@@ -107,74 +113,13 @@ function validateResponse(
   return results;
 }
 
-export async function POST(request: Request) {
-  try {
-    // Rate limiting
-    const ip = request.headers.get("x-forwarded-for") ?? request.headers.get("x-real-ip") ?? "unknown";
-    if (isRateLimited(ip)) {
-      return NextResponse.json(
-        { error: "Zu viele Anfragen. Bitte versuchen Sie es später erneut." },
-        { status: 429 }
-      );
-    }
+async function runStaticScan(profile: Record<string, unknown>): Promise<MatchedRegulation[]> {
+  const compactRegs = compactRegulations(carpentryRegulations);
+  const regulationMap = new Map<string, Regulation>(
+    carpentryRegulations.map((r) => [r.id, r])
+  );
 
-    // Auth check — allow both authenticated users and guests
-    const cookieStore = await cookies();
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      { cookies: { getAll: () => cookieStore.getAll() } }
-    );
-    const { data: { session } } = await supabase.auth.getSession();
-    // Allow guests (no session) but log for monitoring
-    const userId = session?.user?.id ?? "guest";
-    console.info(`Scan request from user: ${userId}`);
-
-    const apiKey = process.env.OPENAI_API_KEY;
-    const model = process.env.OPENAI_MODEL || "gpt-4o";
-
-    if (!apiKey) {
-      return NextResponse.json(
-        { error: "OpenAI API-Schlüssel nicht konfiguriert" },
-        { status: 500 }
-      );
-    }
-
-    let body: { profile?: unknown };
-    try {
-      body = await request.json();
-    } catch {
-      return NextResponse.json(
-        { error: "Ungültiges JSON im Anfragekörper" },
-        { status: 400 }
-      );
-    }
-
-    const { profile } = body;
-
-    if (!profile || typeof profile !== "object") {
-      return NextResponse.json(
-        { error: "Unternehmensprofil fehlt" },
-        { status: 400 }
-      );
-    }
-
-    // Validate required fields exist
-    const profileObj = profile as Record<string, unknown>;
-    const missingFields = REQUIRED_PROFILE_FIELDS.filter((f) => !profileObj[f]);
-    if (missingFields.length > 0) {
-      return NextResponse.json(
-        { error: `Fehlende Pflichtfelder: ${missingFields.join(", ")}` },
-        { status: 400 }
-      );
-    }
-
-    const compactRegs = compactRegulations(carpentryRegulations);
-    const regulationMap = new Map<string, Regulation>(
-      carpentryRegulations.map((r) => [r.id, r])
-    );
-
-    const systemPrompt = `Du bist ein erfahrener deutscher Rechtsberater für Handwerksbetriebe, spezialisiert auf regulatorische Compliance im Tischler- und Schreinerhandwerk.
+  const systemPrompt = `Du bist ein erfahrener deutscher Rechtsberater für Handwerksbetriebe, spezialisiert auf regulatorische Compliance im Tischler- und Schreinerhandwerk.
 
 Du erhältst:
 1. Ein Unternehmensprofil (Betriebsdaten aus einem Fragebogen)
@@ -208,7 +153,7 @@ Wichtig:
 - Sortiere nach Risikolevel: hoch zuerst, dann mittel, dann niedrig
 - Die whyApplies-Texte sollen konkret und hilfreich sein, nicht generisch`;
 
-    const userPrompt = `## Unternehmensprofil
+  const userPrompt = `## Unternehmensprofil
 
 ${JSON.stringify(profile, null, 2)}
 
@@ -216,72 +161,203 @@ ${JSON.stringify(profile, null, 2)}
 
 ${JSON.stringify(compactRegs, null, 2)}`;
 
-    // Fetch with timeout
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 60_000);
+  const { content, error } = await callOpenAI(systemPrompt, userPrompt);
 
-    let response: Response;
+  if (error || !content) {
+    throw new Error(error || "Keine Antwort vom KI-System");
+  }
+
+  const parsed = JSON.parse(content);
+  return validateStaticResponse(parsed, regulationMap);
+}
+
+// --- Dynamic mode: AI identifies regulations for any industry ---
+
+function validateDynamicResponse(parsed: unknown): MatchedRegulation[] {
+  const data = parsed as { regulations?: unknown[] };
+  if (!data.regulations || !Array.isArray(data.regulations)) {
+    throw new Error("Antwort enthält kein 'regulations'-Array");
+  }
+
+  const results: MatchedRegulation[] = [];
+
+  for (const item of data.regulations) {
+    const r = item as Record<string, unknown>;
+
+    const status = r.status as ComplianceStatus;
+    if (!VALID_STATUSES.includes(status)) continue;
+
+    const jurisdiction = VALID_JURISDICTIONS.includes(r.jurisdiction as Jurisdiction)
+      ? (r.jurisdiction as Jurisdiction)
+      : "bund";
+    const category = VALID_CATEGORIES.includes(r.category as RegulationCategory)
+      ? (r.category as RegulationCategory)
+      : "gewerberecht";
+    const riskLevel = VALID_RISK_LEVELS.includes(r.riskLevel as RiskLevel)
+      ? (r.riskLevel as RiskLevel)
+      : "mittel";
+
+    // Generate a stable ID from the regulation name
+    const id = typeof r.id === "string" && r.id.length > 0
+      ? r.id
+      : (r.name as string || "unknown").toLowerCase().replace(/[^a-z0-9äöüß]/g, "-").replace(/-+/g, "-").substring(0, 50);
+
+    results.push({
+      id,
+      name: typeof r.name === "string" ? r.name : "Unbekannte Vorschrift",
+      officialReference: typeof r.officialReference === "string" ? r.officialReference : "",
+      jurisdiction,
+      category,
+      summary: typeof r.summary === "string" ? r.summary : "",
+      keyRequirements: Array.isArray(r.keyRequirements) ? r.keyRequirements as string[] : [],
+      potentialPenalty: typeof r.potentialPenalty === "string" ? r.potentialPenalty : "",
+      riskLevel,
+      sourceUrl: typeof r.sourceUrl === "string" ? r.sourceUrl : "",
+      appliesWhen: [],
+      niche: "dynamic",
+      whyAppliesTemplate: "",
+      status,
+      whyApplies: typeof r.whyApplies === "string" ? r.whyApplies : "",
+    });
+  }
+
+  return results;
+}
+
+async function runDynamicScan(
+  profile: Record<string, unknown>,
+  companyContext: CompanyContext
+): Promise<MatchedRegulation[]> {
+  const industryInfo = companyContext.industryLabel
+    ? `${companyContext.industryLabel} (${companyContext.industryCode})`
+    : companyContext.gegenstand || "Unbekannte Branche";
+
+  const systemPrompt = `Du bist ein erfahrener deutscher Rechtsberater, spezialisiert auf regulatorische Compliance für deutsche Unternehmen aller Branchen.
+
+Du erhältst:
+1. Informationen zum Unternehmen (Name, Branche, Handelsregister-Gegenstand)
+2. Ein Unternehmensprofil (Betriebsdaten aus einem branchenspezifischen Fragebogen)
+
+Deine Aufgabe:
+- Identifiziere alle deutschen und EU-Vorschriften, die für dieses konkrete Unternehmen gelten
+- Berücksichtige die Branche, Mitarbeiterzahl, Bundesland, und alle spezifischen Angaben aus dem Profil
+- Setze für jede Vorschrift einen Compliance-Status basierend auf den Antworten im Profil:
+  - "erfuellt": Der Betrieb hat die entsprechenden Maßnahmen getroffen
+  - "fehlend": Der Betrieb hat die Maßnahmen NICHT getroffen
+  - "pruefung": Nicht genügend Information oder Status unklar
+
+Antworte ausschließlich im folgenden JSON-Format:
+{
+  "regulations": [
+    {
+      "id": "<kurzer-kebab-case-identifier>",
+      "name": "<Offizieller Name der Vorschrift>",
+      "officialReference": "<Gesetzesreferenz, z.B. 'ArbSchG §§ 3–14'>",
+      "jurisdiction": "<eu|bund|land|branche>",
+      "category": "<arbeitssicherheit|arbeitsrecht|gewerberecht|umweltrecht|produktsicherheit|datenschutz|versicherungspflichten>",
+      "summary": "<2-3 Sätze Zusammenfassung der Vorschrift>",
+      "keyRequirements": ["<Anforderung 1>", "<Anforderung 2>", "..."],
+      "potentialPenalty": "<Mögliche Strafe/Bußgeld>",
+      "riskLevel": "<hoch|mittel|niedrig>",
+      "sourceUrl": "<URL zur offiziellen Quelle>",
+      "status": "<erfuellt|pruefung|fehlend>",
+      "whyApplies": "<2-3 Sätze, WARUM diese Vorschrift für diesen konkreten Betrieb gilt>"
+    }
+  ]
+}
+
+Wichtig:
+- Identifiziere 15-30 relevante Vorschriften für die Branche "${industryInfo}"
+- Berücksichtige: Arbeitsrecht, Gewerberecht, Umweltrecht, Datenschutz, branchenspezifische Vorschriften
+- Sortiere nach Risikolevel: hoch zuerst, dann mittel, dann niedrig
+- Die whyApplies-Texte sollen konkret und hilfreich sein — beziehe dich auf die konkreten Betriebsdaten
+- Verwende echte, existierende deutsche Gesetze und Vorschriften mit korrekten Referenzen
+- sourceUrl soll auf gesetze-im-internet.de oder andere offizielle Quellen verweisen`;
+
+  const userPrompt = `## Unternehmen
+
+Firmenname: ${companyContext.name}
+Branche: ${industryInfo}
+Handelsregister-Gegenstand: ${companyContext.gegenstand || "Nicht verfügbar"}
+
+## Unternehmensprofil (Antworten aus dem Fragebogen)
+
+${JSON.stringify(profile, null, 2)}`;
+
+  const { content, error } = await callOpenAI(systemPrompt, userPrompt, undefined, 4000);
+
+  if (error || !content) {
+    throw new Error(error || "Keine Antwort vom KI-System");
+  }
+
+  const parsed = JSON.parse(content);
+  return validateDynamicResponse(parsed);
+}
+
+// --- Main handler ---
+
+export async function POST(request: Request) {
+  try {
+    // Rate limiting
+    const ip = request.headers.get("x-forwarded-for") ?? request.headers.get("x-real-ip") ?? "unknown";
+    if (isRateLimited(ip)) {
+      return NextResponse.json(
+        { error: "Zu viele Anfragen. Bitte versuchen Sie es später erneut." },
+        { status: 429 }
+      );
+    }
+
+    // Auth check — allow both authenticated users and guests
+    const cookieStore = await cookies();
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      { cookies: { getAll: () => cookieStore.getAll() } }
+    );
+    const { data: { session } } = await supabase.auth.getSession();
+    const userId = session?.user?.id ?? "guest";
+    console.info(`Scan request from user: ${userId}`);
+
+    let body: { profile?: unknown; companyContext?: CompanyContext };
     try {
-      response = await fetch("https://api.openai.com/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${apiKey}`,
-        },
-        body: JSON.stringify({
-          model,
-          messages: [
-            { role: "system", content: systemPrompt },
-            { role: "user", content: userPrompt },
-          ],
-          response_format: { type: "json_object" },
-          temperature: 0.2,
-        }),
-        signal: controller.signal,
-      });
-    } catch (err) {
-      if (err instanceof Error && err.name === "AbortError") {
+      body = await request.json();
+    } catch {
+      return NextResponse.json(
+        { error: "Ungültiges JSON im Anfragekörper" },
+        { status: 400 }
+      );
+    }
+
+    const { profile, companyContext } = body;
+
+    if (!profile || typeof profile !== "object") {
+      return NextResponse.json(
+        { error: "Unternehmensprofil fehlt" },
+        { status: 400 }
+      );
+    }
+
+    const profileObj = profile as Record<string, unknown>;
+
+    // Determine scan mode: dynamic (with company context) or static (carpentry fallback)
+    const isDynamic = companyContext?.industryCode && companyContext.industryCode !== "HANDWERK_TISCHLEREI";
+
+    let regulations: MatchedRegulation[];
+
+    if (isDynamic) {
+      console.info(`Dynamic scan for industry: ${companyContext!.industryCode} (${companyContext!.name})`);
+      regulations = await runDynamicScan(profileObj, companyContext!);
+    } else {
+      // Static carpentry mode — validate required fields
+      const missingFields = ["industry", "employeeCount"].filter((f) => !profileObj[f]);
+      if (missingFields.length > 0) {
         return NextResponse.json(
-          { error: "OpenAI-Anfrage zeitüberschritten. Bitte versuchen Sie es erneut." },
-          { status: 504 }
+          { error: `Fehlende Pflichtfelder: ${missingFields.join(", ")}` },
+          { status: 400 }
         );
       }
-      throw err;
-    } finally {
-      clearTimeout(timeout);
+      regulations = await runStaticScan(profileObj);
     }
-
-    if (!response.ok) {
-      const errorBody = await response.text();
-      console.error("OpenAI API error:", response.status, errorBody);
-      return NextResponse.json(
-        { error: `OpenAI API-Fehler: ${response.status}` },
-        { status: 502 }
-      );
-    }
-
-    const completion = await response.json();
-    const content = completion.choices?.[0]?.message?.content;
-
-    if (!content) {
-      return NextResponse.json(
-        { error: "Leere Antwort von OpenAI" },
-        { status: 502 }
-      );
-    }
-
-    let parsed: unknown;
-    try {
-      parsed = JSON.parse(content);
-    } catch {
-      console.error("Failed to parse OpenAI response:", content.slice(0, 200));
-      return NextResponse.json(
-        { error: "Ungültiges Antwortformat von der KI" },
-        { status: 502 }
-      );
-    }
-
-    const regulations = validateResponse(parsed, regulationMap);
 
     return NextResponse.json({ regulations });
   } catch (error) {

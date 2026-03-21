@@ -591,5 +591,16 @@
     "save": "Speichern",
     "cancel": "Abbrechen",
     "loading": "Wird geladen..."
+  },
+  "CompanySearch": {
+    "title": "Unternehmen suchen",
+    "subtitle": "Suchen Sie Ihr Unternehmen im Handelsregister, damit wir die passenden Fragen für Ihre Branche erstellen können.",
+    "placeholder": "Firmenname eingeben (z.B. Ali's Bäckerei GmbH)",
+    "gegenstand": "Unternehmensgegenstand",
+    "noGegenstand": "Kein Unternehmensgegenstand verfügbar. Die Branche wird anhand des Firmennamens bestimmt.",
+    "resultsCount": "{count, plural, one {# Ergebnis} other {# Ergebnisse}} gefunden",
+    "noResults": "Keine Ergebnisse gefunden. Versuchen Sie einen anderen Suchbegriff.",
+    "confirm": "Weiter",
+    "skip": "Ohne Suche fortfahren"
   }
 }

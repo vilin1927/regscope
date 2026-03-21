@@ -3,6 +3,7 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import type { MatchedRegulation } from "@/data/regulations/types";
 import type { BusinessProfile } from "@/data/questionnaire/types";
+import type { CompanyContext } from "@/components/providers/ScanProvider";
 
 interface UseProcessingOptions {
   onComplete: (matched: MatchedRegulation[]) => void;
@@ -27,7 +28,7 @@ export function useProcessing({ onComplete, onError }: UseProcessingOptions) {
   }, []);
 
   const startProcessing = useCallback(
-    (profile: BusinessProfile) => {
+    (profile: BusinessProfile, companyContext?: CompanyContext) => {
       setProcessingStep(0);
       setIsProcessing(true);
 
@@ -57,7 +58,7 @@ export function useProcessing({ onComplete, onError }: UseProcessingOptions) {
       const apiCall = fetch("/api/scan", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ profile }),
+        body: JSON.stringify({ profile, companyContext }),
         signal: controller.signal,
       }).then(async (res) => {
         const data = await res.json();

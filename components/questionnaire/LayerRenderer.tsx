@@ -58,6 +58,10 @@ export function LayerRenderer({
 
   const layerKey = `layer${layer.id}` as const;
 
+  // Support both i18n (static layers) and direct text (dynamic AI-generated layers)
+  const layerTitle = t.has(`${layerKey}.title`) ? t(`${layerKey}.title`) : layer.title;
+  const layerSubtitle = t.has(`${layerKey}.subtitle`) ? t(`${layerKey}.subtitle`) : layer.subtitle;
+
   return (
     <motion.div
       key={layer.id}
@@ -68,8 +72,8 @@ export function LayerRenderer({
     >
       {/* Layer header */}
       <div className="mb-4">
-        <h2 className="text-lg font-bold text-gray-900">{t(`${layerKey}.title`)}</h2>
-        <p className="text-sm text-gray-500">{t(`${layerKey}.subtitle`)}</p>
+        <h2 className="text-lg font-bold text-gray-900">{layerTitle}</h2>
+        <p className="text-sm text-gray-500">{layerSubtitle}</p>
       </div>
 
       {/* Regular fields */}

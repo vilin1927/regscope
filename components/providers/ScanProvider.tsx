@@ -12,6 +12,15 @@ import type { MatchedRegulation } from "@/data/regulations/types";
 import type { BusinessProfile } from "@/data/questionnaire/types";
 import type { ScanRecord } from "@/types";
 
+export interface CompanyContext {
+  name: string;
+  registerNum: string | null;
+  state: string;
+  gegenstand: string | null;
+  industryCode?: string;
+  industryLabel?: string;
+}
+
 interface ScanContextValue {
   // From useScanHistory
   scanHistory: ScanRecord[];
@@ -34,13 +43,15 @@ interface ScanContextValue {
   // From useProcessing
   isProcessing: boolean;
   processingStep: number;
-  startProcessing: (profile: BusinessProfile) => void;
+  startProcessing: (profile: BusinessProfile, companyContext?: CompanyContext) => void;
 
   // Local state
   prefillAnswers: BusinessProfile | undefined;
   setPrefillAnswers: (answers: BusinessProfile | undefined) => void;
   processingError: string | undefined;
   setProcessingError: (error: string | undefined) => void;
+  companyContext: CompanyContext | undefined;
+  setCompanyContext: (ctx: CompanyContext | undefined) => void;
 
   // Computed
   hasResults: boolean;
@@ -64,6 +75,7 @@ export function ScanProvider({
 }: ScanProviderProps) {
   const [prefillAnswers, setPrefillAnswers] = useState<BusinessProfile | undefined>();
   const [processingError, setProcessingError] = useState<string | undefined>();
+  const [companyContext, setCompanyContext] = useState<CompanyContext | undefined>();
 
   const scans = useScanHistory(userId, isGuest);
 
@@ -120,6 +132,8 @@ export function ScanProvider({
         setPrefillAnswers,
         processingError,
         setProcessingError,
+        companyContext,
+        setCompanyContext,
 
         // Computed
         hasResults,

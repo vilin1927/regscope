@@ -1,6 +1,7 @@
 export type Screen =
   | "auth"
   | "dashboard"
+  | "company-search"
   | "questionnaire"
   | "processing"
   | "results"

@@ -8,15 +8,17 @@ import { ProgressBar } from "./ProgressBar";
 import { LayerRenderer } from "./LayerRenderer";
 import { questionnaireLayers } from "@/data/questionnaire/layers";
 import { validateLayer, type ValidationErrors } from "@/lib/validation";
-import type { BusinessProfile } from "@/data/questionnaire/types";
+import type { BusinessProfile, QuestionnaireLayer } from "@/data/questionnaire/types";
 
 interface QuestionnaireScreenProps {
   initialAnswers?: BusinessProfile;
+  dynamicLayers?: QuestionnaireLayer[];
   onComplete: (answers: BusinessProfile) => void;
 }
 
 export function QuestionnaireScreen({
   initialAnswers,
+  dynamicLayers,
   onComplete,
 }: QuestionnaireScreenProps) {
   const [currentLayer, setCurrentLayer] = useState(0);
@@ -27,7 +29,7 @@ export function QuestionnaireScreen({
   const [shakeKey, setShakeKey] = useState(0);
   const t = useTranslations("Questionnaire");
 
-  const layers = questionnaireLayers;
+  const layers = dynamicLayers && dynamicLayers.length > 0 ? dynamicLayers : questionnaireLayers;
   const layer = layers[currentLayer];
   const totalLayers = layers.length;
   const isLastLayer = currentLayer === totalLayers - 1;
