@@ -1,7 +1,7 @@
 # ComplyRadar — Progress Log
 
 > **Last updated:** 2026-03-21
-> **Current state:** Phase 2 M1 — Epic 4 CODE COMPLETE, ready for deploy + e2e test
+> **Current state:** Phase 2 M1 — COMPLETE, deployed on Raphael's Hetzner VPS, all tests passing
 
 ---
 
@@ -27,15 +27,96 @@
 - Vercel env vars set: `HANDELSREGISTER_API_URL` + `HANDELSREGISTER_API_KEY` ✅
 - VPS microservice health confirmed ✅
 
-**Remaining:**
-- Apply Supabase migration (migration-m1.sql) — industry_templates table
-- Deploy to Vercel (push to main via PR)
-- E4.5: End-to-end test full flow
-- E4.6: Mobile responsive verification
-- E4.7: Error handling edge cases
-- E4.8: E2E test with 3+ industries
+**Also completed (2026-03-21 continued):**
+- Supabase migration applied ✅ (industry_templates table)
+- PRs #7-#11 merged (Epic 4 + 4 hotfixes)
+- Hotfixes: token limits (questionnaire 3000→5000, scan 4000→8000), dynamic detection, retry context
+- Full migration to Raphael's Hetzner VPS (46.225.92.189):
+  - Next.js app via PM2 + nginx
+  - Handelsregister microservice via systemd + gunicorn
+  - SSL via certbot (auto-renew, expires 2026-06-19)
+  - DNS: smart-lex.de → 46.225.92.189 (United Domains)
+  - Vercel no longer needed
 
-**Decision:** Option B chosen — keep Vercel for Next.js, use GlobalHair VPS only for microservice. When Raphael gets Hetzner, only move microservice + update 1 env var. No DNS changes needed.
+**Also completed (2026-03-21 evening):**
+- E4.5: End-to-end test on Hetzner — PASSED (Orgonic Art → 20 regulations)
+- E4.7: Error handling — 404 search fix, retry with companyContext, timeout 90s
+- Admin Templates viewer (F-100-E5) — shows cached industry questionnaires
+- Toggle shrink fix for desktop
+- PRs #7-#15 all merged
+
+**Verified on production (all passing):**
+- SSL/HTTPS ✅
+- Handelsregister microservice ✅
+- Company search → results ✅
+- AI questionnaire generation (fresh + cached) ✅
+- Dynamic scan → results (20 regulations) ✅
+- Admin templates page ✅
+- Static carpentry fallback (skip search) ✅
+
+**Remaining (non-blocking):**
+- Clean up GlobalHair VPS (remove old microservice)
+- Remove Vercel project (optional)
+- E4.8: E2E test with 3+ more industries (bakery tested, need 2 more)
+- Mobile responsive spot-check on new screens
+
+**Decision:** Full stack on Raphael's Hetzner VPS — client owns everything. Vercel dropped.
+
+---
+
+### Handelsregister API — Rate Limits & Scaling
+
+**Current state:**
+- Each company search makes 1 API call to handelsregister.de (government website)
+- Rate limit: **60 requests/hour** (enforced by government site + our microservice)
+- In-memory rate limiter exists in microservice (per IP, 60/hour)
+- **No tracking dashboard** — we don't currently monitor how many calls are used
+- No caching of search results — every search hits handelsregister.de live
+
+**Is 60/hour enough?**
+- For beta (8 agencies, ~20-50 users/day): YES, plenty
+- Each user typically searches 1-2 times per session
+- Problem only at 100+ concurrent users searching simultaneously
+
+**Future scaling solution — Search Result Caching (not built yet, ~2h work):**
+```
+User A searches "Bäckerei" → hits handelsregister.de → saves to Supabase
+User B searches "Bäckerei" → hits Supabase cache → instant, 0 API calls
+```
+- One Supabase table: `company_search_cache` (search_term, results, cached_at)
+- TTL: 30 days (company data rarely changes)
+- After months: thousands of companies cached, almost zero live API calls
+- NO IP rotation or proxy needed — just a database cache
+
+**NOT needed for scaling:**
+- IP proxy rotation (only for bulk scraping all 5M companies — not our use case)
+- Multiple API keys (handelsregister.de doesn't use API keys)
+- Multiple VPS instances (one VPS handles 60/hour fine)
+
+**Nice-to-have for monitoring (future):**
+- API call counter (daily/hourly usage)
+- Admin dashboard showing remaining quota
+- Alert when approaching 60/hour limit
+
+### API Call Breakdown Per User Flow
+
+| Step | What happens | API calls |
+|------|-------------|-----------|
+| User types in search bar | Search Handelsregister | **1 call to handelsregister.de** per search (debounced 500ms) |
+| User clicks a company result | Just selects from already-loaded results | **0 calls** (data already fetched) |
+| User clicks "Continue" | AI classifies industry + generates/loads questionnaire | **1-2 calls to OpenAI** (0 if industry cached in Supabase) |
+| User fills questionnaire + "Analyze" | AI scans for regulations | **1 call to OpenAI** |
+
+**Key:** Clicking a company from the list does NOT make another Handelsregister call. The Gegenstand is already in the search results.
+
+### Questionnaire Caching (industry_templates)
+
+- First time an industry is scanned: AI generates questions (~15-30 sec), saves to `industry_templates` table in Supabase
+- Second time same industry: loads from database (<2 sec, no OpenAI call)
+- **How to tell from UI:** If "Fragebogen wird erstellt..." loading is fast (<2 sec) = cached. If 15-30 sec = freshly generated.
+- Cache key: `industry_code` (e.g. HANDWERK_BAECKEREI, KUNST_KULTUR, IT_DIENSTLEISTUNG)
+- Two different bakeries get the SAME cached questionnaire (same industry code)
+- Check cache: Supabase → Table Editor → `industry_templates` (shows industry_code, usage_count)
 
 **Final Milestones Sent:**
 
