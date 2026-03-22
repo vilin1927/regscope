@@ -226,28 +226,31 @@ function ComplyRadarAppShell({
     else if (nameLower.includes("gbr") || nameLower.includes("egbr")) prefill.legalForm = "gbr";
     else if (nameLower.includes("e.k.") || nameLower.includes("e.kfm") || nameLower.includes("e.kfr")) prefill.legalForm = "einzelunternehmen";
     else if (nameLower.includes("ag") || nameLower.includes("aktiengesellschaft")) prefill.legalForm = "sonstige";
-    // Map state/city to Bundesland
-    const stateMap: Record<string, string> = {
-      "münchen": "Bayern", "nürnberg": "Bayern", "augsburg": "Bayern", "regensburg": "Bayern", "würzburg": "Bayern",
-      "berlin": "Berlin", "hamburg": "Hamburg", "bremen": "Bremen",
-      "stuttgart": "Baden-Württemberg", "karlsruhe": "Baden-Württemberg", "mannheim": "Baden-Württemberg", "freiburg": "Baden-Württemberg",
-      "frankfurt": "Hessen", "wiesbaden": "Hessen", "darmstadt": "Hessen", "kassel": "Hessen",
-      "düsseldorf": "Nordrhein-Westfalen", "köln": "Nordrhein-Westfalen", "dortmund": "Nordrhein-Westfalen", "essen": "Nordrhein-Westfalen", "duisburg": "Nordrhein-Westfalen", "mönchengladbach": "Nordrhein-Westfalen",
-      "hannover": "Niedersachsen", "braunschweig": "Niedersachsen", "oldenburg": "Niedersachsen", "celle": "Niedersachsen",
-      "mainz": "Rheinland-Pfalz", "koblenz": "Rheinland-Pfalz",
-      "saarbrücken": "Saarland",
-      "dresden": "Sachsen", "leipzig": "Sachsen", "chemnitz": "Sachsen",
-      "magdeburg": "Sachsen-Anhalt", "halle": "Sachsen-Anhalt",
-      "kiel": "Schleswig-Holstein", "lübeck": "Schleswig-Holstein",
-      "erfurt": "Thüringen", "jena": "Thüringen",
-      "potsdam": "Brandenburg", "cottbus": "Brandenburg",
-      "schwerin": "Mecklenburg-Vorpommern", "rostock": "Mecklenburg-Vorpommern",
+    // Map state/city to Bundesland — try multiple value formats since AI generates different option values
+    const cityToBundesland: Record<string, string[]> = {
+      "münchen": ["by", "bayern", "Bayern"], "nürnberg": ["by", "bayern", "Bayern"], "augsburg": ["by", "bayern", "Bayern"], "regensburg": ["by", "bayern", "Bayern"], "würzburg": ["by", "bayern", "Bayern"], "bamberg": ["by", "bayern", "Bayern"], "erlangen": ["by", "bayern", "Bayern"],
+      "berlin": ["be", "berlin", "Berlin"],
+      "hamburg": ["hh", "hamburg", "Hamburg"],
+      "bremen": ["hb", "bremen", "Bremen"],
+      "stuttgart": ["bw", "baden-württemberg", "Baden-Württemberg"], "karlsruhe": ["bw", "baden-württemberg", "Baden-Württemberg"], "mannheim": ["bw", "baden-württemberg", "Baden-Württemberg"], "freiburg": ["bw", "baden-württemberg", "Baden-Württemberg"], "heidelberg": ["bw", "baden-württemberg", "Baden-Württemberg"],
+      "frankfurt": ["he", "hessen", "Hessen"], "wiesbaden": ["he", "hessen", "Hessen"], "darmstadt": ["he", "hessen", "Hessen"], "kassel": ["he", "hessen", "Hessen"],
+      "düsseldorf": ["nw", "nordrhein-westfalen", "Nordrhein-Westfalen"], "köln": ["nw", "nordrhein-westfalen", "Nordrhein-Westfalen"], "dortmund": ["nw", "nordrhein-westfalen", "Nordrhein-Westfalen"], "essen": ["nw", "nordrhein-westfalen", "Nordrhein-Westfalen"], "duisburg": ["nw", "nordrhein-westfalen", "Nordrhein-Westfalen"], "mönchengladbach": ["nw", "nordrhein-westfalen", "Nordrhein-Westfalen"],
+      "hannover": ["ni", "niedersachsen", "Niedersachsen"], "braunschweig": ["ni", "niedersachsen", "Niedersachsen"], "oldenburg": ["ni", "niedersachsen", "Niedersachsen"], "celle": ["ni", "niedersachsen", "Niedersachsen"],
+      "mainz": ["rp", "rheinland-pfalz", "Rheinland-Pfalz"], "koblenz": ["rp", "rheinland-pfalz", "Rheinland-Pfalz"],
+      "saarbrücken": ["sl", "saarland", "Saarland"],
+      "dresden": ["sn", "sachsen", "Sachsen"], "leipzig": ["sn", "sachsen", "Sachsen"], "chemnitz": ["sn", "sachsen", "Sachsen"],
+      "magdeburg": ["st", "sachsen-anhalt", "Sachsen-Anhalt"], "halle": ["st", "sachsen-anhalt", "Sachsen-Anhalt"],
+      "kiel": ["sh", "schleswig-holstein", "Schleswig-Holstein"], "lübeck": ["sh", "schleswig-holstein", "Schleswig-Holstein"],
+      "erfurt": ["th", "thüringen", "Thüringen"], "jena": ["th", "thüringen", "Thüringen"],
+      "potsdam": ["bb", "brandenburg", "Brandenburg"], "cottbus": ["bb", "brandenburg", "Brandenburg"],
+      "schwerin": ["mv", "mecklenburg-vorpommern", "Mecklenburg-Vorpommern"], "rostock": ["mv", "mecklenburg-vorpommern", "Mecklenburg-Vorpommern"],
     };
     if (company.state) {
       const cityLower = company.state.toLowerCase();
-      for (const [city, bundesland] of Object.entries(stateMap)) {
+      for (const [city, variants] of Object.entries(cityToBundesland)) {
         if (cityLower.includes(city)) {
-          prefill.bundesland = bundesland;
+          // Set all variants — the select will match whichever option value format the AI used
+          prefill.bundesland = variants[0]; // abbreviation (most common in AI templates)
           break;
         }
       }
