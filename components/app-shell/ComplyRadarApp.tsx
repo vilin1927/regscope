@@ -211,6 +211,49 @@ function ComplyRadarAppShell({
       gegenstand: company.gegenstand,
     });
 
+    // Pre-fill questionnaire with data from Handelsregister
+    const prefill: BusinessProfile = {
+      companyName: company.name,
+      businessLocation: company.state || "",
+      handelsregisterEingetragen: true,
+    };
+    // Extract legal form from company name
+    const nameLower = company.name.toLowerCase();
+    if (nameLower.includes("gmbh") && !nameLower.includes("ug")) prefill.legalForm = "gmbh";
+    else if (nameLower.includes("ug")) prefill.legalForm = "ug";
+    else if (nameLower.includes(" kg")) prefill.legalForm = "kg";
+    else if (nameLower.includes("ohg")) prefill.legalForm = "ohg";
+    else if (nameLower.includes("gbr") || nameLower.includes("egbr")) prefill.legalForm = "gbr";
+    else if (nameLower.includes("e.k.") || nameLower.includes("e.kfm") || nameLower.includes("e.kfr")) prefill.legalForm = "einzelunternehmen";
+    else if (nameLower.includes("ag") || nameLower.includes("aktiengesellschaft")) prefill.legalForm = "sonstige";
+    // Map state/city to Bundesland
+    const stateMap: Record<string, string> = {
+      "münchen": "Bayern", "nürnberg": "Bayern", "augsburg": "Bayern", "regensburg": "Bayern", "würzburg": "Bayern",
+      "berlin": "Berlin", "hamburg": "Hamburg", "bremen": "Bremen",
+      "stuttgart": "Baden-Württemberg", "karlsruhe": "Baden-Württemberg", "mannheim": "Baden-Württemberg", "freiburg": "Baden-Württemberg",
+      "frankfurt": "Hessen", "wiesbaden": "Hessen", "darmstadt": "Hessen", "kassel": "Hessen",
+      "düsseldorf": "Nordrhein-Westfalen", "köln": "Nordrhein-Westfalen", "dortmund": "Nordrhein-Westfalen", "essen": "Nordrhein-Westfalen", "duisburg": "Nordrhein-Westfalen", "mönchengladbach": "Nordrhein-Westfalen",
+      "hannover": "Niedersachsen", "braunschweig": "Niedersachsen", "oldenburg": "Niedersachsen", "celle": "Niedersachsen",
+      "mainz": "Rheinland-Pfalz", "koblenz": "Rheinland-Pfalz",
+      "saarbrücken": "Saarland",
+      "dresden": "Sachsen", "leipzig": "Sachsen", "chemnitz": "Sachsen",
+      "magdeburg": "Sachsen-Anhalt", "halle": "Sachsen-Anhalt",
+      "kiel": "Schleswig-Holstein", "lübeck": "Schleswig-Holstein",
+      "erfurt": "Thüringen", "jena": "Thüringen",
+      "potsdam": "Brandenburg", "cottbus": "Brandenburg",
+      "schwerin": "Mecklenburg-Vorpommern", "rostock": "Mecklenburg-Vorpommern",
+    };
+    if (company.state) {
+      const cityLower = company.state.toLowerCase();
+      for (const [city, bundesland] of Object.entries(stateMap)) {
+        if (cityLower.includes(city)) {
+          prefill.bundesland = bundesland;
+          break;
+        }
+      }
+    }
+    scan.setPrefillAnswers(prefill);
+
     if (company.gegenstand) {
       // Generate dynamic questions, then navigate
       fetchDynamicQuestions(company.gegenstand, company.name, company).then(() => {
