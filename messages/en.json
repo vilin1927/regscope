@@ -92,10 +92,10 @@
     },
     "complianceChecksSection": "Compliance Checks",
     "fields": {
-      "companyName": { "label": "Company Name", "placeholder": "e.g. Müller Carpentry GmbH" },
+      "companyName": { "label": "Company Name", "placeholder": "e.g. Müller GmbH" },
       "industry": {
         "label": "Industry",
-        "options": { "tischlerei": "Carpentry (Tischlerei)", "schreinerei": "Carpentry (Schreinerei)" }
+        "placeholder": "e.g. Bakery, IT Services, Electrical Installation"
       },
       "legalForm": {
         "label": "Legal Form",
@@ -272,6 +272,7 @@
     "profileWith": "with",
     "profileEmployees": "employees",
     "profileYourBusiness": "Your Business",
+    "profileUnknownIndustry": "Unknown Industry",
     "relevantRegulations": "Relevant Regulations",
     "newScan": "New Scan",
     "backToHistory": "Scan History",
