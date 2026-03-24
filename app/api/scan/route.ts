@@ -339,18 +339,26 @@ export async function POST(request: Request) {
 
     const profileObj = profile as Record<string, unknown>;
 
-    // Determine scan mode: dynamic (with company context) or static (carpentry fallback)
-    // Use dynamic if we have company context with industry code (non-carpentry) or Gegenstand
-    const isDynamic = companyContext && (
-      (companyContext.industryCode && companyContext.industryCode !== "HANDWERK_TISCHLEREI") ||
-      companyContext.gegenstand
-    );
+    // Determine scan mode: dynamic (AI-powered for any industry) or static (carpentry fallback)
+    // Use dynamic if we have company context OR user entered a free-text industry
+    const userIndustry = profileObj.industry as string | undefined;
+    const isDynamic = companyContext?.gegenstand || companyContext?.industryCode || userIndustry;
 
     let regulations: MatchedRegulation[];
 
     if (isDynamic) {
-      console.info(`Dynamic scan for industry: ${companyContext!.industryCode || "unknown"} (${companyContext!.name})`);
-      regulations = await runDynamicScan(profileObj, companyContext!);
+      // Build or use company context for dynamic scan
+      const effectiveContext: CompanyContext = companyContext || {
+        name: (profileObj.companyName as string) || "Unbekannt",
+        gegenstand: null,
+        industryLabel: userIndustry,
+      };
+      // If no industryLabel from Handelsregister, use the free-text industry
+      if (!effectiveContext.industryLabel && userIndustry) {
+        effectiveContext.industryLabel = userIndustry;
+      }
+      console.info(`Dynamic scan for industry: ${effectiveContext.industryCode || effectiveContext.industryLabel || "unknown"} (${effectiveContext.name})`);
+      regulations = await runDynamicScan(profileObj, effectiveContext);
     } else {
       // Static carpentry mode — validate required fields
       const missingFields = ["industry", "employeeCount"].filter((f) => !profileObj[f]);

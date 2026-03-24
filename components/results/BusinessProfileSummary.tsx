@@ -14,7 +14,7 @@ export function BusinessProfileSummary({
 
   const companyName =
     (profile.companyName as string) || t("profileYourBusiness");
-  const industry = (profile.industry as string) || "Tischlerei";
+  const industry = (profile.industry as string) || t("profileUnknownIndustry");
   const bundesland = (profile.bundesland as string) || "";
   const employeeCount = (profile.employeeCount as string) || "0";
   const legalForm = (profile.legalForm as string) || "";

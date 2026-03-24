@@ -21,8 +21,8 @@ export async function generateMetadata({
       ? "ComplyRadar — Compliance für Handwerksbetriebe"
       : "ComplyRadar — Compliance for Trade Businesses",
     description: isGerman
-      ? "Finden Sie heraus, welche Vorschriften für Ihren Handwerksbetrieb gelten. Compliance-Scan für Tischlereien und Schreinereien."
-      : "Discover which regulations apply to your trade business. Compliance scanner for carpentry and joinery workshops.",
+      ? "Finden Sie heraus, welche Vorschriften für Ihren Betrieb gelten. Compliance-Scan für alle Branchen."
+      : "Discover which regulations apply to your business. Compliance scanner for all industries.",
     // Fix #26: hreflang alternates
     alternates: {
       languages: {

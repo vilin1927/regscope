@@ -279,6 +279,10 @@ function ComplyRadarAppShell({
   const handleQuestionnaireComplete = (answers: BusinessProfile) => {
     scan.setProcessingError(undefined);
     scan.resetScan();
+    // Inject industry label from AI classification if not already set by user
+    if (!answers.industry && scan.companyContext?.industryLabel) {
+      answers.industry = scan.companyContext.industryLabel;
+    }
     scan.setBusinessProfile(answers);
     scan.startProcessing(answers, scan.companyContext);
     setCurrentScreen("processing");

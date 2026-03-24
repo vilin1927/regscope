@@ -13,20 +13,17 @@ export const questionnaireLayers: QuestionnaireLayer[] = [
         id: "companyName",
         type: "text",
         label: "Firmenname",
-        placeholder: "z.B. Tischlerei Müller GmbH",
+        placeholder: "z.B. Müller GmbH",
         required: true,
         isComplianceCheck: false,
       },
       {
         id: "industry",
-        type: "select",
+        type: "text",
         label: "Branche",
+        placeholder: "z.B. Bäckerei, IT-Dienstleistungen, Elektroinstallation",
         required: true,
         isComplianceCheck: false,
-        options: [
-          { value: "tischlerei", label: "Tischlerei" },
-          { value: "schreinerei", label: "Schreinerei" },
-        ],
       },
       {
         id: "legalForm",

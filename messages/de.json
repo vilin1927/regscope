@@ -92,10 +92,10 @@
     },
     "complianceChecksSection": "Compliance-Checks",
     "fields": {
-      "companyName": { "label": "Firmenname", "placeholder": "z.B. Tischlerei Müller GmbH" },
+      "companyName": { "label": "Firmenname", "placeholder": "z.B. Müller GmbH" },
       "industry": {
         "label": "Branche",
-        "options": { "tischlerei": "Tischlerei", "schreinerei": "Schreinerei" }
+        "placeholder": "z.B. Bäckerei, IT-Dienstleistungen, Elektroinstallation"
       },
       "legalForm": {
         "label": "Rechtsform",
@@ -272,6 +272,7 @@
     "profileWith": "mit",
     "profileEmployees": "Mitarbeitern",
     "profileYourBusiness": "Ihr Betrieb",
+    "profileUnknownIndustry": "Unbekannte Branche",
     "relevantRegulations": "Relevante Vorschriften",
     "newScan": "Neuer Scan",
     "backToHistory": "Scan-Verlauf",
