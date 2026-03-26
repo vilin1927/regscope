@@ -1,17 +1,118 @@
 # ComplyRadar — Progress Log
 
-> **Last updated:** 2026-03-21
-> **Current state:** Phase 2 M1 — COMPLETE, deployed on Raphael's Hetzner VPS, all tests passing
+> **Last updated:** 2026-03-26
+> **Current state:** Phase 2 M3 (Referral System + Consultant Dashboard) — PLANNING. Building M3 first while Raphael sets up Stripe for M2.
 
 ---
 
-## Phase 2 M1 — ACTIVE
+## Phase 2 M3 — Referral System + Consultant Dashboard ($135)
+
+**Status:** Planning → Building (Raphael funded M2 but wants M3 built first)
+**Agreement:** Mar 25 — Raphael funds M2 ($170), Vlad builds M3 first while Stripe gets set up
+
+### Session 2026-03-26 — Epic Breakdown from Call Transcript
+
+**Source:** Reviewed 29-min call transcript from 2026-03-15 (Raphael + Fabi + Vlad)
+
+**What Raphael described for M3 (consultant backend/dashboard):**
+
+1. **Consultant account type** — lawyers, insurance brokers, tax advisors sign up separately
+2. **Expertise tags** — consultant selects their specialties (matches compliance scan categories)
+3. **Referral codes** — each consultant gets unique code/QR to share with potential customers
+4. **Customer enters code at signup** → permanently linked to that consultant
+5. **"Get Professional Help" button** (renamed from "Ask Expert" — lower barrier)
+   - With referral code → always routes to that consultant
+   - Without code → random consultant with matching tags
+   - Hidden for categories with no expert
+6. **Contact reveal** — consultant only sees customer phone/email AFTER customer clicks "contact me"
+7. **Consultant dashboard** — referrals list, customers, help requests, bonus amount
+8. **Commission** — ~10% or ~€50/mo per referral (TBD — building as configurable)
+9. **Payout** — manual bank transfer/PayPal for now (no auto-transfer needed)
+
+**Epic breakdown created:**
+- E1 (Day 1): Database schema + consultant accounts + registration
+- E2 (Day 2): Referral flow + "Get Professional Help" button + help request signaling
+- E3 (Day 3): Consultant dashboard + admin controls
+
+**Open questions (non-blocking, configurable defaults):**
+- Exact commission rate → admin-configurable (default 10%)
+- Consultant signup: open registration or invite-only? → building open, admin can deactivate
+- Reward type: % of subscription or fixed amount? → building both options in admin
+
+**E1 — COMPLETED (2026-03-26):**
+- `supabase/migration-m3.sql` — 3 new tables: consultants, referrals, help_requests (with RLS)
+- `lib/consultant-types.ts` — TypeScript types + 11 expertise tags
+- `app/api/consultant/register/route.ts` — POST registration with referral code gen (nanoid)
+- `app/api/consultant/profile/route.ts` — GET/PATCH own profile
+- `app/api/consultant/dashboard/route.ts` — GET dashboard data (referrals + help requests + stats)
+- `app/api/referral/validate/route.ts` — GET validate referral code
+- `app/api/help-request/route.ts` — POST create + GET list help requests
+- `app/api/admin/consultants/route.ts` — GET list + PATCH update (commission, active)
+- `components/consultant/ConsultantRegisterScreen.tsx` — Registration form with tag multi-select
+- `components/consultant/ConsultantDashboardScreen.tsx` — Dashboard with stats, referrals, help requests
+- `components/admin/AdminConsultantsScreen.tsx` — Admin: manage consultants, set commission, activate/deactivate
+- Routes, sidebar nav, header titles, i18n (DE+EN) all wired up
+- Build passes clean
+
+**E2 — COMPLETED (2026-03-26):**
+- `components/auth/AuthForm.tsx` — referral code field on signup (optional, live validation with debounce)
+- `hooks/useAuth.ts` — after signup with code, records referral in DB (fire-and-forget)
+- `components/ui/ExpertContactModal.tsx` — wired to POST /api/help-request, added contact sharing toggle (email/phone)
+- Button renamed: "Experte kontaktieren" → "Professionelle Hilfe" (DE) / "Get Professional Help" (EN)
+- Referral routing: with code → specific consultant, without → random matching by tags
+- i18n updated (DE+EN) for Auth.referralCode, Expert.shareContact, etc.
+
+**E3 — COMPLETED (2026-03-26):**
+- Already built in E1: ConsultantDashboardScreen, AdminConsultantsScreen, all APIs
+- Notification badge for pending help requests (amber badge in dashboard)
+- All i18n and mobile responsive
+
+**Migration applied:** migration-m3.sql executed via Supabase SQL Editor (Chrome DevTools MCP)
+- Tables confirmed: consultants, referrals, help_requests (+ indexes + RLS)
+
+**What comes next:**
+- Test locally with `npm run dev`
+- Deploy branch to VPS on port 3001 for Raphael to test
+- E2.8 (hide button for categories with no consultant) — deferred until real consultants exist
+
+---
+
+## Phase 2 M1 — COMPLETE
 
 **Accepted:** 2026-03-18 (Raphael funded M1 on Upwork)
 **Feature:** Dynamic Questionnaire + Handelsregister — $450
 **Deadline:** 2026-03-22 (Saturday EOD)
 **Demo:** 2026-03-24 at 14:00 Berlin time (Raphael's agency meeting)
 **VPS:** Using Peter's GlobalHair VPS (187.77.93.207) for microservice — Option B (Vercel stays for Next.js)
+
+### Session 2026-03-24 — Bug Fixes from Raphael
+
+**Client message (Upwork, 5:22 PM):**
+- Wants to proceed with next milestones (paywall + consultant dashboard)
+- Reported 2 bugs to fix first
+- Stripe not ready yet → start with consultant backend/dashboard first
+
+**Bug 1: Scan history always shows "Tischlerei"**
+- Root cause: `BusinessProfileSummary.tsx:17` had `|| "Tischlerei"` fallback
+- For dynamic scans, AI-detected industry was in `companyContext` but never written to `businessProfile.industry`
+- Fix: Replaced fallback with "Unbekannte Branche", inject `companyContext.industryLabel` into profile on questionnaire complete
+
+**Bug 2: Niche dropdown only had carpentry options**
+- Root cause: `layers.ts` had `select` with only "Tischlerei"/"Schreinerei"
+- Fix: Changed to `text` input with placeholder "z.B. Bäckerei, IT-Dienstleistungen, Elektroinstallation"
+- Also updated scan API: free-text industry now routes to dynamic AI scan (not static carpentry-only)
+
+**Completed:**
+- PR #19 merged (fix/remove-hardcoded-tischlerei)
+- Deployed to VPS (main branch, build clean)
+- Verified via Chrome DevTools: both bugs confirmed fixed on smart-lex.de
+- Updated meta description to be industry-agnostic
+
+**What comes next (from Raphael):**
+- Consultant backend/dashboard (start first since Stripe not ready)
+- Then paywall (once Stripe account is set up)
+
+---
 
 ### Session 2026-03-21 — Epic 4 Implementation
 
@@ -158,11 +259,13 @@ M4: Expert Improvements — $80 (2 days)
 
 ## Deployment
 
-- **Platform:** Vercel (auto-deploy from `main`)
-- **Region:** `fra1` (Frankfurt)
-- **Live URL:** https://regscope-nine.vercel.app
+- **Platform:** Hetzner VPS (46.225.92.189) — Raphael's server
+- **Domain:** smart-lex.de (SSL via certbot)
+- **Next.js:** PM2 process `complyradar-web` on port 3000 behind nginx
+- **Microservice:** systemd `complyradar-hr` on port 5000 (localhost only)
 - **Repo:** https://github.com/vilin1927/regscope
 - **Branch strategy:** Feature branches + PRs (never commit directly to `main`)
+- **Deploy:** SSH → git pull → npm run build → pm2 restart
 
 ## Tech Stack
 

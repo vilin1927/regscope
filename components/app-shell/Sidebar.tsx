@@ -13,6 +13,8 @@ import {
   FileText,
   X,
   Sparkles,
+  Briefcase,
+  UserPlus,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { NavItem } from "./NavItem";
@@ -112,6 +114,27 @@ export function Sidebar({
           onClick={() => onNavigate("newsletter")}
         />
 
+        {/* Consultant section — visible to all logged-in users */}
+        {!isGuest && (
+          <>
+            <p className="px-3 pt-4 pb-1 text-[10px] font-bold uppercase tracking-widest text-gray-400">
+              {t("consultants")}
+            </p>
+            <NavItem
+              icon={Briefcase}
+              label={t("consultantDashboard")}
+              active={currentScreen === "consultant-dashboard"}
+              onClick={() => onNavigate("consultant-dashboard")}
+            />
+            <NavItem
+              icon={UserPlus}
+              label={t("consultantRegister")}
+              active={currentScreen === "consultant-register"}
+              onClick={() => onNavigate("consultant-register")}
+            />
+          </>
+        )}
+
         {(process.env.NEXT_PUBLIC_ADMIN_EMAIL || "").split(",").map((e) => e.trim().toLowerCase()).includes(userEmail?.toLowerCase() || "") && (
           <>
             <p className="px-3 pt-4 pb-1 text-[10px] font-bold uppercase tracking-widest text-gray-400">
@@ -134,6 +157,12 @@ export function Sidebar({
               label={t("adminTemplates")}
               active={currentScreen === "admin-templates"}
               onClick={() => onNavigate("admin-templates")}
+            />
+            <NavItem
+              icon={Briefcase}
+              label={t("adminConsultants")}
+              active={currentScreen === "admin-consultants"}
+              onClick={() => onNavigate("admin-consultants")}
             />
           </>
         )}

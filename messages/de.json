@@ -17,7 +17,11 @@
     "adminUsers": "Benutzer",
     "adminTemplates": "Vorlagen",
     "system": "SYSTEM",
-    "settings": "Einstellungen"
+    "settings": "Einstellungen",
+    "consultants": "BERATER",
+    "consultantDashboard": "Mein Dashboard",
+    "consultantRegister": "Berater werden",
+    "adminConsultants": "Berater"
   },
   "Dashboard": {
     "welcome": "Willkommen bei ComplyRadar",
@@ -92,7 +96,10 @@
     },
     "complianceChecksSection": "Compliance-Checks",
     "fields": {
-      "companyName": { "label": "Firmenname", "placeholder": "z.B. Müller GmbH" },
+      "companyName": {
+        "label": "Firmenname",
+        "placeholder": "z.B. Müller GmbH"
+      },
       "industry": {
         "label": "Branche",
         "placeholder": "z.B. Bäckerei, IT-Dienstleistungen, Elektroinstallation"
@@ -109,8 +116,13 @@
           "sonstige": "Sonstige"
         }
       },
-      "noCompanyYet": { "label": "Unternehmen noch nicht gegründet" },
-      "establishmentDate": { "label": "Gründungsdatum", "placeholder": "TT.MM.JJJJ" },
+      "noCompanyYet": {
+        "label": "Unternehmen noch nicht gegründet"
+      },
+      "establishmentDate": {
+        "label": "Gründungsdatum",
+        "placeholder": "TT.MM.JJJJ"
+      },
       "bundesland": {
         "label": "Bundesland",
         "options": {
@@ -132,9 +144,16 @@
           "thueringen": "Thüringen"
         }
       },
-      "businessLocation": { "label": "Betriebsstandort(e)", "placeholder": "Adresse oder Anzahl der Standorte" },
-      "handelsregister": { "label": "Eintragung im Handelsregister vorhanden?" },
-      "handwerksrolle": { "label": "Eintragung in die Handwerksrolle vorhanden?" },
+      "businessLocation": {
+        "label": "Betriebsstandort(e)",
+        "placeholder": "Adresse oder Anzahl der Standorte"
+      },
+      "handelsregister": {
+        "label": "Eintragung im Handelsregister vorhanden?"
+      },
+      "handwerksrolle": {
+        "label": "Eintragung in die Handwerksrolle vorhanden?"
+      },
       "employeeCount": {
         "label": "Anzahl der Mitarbeiter",
         "options": {
@@ -155,11 +174,21 @@
           "leiharbeiter": "Leiharbeiter"
         }
       },
-      "writtenContracts": { "label": "Schriftliche Arbeitsverträge vorhanden?" },
-      "riskAssessment": { "label": "Gefährdungsbeurteilung durchgeführt?" },
-      "ppeProvided": { "label": "Persönliche Schutzausrüstung bereitgestellt?" },
-      "safetyInstructions": { "label": "Sicherheitsunterweisungen dokumentiert?" },
-      "firstAidPersonnel": { "label": "Ersthelfer im Betrieb vorhanden?" },
+      "writtenContracts": {
+        "label": "Schriftliche Arbeitsverträge vorhanden?"
+      },
+      "riskAssessment": {
+        "label": "Gefährdungsbeurteilung durchgeführt?"
+      },
+      "ppeProvided": {
+        "label": "Persönliche Schutzausrüstung bereitgestellt?"
+      },
+      "safetyInstructions": {
+        "label": "Sicherheitsunterweisungen dokumentiert?"
+      },
+      "firstAidPersonnel": {
+        "label": "Ersthelfer im Betrieb vorhanden?"
+      },
       "certifications": {
         "label": "Vorhandene Qualifikationen",
         "options": {
@@ -169,12 +198,21 @@
           "erste-hilfe-schein": "Erste-Hilfe-Schein"
         }
       },
-      "safetyOfficer": { "label": "Sicherheitsbeauftragter bestellt?" },
-      "occupationalPhysician": { "label": "Betriebsarzt vorhanden?" },
-      "workshopPresent": { "label": "Werkstatt vorhanden?" },
+      "safetyOfficer": {
+        "label": "Sicherheitsbeauftragter bestellt?"
+      },
+      "occupationalPhysician": {
+        "label": "Betriebsarzt vorhanden?"
+      },
+      "workshopPresent": {
+        "label": "Werkstatt vorhanden?"
+      },
       "premisesType": {
         "label": "Eigentum oder Miete",
-        "options": { "eigentum": "Eigentum", "miete": "Miete" }
+        "options": {
+          "eigentum": "Eigentum",
+          "miete": "Miete"
+        }
       },
       "machines": {
         "label": "Eingesetzte Maschinen",
@@ -186,11 +224,21 @@
           "absauganlage": "Absauganlage"
         }
       },
-      "dustExtraction": { "label": "Absauganlage für Holzstaub installiert?" },
-      "emergencyExits": { "label": "Notausgänge gekennzeichnet?" },
-      "fireExtinguishers": { "label": "Feuerlöscher vorhanden und geprüft?" },
-      "escapeRoutePlan": { "label": "Flucht- und Rettungsplan vorhanden?" },
-      "hazardousStorage": { "label": "Lagerung von Lacken oder Lösungsmitteln?" },
+      "dustExtraction": {
+        "label": "Absauganlage für Holzstaub installiert?"
+      },
+      "emergencyExits": {
+        "label": "Notausgänge gekennzeichnet?"
+      },
+      "fireExtinguishers": {
+        "label": "Feuerlöscher vorhanden und geprüft?"
+      },
+      "escapeRoutePlan": {
+        "label": "Flucht- und Rettungsplan vorhanden?"
+      },
+      "hazardousStorage": {
+        "label": "Lagerung von Lacken oder Lösungsmitteln?"
+      },
       "productTypes": {
         "label": "Art der Produkte",
         "options": {
@@ -210,17 +258,37 @@
           "beide": "Beide"
         }
       },
-      "customMade": { "label": "Einzelanfertigung / Maßarbeit?" },
-      "seriesProduction": { "label": "Serienfertigung?" },
-      "onlineSales": { "label": "Online-Verkauf?" },
-      "website": { "label": "Eigene Website oder Online-Shop vorhanden?" },
-      "exportsOutsideGermany": { "label": "Export außerhalb Deutschlands?" },
-      "agbAvailable": { "label": "Allgemeine Geschäftsbedingungen (AGB) vorhanden?" },
-      "widerrufsbelehrung": { "label": "Widerrufsbelehrung vorhanden?" },
-      "datenschutzerklaerung": { "label": "Datenschutzerklärung vorhanden?" },
+      "customMade": {
+        "label": "Einzelanfertigung / Maßarbeit?"
+      },
+      "seriesProduction": {
+        "label": "Serienfertigung?"
+      },
+      "onlineSales": {
+        "label": "Online-Verkauf?"
+      },
+      "website": {
+        "label": "Eigene Website oder Online-Shop vorhanden?"
+      },
+      "exportsOutsideGermany": {
+        "label": "Export außerhalb Deutschlands?"
+      },
+      "agbAvailable": {
+        "label": "Allgemeine Geschäftsbedingungen (AGB) vorhanden?"
+      },
+      "widerrufsbelehrung": {
+        "label": "Widerrufsbelehrung vorhanden?"
+      },
+      "datenschutzerklaerung": {
+        "label": "Datenschutzerklärung vorhanden?"
+      },
       "materialSources": {
         "label": "Herkunft der Materialien",
-        "options": { "deutschland": "Deutschland", "eu": "EU", "nicht-eu": "Nicht-EU" }
+        "options": {
+          "deutschland": "Deutschland",
+          "eu": "EU",
+          "nicht-eu": "Nicht-EU"
+        }
       },
       "supplierCertificates": {
         "label": "Lieferantenzertifikate",
@@ -230,20 +298,48 @@
           "reach-konform": "REACH-konform"
         }
       },
-      "usesSubcontractors": { "label": "Einsatz von Subunternehmern?" },
-      "protectedWoodTypes": { "label": "Verwendung geschützter Holzarten?" },
-      "eoriNumber": { "label": "EORI-Nummer vorhanden?" },
-      "freightForwarder": { "label": "Import über Spediteur abgewickelt?" },
-      "woodDustResidues": { "label": "Fallen Holzstaub oder Lackrückstände an?" },
-      "certifiedDisposal": { "label": "Entsorgung über zertifizierten Entsorgungsfachbetrieb?" },
-      "paintingActivities": { "label": "Regelmäßige Lackier- oder Beschichtungsarbeiten?" },
-      "vocEmissions": { "label": "VOC-Emissionen (flüchtige organische Verbindungen)?" },
-      "environmentalPermits": { "label": "BImSchG-Genehmigung vorhanden?" },
-      "publicLiability": { "label": "Betriebshaftpflichtversicherung vorhanden?" },
-      "machineryInsurance": { "label": "Maschinenversicherung vorhanden?" },
-      "disabilityInsurance": { "label": "Berufsunfähigkeitsversicherung vorhanden?" },
-      "productLiabilityInsurance": { "label": "Produkthaftpflichtversicherung vorhanden?" },
-      "bgBauMembership": { "label": "Mitgliedschaft bei der BG BAU?" }
+      "usesSubcontractors": {
+        "label": "Einsatz von Subunternehmern?"
+      },
+      "protectedWoodTypes": {
+        "label": "Verwendung geschützter Holzarten?"
+      },
+      "eoriNumber": {
+        "label": "EORI-Nummer vorhanden?"
+      },
+      "freightForwarder": {
+        "label": "Import über Spediteur abgewickelt?"
+      },
+      "woodDustResidues": {
+        "label": "Fallen Holzstaub oder Lackrückstände an?"
+      },
+      "certifiedDisposal": {
+        "label": "Entsorgung über zertifizierten Entsorgungsfachbetrieb?"
+      },
+      "paintingActivities": {
+        "label": "Regelmäßige Lackier- oder Beschichtungsarbeiten?"
+      },
+      "vocEmissions": {
+        "label": "VOC-Emissionen (flüchtige organische Verbindungen)?"
+      },
+      "environmentalPermits": {
+        "label": "BImSchG-Genehmigung vorhanden?"
+      },
+      "publicLiability": {
+        "label": "Betriebshaftpflichtversicherung vorhanden?"
+      },
+      "machineryInsurance": {
+        "label": "Maschinenversicherung vorhanden?"
+      },
+      "disabilityInsurance": {
+        "label": "Berufsunfähigkeitsversicherung vorhanden?"
+      },
+      "productLiabilityInsurance": {
+        "label": "Produkthaftpflichtversicherung vorhanden?"
+      },
+      "bgBauMembership": {
+        "label": "Mitgliedschaft bei der BG BAU?"
+      }
     }
   },
   "Processing": {
@@ -337,7 +433,11 @@
     "passwordTooShort": "Passwort muss mindestens {min} Zeichen lang sein",
     "passwordNeedsUppercase": "Passwort muss mindestens einen Großbuchstaben enthalten",
     "passwordNeedsNumber": "Passwort muss mindestens eine Zahl enthalten",
-    "emailPlaceholder": "name@beispiel.de"
+    "emailPlaceholder": "name@beispiel.de",
+    "referralCode": "Empfehlungscode (optional)",
+    "referralPlaceholder": "Code hier eingeben",
+    "referralValid": "Empfohlen von",
+    "referralInvalid": "Ungültiger Code"
   },
   "Settings": {
     "title": "Einstellungen",
@@ -495,10 +595,24 @@
     "grantTrial": "Testphase starten",
     "revokeTrial": "Testphase entziehen",
     "restartTrial": "Testphase neu starten",
-    "templates": "Branchen-Vorlagen"
+    "templates": "Branchen-Vorlagen",
+    "consultantsTitle": "Berater-Verwaltung",
+    "consultantsCount": "Berater",
+    "noConsultants": "Noch keine Berater registriert",
+    "active": "Aktiv",
+    "inactive": "Inaktiv",
+    "referrals": "Empfehlungen",
+    "requests": "Anfragen",
+    "pending": "offen",
+    "expertiseTags": "Fachgebiete",
+    "referralCode": "Empfehlungscode",
+    "commissionRate": "Provision",
+    "activate": "Aktivieren",
+    "deactivate": "Deaktivieren",
+    "registeredOn": "Registriert am"
   },
   "Expert": {
-    "consultExpert": "Experte kontaktieren",
+    "consultExpert": "Professionelle Hilfe",
     "modalTitle": "Expertenberatung anfordern",
     "name": "Name",
     "namePlaceholder": "Ihr vollständiger Name",
@@ -512,7 +626,10 @@
     "successMessage": "Ein Experte wird sich innerhalb von 24 Stunden bei Ihnen melden.",
     "close": "Schließen",
     "more": "Mehr",
-    "less": "Weniger"
+    "less": "Weniger",
+    "shareContact": "Kontaktdaten teilen",
+    "shareContactDesc": "Der Berater kann Sie direkt kontaktieren",
+    "phone": "Telefon"
   },
   "Experts": {
     "yourExpert": "Ihr Experte",
@@ -605,5 +722,45 @@
     "noResults": "Keine Ergebnisse gefunden. Versuchen Sie einen anderen Suchbegriff.",
     "confirm": "Weiter",
     "skip": "Ohne Suche fortfahren"
+  },
+  "Consultant": {
+    "registerTitle": "Als Berater registrieren",
+    "registerSubtitle": "Erstellen Sie Ihr Beraterprofil und erhalten Sie Ihren Empfehlungscode",
+    "name": "Vollständiger Name",
+    "namePlaceholder": "z.B. Dr. Klaus Weber",
+    "nameRequired": "Name ist erforderlich",
+    "email": "E-Mail-Adresse",
+    "emailPlaceholder": "berater@kanzlei.de",
+    "emailRequired": "E-Mail ist erforderlich",
+    "phone": "Telefonnummer (optional)",
+    "phonePlaceholder": "+49 123 456789",
+    "bio": "Kurzprofil (optional)",
+    "bioPlaceholder": "Kurze Beschreibung Ihrer Expertise und Erfahrung...",
+    "expertise": "Fachgebiete",
+    "tagsRequired": "Mindestens ein Fachgebiet ist erforderlich",
+    "register": "Registrieren",
+    "registering": "Wird registriert...",
+    "registrationFailed": "Registrierung fehlgeschlagen",
+    "dashboardTitle": "Berater-Dashboard",
+    "referralCode": "Empfehlungscode",
+    "copyCode": "Code kopieren",
+    "totalReferrals": "Empfehlungen gesamt",
+    "activeReferrals": "Aktive Empfehlungen",
+    "pendingRequests": "Offene Anfragen",
+    "totalRequests": "Anfragen gesamt",
+    "helpRequests": "Hilfe-Anfragen",
+    "new": "neu",
+    "noHelpRequests": "Noch keine Hilfe-Anfragen",
+    "referralsList": "Empfehlungen",
+    "noReferrals": "Noch keine Empfehlungen",
+    "customer": "Kunde",
+    "loadError": "Fehler beim Laden der Daten",
+    "status_pending": "Offen",
+    "status_active": "Aktiv",
+    "status_contacted": "Kontaktiert",
+    "status_resolved": "Erledigt",
+    "status_converted": "Konvertiert",
+    "status_expired": "Abgelaufen",
+    "status_cancelled": "Storniert"
   }
 }

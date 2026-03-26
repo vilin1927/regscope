@@ -17,7 +17,11 @@
     "adminUsers": "Users",
     "adminTemplates": "Templates",
     "system": "SYSTEM",
-    "settings": "Settings"
+    "settings": "Settings",
+    "consultants": "CONSULTANTS",
+    "consultantDashboard": "My Dashboard",
+    "consultantRegister": "Become Consultant",
+    "adminConsultants": "Consultants"
   },
   "Dashboard": {
     "welcome": "Welcome to ComplyRadar",
@@ -92,7 +96,10 @@
     },
     "complianceChecksSection": "Compliance Checks",
     "fields": {
-      "companyName": { "label": "Company Name", "placeholder": "e.g. Müller GmbH" },
+      "companyName": {
+        "label": "Company Name",
+        "placeholder": "e.g. Müller GmbH"
+      },
       "industry": {
         "label": "Industry",
         "placeholder": "e.g. Bakery, IT Services, Electrical Installation"
@@ -109,8 +116,13 @@
           "sonstige": "Other"
         }
       },
-      "noCompanyYet": { "label": "Company not yet established" },
-      "establishmentDate": { "label": "Date of Establishment", "placeholder": "DD.MM.YYYY" },
+      "noCompanyYet": {
+        "label": "Company not yet established"
+      },
+      "establishmentDate": {
+        "label": "Date of Establishment",
+        "placeholder": "DD.MM.YYYY"
+      },
       "bundesland": {
         "label": "Federal State",
         "options": {
@@ -132,9 +144,16 @@
           "thueringen": "Thuringia"
         }
       },
-      "businessLocation": { "label": "Business Location(s)", "placeholder": "Address or number of locations" },
-      "handelsregister": { "label": "Registered in the Commercial Register?" },
-      "handwerksrolle": { "label": "Registered in the Crafts Register?" },
+      "businessLocation": {
+        "label": "Business Location(s)",
+        "placeholder": "Address or number of locations"
+      },
+      "handelsregister": {
+        "label": "Registered in the Commercial Register?"
+      },
+      "handwerksrolle": {
+        "label": "Registered in the Crafts Register?"
+      },
       "employeeCount": {
         "label": "Number of Employees",
         "options": {
@@ -155,11 +174,21 @@
           "leiharbeiter": "Temporary workers"
         }
       },
-      "writtenContracts": { "label": "Written employment contracts available?" },
-      "riskAssessment": { "label": "Risk assessment carried out?" },
-      "ppeProvided": { "label": "Personal protective equipment provided?" },
-      "safetyInstructions": { "label": "Safety instructions documented?" },
-      "firstAidPersonnel": { "label": "First aiders available on site?" },
+      "writtenContracts": {
+        "label": "Written employment contracts available?"
+      },
+      "riskAssessment": {
+        "label": "Risk assessment carried out?"
+      },
+      "ppeProvided": {
+        "label": "Personal protective equipment provided?"
+      },
+      "safetyInstructions": {
+        "label": "Safety instructions documented?"
+      },
+      "firstAidPersonnel": {
+        "label": "First aiders available on site?"
+      },
       "certifications": {
         "label": "Existing Qualifications",
         "options": {
@@ -169,12 +198,21 @@
           "erste-hilfe-schein": "First Aid Certificate"
         }
       },
-      "safetyOfficer": { "label": "Safety officer appointed?" },
-      "occupationalPhysician": { "label": "Occupational physician available?" },
-      "workshopPresent": { "label": "Workshop available?" },
+      "safetyOfficer": {
+        "label": "Safety officer appointed?"
+      },
+      "occupationalPhysician": {
+        "label": "Occupational physician available?"
+      },
+      "workshopPresent": {
+        "label": "Workshop available?"
+      },
       "premisesType": {
         "label": "Ownership or Rental",
-        "options": { "eigentum": "Owned", "miete": "Rented" }
+        "options": {
+          "eigentum": "Owned",
+          "miete": "Rented"
+        }
       },
       "machines": {
         "label": "Machines in Use",
@@ -186,11 +224,21 @@
           "absauganlage": "Dust Extraction System"
         }
       },
-      "dustExtraction": { "label": "Dust extraction system for wood dust installed?" },
-      "emergencyExits": { "label": "Emergency exits marked?" },
-      "fireExtinguishers": { "label": "Fire extinguishers available and inspected?" },
-      "escapeRoutePlan": { "label": "Escape and rescue plan available?" },
-      "hazardousStorage": { "label": "Storage of paints or solvents?" },
+      "dustExtraction": {
+        "label": "Dust extraction system for wood dust installed?"
+      },
+      "emergencyExits": {
+        "label": "Emergency exits marked?"
+      },
+      "fireExtinguishers": {
+        "label": "Fire extinguishers available and inspected?"
+      },
+      "escapeRoutePlan": {
+        "label": "Escape and rescue plan available?"
+      },
+      "hazardousStorage": {
+        "label": "Storage of paints or solvents?"
+      },
       "productTypes": {
         "label": "Type of Products",
         "options": {
@@ -210,17 +258,37 @@
           "beide": "Both"
         }
       },
-      "customMade": { "label": "Custom-made / bespoke work?" },
-      "seriesProduction": { "label": "Series production?" },
-      "onlineSales": { "label": "Online sales?" },
-      "website": { "label": "Own website or online shop?" },
-      "exportsOutsideGermany": { "label": "Exports outside Germany?" },
-      "agbAvailable": { "label": "General Terms and Conditions (GTC) available?" },
-      "widerrufsbelehrung": { "label": "Cancellation policy available?" },
-      "datenschutzerklaerung": { "label": "Privacy policy available?" },
+      "customMade": {
+        "label": "Custom-made / bespoke work?"
+      },
+      "seriesProduction": {
+        "label": "Series production?"
+      },
+      "onlineSales": {
+        "label": "Online sales?"
+      },
+      "website": {
+        "label": "Own website or online shop?"
+      },
+      "exportsOutsideGermany": {
+        "label": "Exports outside Germany?"
+      },
+      "agbAvailable": {
+        "label": "General Terms and Conditions (GTC) available?"
+      },
+      "widerrufsbelehrung": {
+        "label": "Cancellation policy available?"
+      },
+      "datenschutzerklaerung": {
+        "label": "Privacy policy available?"
+      },
       "materialSources": {
         "label": "Origin of Materials",
-        "options": { "deutschland": "Germany", "eu": "EU", "nicht-eu": "Non-EU" }
+        "options": {
+          "deutschland": "Germany",
+          "eu": "EU",
+          "nicht-eu": "Non-EU"
+        }
       },
       "supplierCertificates": {
         "label": "Supplier Certificates",
@@ -230,20 +298,48 @@
           "reach-konform": "REACH Compliant"
         }
       },
-      "usesSubcontractors": { "label": "Use of subcontractors?" },
-      "protectedWoodTypes": { "label": "Use of protected wood species?" },
-      "eoriNumber": { "label": "EORI number available?" },
-      "freightForwarder": { "label": "Import handled via freight forwarder?" },
-      "woodDustResidues": { "label": "Wood dust or paint residues produced?" },
-      "certifiedDisposal": { "label": "Disposal via certified waste management company?" },
-      "paintingActivities": { "label": "Regular painting or coating work?" },
-      "vocEmissions": { "label": "VOC emissions (volatile organic compounds)?" },
-      "environmentalPermits": { "label": "BImSchG permit available?" },
-      "publicLiability": { "label": "Public liability insurance?" },
-      "machineryInsurance": { "label": "Machinery insurance?" },
-      "disabilityInsurance": { "label": "Disability insurance?" },
-      "productLiabilityInsurance": { "label": "Product liability insurance?" },
-      "bgBauMembership": { "label": "BG BAU membership?" }
+      "usesSubcontractors": {
+        "label": "Use of subcontractors?"
+      },
+      "protectedWoodTypes": {
+        "label": "Use of protected wood species?"
+      },
+      "eoriNumber": {
+        "label": "EORI number available?"
+      },
+      "freightForwarder": {
+        "label": "Import handled via freight forwarder?"
+      },
+      "woodDustResidues": {
+        "label": "Wood dust or paint residues produced?"
+      },
+      "certifiedDisposal": {
+        "label": "Disposal via certified waste management company?"
+      },
+      "paintingActivities": {
+        "label": "Regular painting or coating work?"
+      },
+      "vocEmissions": {
+        "label": "VOC emissions (volatile organic compounds)?"
+      },
+      "environmentalPermits": {
+        "label": "BImSchG permit available?"
+      },
+      "publicLiability": {
+        "label": "Public liability insurance?"
+      },
+      "machineryInsurance": {
+        "label": "Machinery insurance?"
+      },
+      "disabilityInsurance": {
+        "label": "Disability insurance?"
+      },
+      "productLiabilityInsurance": {
+        "label": "Product liability insurance?"
+      },
+      "bgBauMembership": {
+        "label": "BG BAU membership?"
+      }
     }
   },
   "Processing": {
@@ -337,7 +433,11 @@
     "passwordTooShort": "Password must be at least {min} characters",
     "passwordNeedsUppercase": "Password must contain at least one uppercase letter",
     "passwordNeedsNumber": "Password must contain at least one number",
-    "emailPlaceholder": "name@example.com"
+    "emailPlaceholder": "name@example.com",
+    "referralCode": "Referral Code (optional)",
+    "referralPlaceholder": "Enter code here",
+    "referralValid": "Referred by",
+    "referralInvalid": "Invalid code"
   },
   "Settings": {
     "title": "Settings",
@@ -495,10 +595,24 @@
     "grantTrial": "Grant trial",
     "revokeTrial": "Revoke trial",
     "restartTrial": "Restart trial",
-    "templates": "Industry Templates"
+    "templates": "Industry Templates",
+    "consultantsTitle": "Consultant Management",
+    "consultantsCount": "consultants",
+    "noConsultants": "No consultants registered yet",
+    "active": "Active",
+    "inactive": "Inactive",
+    "referrals": "referrals",
+    "requests": "requests",
+    "pending": "pending",
+    "expertiseTags": "Expertise",
+    "referralCode": "Referral Code",
+    "commissionRate": "Commission",
+    "activate": "Activate",
+    "deactivate": "Deactivate",
+    "registeredOn": "Registered on"
   },
   "Expert": {
-    "consultExpert": "Consult Expert",
+    "consultExpert": "Get Professional Help",
     "modalTitle": "Request Expert Consultation",
     "name": "Name",
     "namePlaceholder": "Your full name",
@@ -512,7 +626,10 @@
     "successMessage": "An expert will contact you within 24 hours.",
     "close": "Close",
     "more": "More",
-    "less": "Less"
+    "less": "Less",
+    "shareContact": "Share contact details",
+    "shareContactDesc": "The consultant can contact you directly",
+    "phone": "Phone"
   },
   "Experts": {
     "yourExpert": "Your Expert",
@@ -605,5 +722,45 @@
     "noResults": "No results found. Try a different search term.",
     "confirm": "Continue",
     "skip": "Continue without search"
+  },
+  "Consultant": {
+    "registerTitle": "Register as Consultant",
+    "registerSubtitle": "Create your consultant profile and get your referral code",
+    "name": "Full Name",
+    "namePlaceholder": "e.g. Dr. Klaus Weber",
+    "nameRequired": "Name is required",
+    "email": "Email Address",
+    "emailPlaceholder": "consultant@firm.com",
+    "emailRequired": "Email is required",
+    "phone": "Phone Number (optional)",
+    "phonePlaceholder": "+49 123 456789",
+    "bio": "Short Bio (optional)",
+    "bioPlaceholder": "Brief description of your expertise and experience...",
+    "expertise": "Areas of Expertise",
+    "tagsRequired": "At least one area of expertise is required",
+    "register": "Register",
+    "registering": "Registering...",
+    "registrationFailed": "Registration failed",
+    "dashboardTitle": "Consultant Dashboard",
+    "referralCode": "Referral Code",
+    "copyCode": "Copy code",
+    "totalReferrals": "Total Referrals",
+    "activeReferrals": "Active Referrals",
+    "pendingRequests": "Pending Requests",
+    "totalRequests": "Total Requests",
+    "helpRequests": "Help Requests",
+    "new": "new",
+    "noHelpRequests": "No help requests yet",
+    "referralsList": "Referrals",
+    "noReferrals": "No referrals yet",
+    "customer": "Customer",
+    "loadError": "Error loading data",
+    "status_pending": "Pending",
+    "status_active": "Active",
+    "status_contacted": "Contacted",
+    "status_resolved": "Resolved",
+    "status_converted": "Converted",
+    "status_expired": "Expired",
+    "status_cancelled": "Cancelled"
   }
 }

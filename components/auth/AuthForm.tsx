@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useTranslations } from "next-intl";
+import { Check, X as XIcon } from "lucide-react";
 
 interface AuthFormProps {
   mode: "signin" | "signup";
@@ -14,6 +15,12 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 export function AuthForm({ mode, onSubmit, error }: AuthFormProps) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [referralCode, setReferralCode] = useState("");
+  const [referralStatus, setReferralStatus] = useState<{
+    valid: boolean;
+    consultantName?: string;
+    checking: boolean;
+  }>({ valid: false, checking: false });
   const [loading, setLoading] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<{
     email?: string;
@@ -25,6 +32,29 @@ export function AuthForm({ mode, onSubmit, error }: AuthFormProps) {
   useEffect(() => {
     setFieldErrors({});
   }, [mode]);
+
+  // Validate referral code with debounce
+  useEffect(() => {
+    if (mode !== "signup" || !referralCode.trim()) {
+      setReferralStatus({ valid: false, checking: false });
+      return;
+    }
+    const timer = setTimeout(async () => {
+      setReferralStatus((prev) => ({ ...prev, checking: true }));
+      try {
+        const res = await fetch(`/api/referral/validate?code=${encodeURIComponent(referralCode.trim())}`);
+        const data = await res.json();
+        setReferralStatus({
+          valid: data.valid,
+          consultantName: data.consultantName,
+          checking: false,
+        });
+      } catch {
+        setReferralStatus({ valid: false, checking: false });
+      }
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [referralCode, mode]);
 
   const validate = (): boolean => {
     const errors: { email?: string; password?: string } = {};
@@ -55,6 +85,10 @@ export function AuthForm({ mode, onSubmit, error }: AuthFormProps) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validate()) return;
+    // Store referral code before signup so useAuth can record it after
+    if (mode === "signup" && referralCode.trim() && referralStatus.valid) {
+      sessionStorage.setItem("complyradar_referral_code", referralCode.trim().toUpperCase());
+    }
     setLoading(true);
     try {
       await onSubmit(email, password);
@@ -119,6 +153,49 @@ export function AuthForm({ mode, onSubmit, error }: AuthFormProps) {
           <p className="text-sm text-red-600 mt-1">{fieldErrors.password}</p>
         )}
       </div>
+
+      {/* Referral code — signup only */}
+      {mode === "signup" && (
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            {t("referralCode")}
+          </label>
+          <div className="relative">
+            <input
+              type="text"
+              value={referralCode}
+              onChange={(e) => setReferralCode(e.target.value.toUpperCase())}
+              className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none pr-10 ${
+                referralCode.trim()
+                  ? referralStatus.valid
+                    ? "border-green-400 bg-green-50"
+                    : referralStatus.checking
+                      ? "border-gray-300"
+                      : "border-red-300 bg-red-50"
+                  : "border-gray-300"
+              }`}
+              placeholder={t("referralPlaceholder")}
+              maxLength={12}
+            />
+            {referralCode.trim() && !referralStatus.checking && (
+              <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                {referralStatus.valid ? (
+                  <Check className="w-5 h-5 text-green-600" />
+                ) : (
+                  <XIcon className="w-5 h-5 text-red-400" />
+                )}
+              </div>
+            )}
+          </div>
+          {referralCode.trim() && !referralStatus.checking && (
+            <p className={`text-xs mt-1 ${referralStatus.valid ? "text-green-600" : "text-red-500"}`}>
+              {referralStatus.valid
+                ? `${t("referralValid")}: ${referralStatus.consultantName}`
+                : t("referralInvalid")}
+            </p>
+          )}
+        </div>
+      )}
 
       {error && (
         <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
