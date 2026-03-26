@@ -14,7 +14,9 @@ import {
   Mail,
   Phone,
   Tag,
+  QrCode,
 } from "lucide-react";
+import { QRCodeSVG } from "qrcode.react";
 import { EXPERTISE_TAG_LABELS } from "@/lib/consultant-types";
 import type { Consultant, Referral, HelpRequest } from "@/lib/consultant-types";
 
@@ -36,6 +38,7 @@ export function ConsultantDashboardScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [showQR, setShowQR] = useState(false);
 
   const fetchDashboard = useCallback(async () => {
     try {
@@ -111,8 +114,29 @@ export function ConsultantDashboardScreen() {
                 <Copy className="w-4 h-4 text-blue-600" />
               )}
             </button>
+            <button
+              onClick={() => setShowQR(!showQR)}
+              className="p-1.5 hover:bg-blue-100 rounded-lg transition-colors"
+              title={t("showQR")}
+            >
+              <QrCode className="w-4 h-4 text-blue-600" />
+            </button>
           </div>
         </div>
+
+        {/* QR Code */}
+        {showQR && data?.consultant.referral_code && (
+          <div className="flex justify-center sm:justify-end mt-4">
+            <div className="bg-white p-4 rounded-xl border border-gray-200 inline-flex flex-col items-center gap-2">
+              <QRCodeSVG
+                value={data.consultant.referral_code}
+                size={160}
+                level="M"
+              />
+              <p className="text-xs text-gray-500 font-medium">{data.consultant.referral_code}</p>
+            </div>
+          </div>
+        )}
 
         {/* Tags */}
         <div className="flex flex-wrap gap-1.5 mt-4">

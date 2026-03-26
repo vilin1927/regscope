@@ -761,6 +761,7 @@
     "status_resolved": "Erledigt",
     "status_converted": "Konvertiert",
     "status_expired": "Abgelaufen",
-    "status_cancelled": "Storniert"
+    "status_cancelled": "Storniert",
+    "showQR": "QR-Code anzeigen"
   }
 }

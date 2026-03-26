@@ -14,6 +14,7 @@ interface RegulationListProps {
   complianceChecks: Record<string, boolean>;
   onComplianceChange: (regulationId: string, checked: boolean) => void;
   onExpertContact?: (categoryKey: RegulationCategory) => void;
+  activeTags?: string[];
   isPro?: boolean;
   onUnlock?: () => void;
 }
@@ -33,6 +34,7 @@ export function RegulationList({
   complianceChecks,
   onComplianceChange,
   onExpertContact,
+  activeTags = [],
   isPro = true,
   onUnlock,
 }: RegulationListProps) {
@@ -100,8 +102,8 @@ export function RegulationList({
                     ({group.items.length})
                   </span>
                 </div>
-                {/* Expert contact chip — inline with category header */}
-                {onExpertContact && (
+                {/* Expert contact chip — only show if active consultant exists for this category */}
+                {onExpertContact && activeTags.includes(group.category) && (
                   <button
                     onClick={() => onExpertContact(group.category)}
                     className="inline-flex items-center gap-2.5 pl-1.5 pr-3.5 py-1.5 bg-white border border-gray-200 rounded-full text-sm hover:border-blue-300 hover:shadow-sm transition-all"
