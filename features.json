@@ -435,7 +435,7 @@
     {
       "id": "F-102-FIX",
       "title": "Two-Tier Commission Model",
-      "status": "pending",
+      "status": "done",
       "phase": "Phase 2 - M3 - Post-review fix",
       "description": "Split single commission_rate into two fields per Raphael's confirmation: 30% on first payment (€190), 10% lifetime on recurring (€30/month). Display both rates in consultant dashboard and admin panel.",
       "files": [
@@ -458,7 +458,7 @@
     {
       "id": "F-102-FIX2",
       "title": "QR Code → Signup URL with Pre-filled Referral",
-      "status": "pending",
+      "status": "done",
       "phase": "Phase 2 - M3 - Post-review fix",
       "description": "QR code currently encodes plain text (e.g. '4GXVBMDB'). Should encode a signup URL with ?ref= parameter (e.g. 'https://smart-lex.de/de?ref=4GXVBMDB'). Scanning opens browser → signup page → referral code auto-filled.",
       "files": [
