@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { ScanSearch } from "lucide-react";
 import { screenVariants, screenTransition } from "@/lib/motion";
@@ -15,7 +15,11 @@ interface AuthScreenProps {
 }
 
 export function AuthScreen({ onAuth, onGuest, onLegal, error }: AuthScreenProps) {
-  const [mode, setMode] = useState<"signin" | "signup">("signin");
+  // Check for ?ref= param → auto-switch to signup
+  const refFromUrl = typeof window !== "undefined"
+    ? new URLSearchParams(window.location.search).get("ref") || ""
+    : "";
+  const [mode, setMode] = useState<"signin" | "signup">(refFromUrl ? "signup" : "signin");
   const t = useTranslations("Auth");
   const tLegal = useTranslations("Legal");
 
@@ -66,6 +70,7 @@ export function AuthScreen({ onAuth, onGuest, onLegal, error }: AuthScreenProps)
             mode={mode}
             onSubmit={(email, password) => onAuth(email, password, mode)}
             error={error}
+            initialReferralCode={refFromUrl}
           />
 
           <div className="mt-6 pt-6 border-t border-gray-200">

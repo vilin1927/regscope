@@ -129,7 +129,7 @@ export function ConsultantDashboardScreen() {
           <div className="flex justify-center sm:justify-end mt-4">
             <div className="bg-white p-4 rounded-xl border border-gray-200 inline-flex flex-col items-center gap-2">
               <QRCodeSVG
-                value={data.consultant.referral_code}
+                value={`${typeof window !== "undefined" ? window.location.origin : "https://smart-lex.de"}/de?ref=${data.consultant.referral_code}`}
                 size={160}
                 level="M"
               />
@@ -137,6 +137,17 @@ export function ConsultantDashboardScreen() {
             </div>
           </div>
         )}
+
+        {/* Commission rates */}
+        <div className="flex flex-wrap items-center gap-3 mt-4">
+          <span className="text-xs text-gray-500 font-medium">{t("commission")}:</span>
+          <span className="px-2.5 py-1 bg-green-50 text-green-700 rounded-full text-xs font-medium">
+            {consultant.commission_rate_initial}% {t("commissionInitial")}
+          </span>
+          <span className="px-2.5 py-1 bg-blue-50 text-blue-700 rounded-full text-xs font-medium">
+            {consultant.commission_rate_recurring}% {t("commissionRecurring")}
+          </span>
+        </div>
 
         {/* Tags */}
         <div className="flex flex-wrap gap-1.5 mt-4">

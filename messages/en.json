@@ -609,7 +609,9 @@
     "commissionRate": "Commission",
     "activate": "Activate",
     "deactivate": "Deactivate",
-    "registeredOn": "Registered on"
+    "registeredOn": "Registered on",
+    "commissionInitial": "Initial Commission",
+    "commissionRecurring": "Recurring Commission"
   },
   "Expert": {
     "consultExpert": "Get Professional Help",
@@ -762,6 +764,9 @@
     "status_converted": "Converted",
     "status_expired": "Expired",
     "status_cancelled": "Cancelled",
-    "showQR": "Show QR Code"
+    "showQR": "Show QR Code",
+    "commission": "Commission",
+    "commissionInitial": "First Payment",
+    "commissionRecurring": "Recurring"
   }
 }

@@ -39,7 +39,8 @@ export interface Consultant {
   bio?: string;
   tags: string[];
   referral_code: string;
-  commission_rate: number;
+  commission_rate_initial: number;
+  commission_rate_recurring: number;
   is_active: boolean;
   created_at: string;
   updated_at: string;

@@ -609,7 +609,9 @@
     "commissionRate": "Provision",
     "activate": "Aktivieren",
     "deactivate": "Deaktivieren",
-    "registeredOn": "Registriert am"
+    "registeredOn": "Registriert am",
+    "commissionInitial": "Provision Erst",
+    "commissionRecurring": "Provision laufend"
   },
   "Expert": {
     "consultExpert": "Professionelle Hilfe",
@@ -762,6 +764,9 @@
     "status_converted": "Konvertiert",
     "status_expired": "Abgelaufen",
     "status_cancelled": "Storniert",
-    "showQR": "QR-Code anzeigen"
+    "showQR": "QR-Code anzeigen",
+    "commission": "Provision",
+    "commissionInitial": "Erstzahlung",
+    "commissionRecurring": "laufend"
   }
 }

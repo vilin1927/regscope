@@ -8,14 +8,15 @@ interface AuthFormProps {
   mode: "signin" | "signup";
   onSubmit: (email: string, password: string) => Promise<void>;
   error?: string;
+  initialReferralCode?: string;
 }
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-export function AuthForm({ mode, onSubmit, error }: AuthFormProps) {
+export function AuthForm({ mode, onSubmit, error, initialReferralCode }: AuthFormProps) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [referralCode, setReferralCode] = useState("");
+  const [referralCode, setReferralCode] = useState(initialReferralCode?.toUpperCase() || "");
   const [referralStatus, setReferralStatus] = useState<{
     valid: boolean;
     consultantName?: string;

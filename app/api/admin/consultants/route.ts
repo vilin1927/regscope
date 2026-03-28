@@ -55,14 +55,15 @@ export async function PATCH(request: Request) {
   if (error) return error;
 
   const body = await request.json();
-  const { consultantId, commission_rate, is_active } = body;
+  const { consultantId, commission_rate_initial, commission_rate_recurring, is_active } = body;
 
   if (!consultantId) {
     return NextResponse.json({ error: "Berater-ID erforderlich" }, { status: 400 });
   }
 
   const updates: Record<string, unknown> = { updated_at: new Date().toISOString() };
-  if (commission_rate !== undefined) updates.commission_rate = commission_rate;
+  if (commission_rate_initial !== undefined) updates.commission_rate_initial = commission_rate_initial;
+  if (commission_rate_recurring !== undefined) updates.commission_rate_recurring = commission_rate_recurring;
   if (is_active !== undefined) updates.is_active = is_active;
 
   const { data, error: updateError } = await adminSupabase!

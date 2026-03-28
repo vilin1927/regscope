@@ -1,7 +1,23 @@
 # ComplyRadar — Progress Log
 
-> **Last updated:** 2026-03-26
-> **Current state:** Phase 2 M3 (Referral System + Consultant Dashboard) — PLANNING. Building M3 first while Raphael sets up Stripe for M2.
+> **Last updated:** 2026-03-28
+> **Current state:** Phase 2 M3 — BUILT + STAGING. Awaiting Vlad's manual test. Two-tier commission (F-102-FIX) pending.
+
+---
+
+### Session 2026-03-28 — Commission Clarification from Raphael
+
+**Raphael confirmed (Upwork, 5:14 PM):**
+- Commission: **30% on first payment** (€190 initial scan + 6mo) = **€57 per customer**
+- Commission: **10% lifetime** on recurring subscription (€30/month) = **€3/month per customer**
+- "We want to get consultants on board ASAP and after that we sell the leads to them as well"
+
+**Action items:**
+- F-102-FIX: Split single `commission_rate` → two fields (initial 30% + recurring 10%) — pending
+- F-101 (M2 Stripe): Updated criteria to include commission tracking + earned amounts display
+- F-104: Updated notes with "sell leads" concept from Raphael
+
+**Staging:** http://46.225.92.189:3001 — live on VPS, awaiting manual testing
 
 ---
 

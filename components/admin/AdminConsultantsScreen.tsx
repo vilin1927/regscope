@@ -13,7 +13,8 @@ interface ConsultantRow {
   phone?: string;
   tags: string[];
   referral_code: string;
-  commission_rate: number;
+  commission_rate_initial: number;
+  commission_rate_recurring: number;
   is_active: boolean;
   referral_count: number;
   help_request_count: number;
@@ -56,15 +57,15 @@ export function AdminConsultantsScreen() {
     }
   };
 
-  const updateCommission = async (consultantId: string, rate: number) => {
+  const updateCommission = async (consultantId: string, field: "commission_rate_initial" | "commission_rate_recurring", rate: number) => {
     const res = await fetch("/api/admin/consultants", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ consultantId, commission_rate: rate }),
+      body: JSON.stringify({ consultantId, [field]: rate }),
     });
     if (res.ok) {
       setConsultants((prev) =>
-        prev.map((c) => (c.id === consultantId ? { ...c, commission_rate: rate } : c))
+        prev.map((c) => (c.id === consultantId ? { ...c, [field]: rate } : c))
       );
     }
   };
@@ -168,21 +169,38 @@ export function AdminConsultantsScreen() {
                     <code className="text-sm font-bold text-blue-700 tracking-wider">{c.referral_code}</code>
                   </div>
 
-                  {/* Commission rate */}
-                  <div className="flex items-center gap-3">
-                    <p className="text-xs font-medium text-gray-500">{t("commissionRate")}</p>
-                    <select
-                      value={c.commission_rate}
-                      onChange={(e) => updateCommission(c.id, parseFloat(e.target.value))}
-                      className="px-2 py-1 border border-gray-300 rounded-lg text-sm"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      {[5, 10, 15, 20, 25, 30].map((v) => (
-                        <option key={v} value={v}>
-                          {v}%
-                        </option>
-                      ))}
-                    </select>
+                  {/* Commission rates */}
+                  <div className="flex flex-wrap items-center gap-4">
+                    <div className="flex items-center gap-2">
+                      <p className="text-xs font-medium text-gray-500">{t("commissionInitial")}</p>
+                      <select
+                        value={c.commission_rate_initial}
+                        onChange={(e) => updateCommission(c.id, "commission_rate_initial", parseFloat(e.target.value))}
+                        className="px-2 py-1 border border-gray-300 rounded-lg text-sm"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        {[10, 15, 20, 25, 30, 35, 40, 50].map((v) => (
+                          <option key={v} value={v}>
+                            {v}%
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <p className="text-xs font-medium text-gray-500">{t("commissionRecurring")}</p>
+                      <select
+                        value={c.commission_rate_recurring}
+                        onChange={(e) => updateCommission(c.id, "commission_rate_recurring", parseFloat(e.target.value))}
+                        className="px-2 py-1 border border-gray-300 rounded-lg text-sm"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        {[5, 10, 15, 20, 25, 30].map((v) => (
+                          <option key={v} value={v}>
+                            {v}%
+                          </option>
+                        ))}
+                      </select>
+                    </div>
                   </div>
 
                   {/* Toggle active */}
