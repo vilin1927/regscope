@@ -458,7 +458,7 @@
     {
       "id": "F-102-FIX3",
       "title": "Legal Compliance Popups (Disclaimer + Contact Consent)",
-      "status": "pending",
+      "status": "done",
       "phase": "Phase 2 - M3 - Legal compliance",
       "description": "Two mandatory popups per Raphael (2026-03-31): (1) Results disclaimer before viewing scan results — checkbox 'I understand and agree', saves acknowledgment per scan. (2) Contact consent before first help request — stored for purpose of expert contacting customer, shows once per user.",
       "files": [
