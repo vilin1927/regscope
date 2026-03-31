@@ -768,5 +768,19 @@
     "commission": "Commission",
     "commissionInitial": "First Payment",
     "commissionRecurring": "Recurring"
+  },
+  "Disclaimer": {
+    "title": "Important Notice",
+    "body": "The following results do not constitute legal advice. They merely provide an overview of potentially relevant legal regulations for your business. These results do not replace consultation with a qualified lawyer or professional advisor. For a binding legal assessment, please consult an expert.",
+    "checkbox": "I understand and agree that these results do not constitute legal advice",
+    "accept": "View Results",
+    "decline": "Go Back"
+  },
+  "ContactConsent": {
+    "title": "Consent for Contact Sharing",
+    "body": "I hereby give Smart-Lex permission to forward my email address and phone number used for registration to a qualified professional expert in order to contact me regarding my inquiry. My contact details are stored solely for this purpose and will only be shared with the assigned consultant.",
+    "checkbox": "I agree to the forwarding of my contact details",
+    "accept": "Agree and Continue",
+    "decline": "Cancel"
   }
 }

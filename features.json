@@ -456,6 +456,33 @@
       ]
     },
     {
+      "id": "F-102-FIX3",
+      "title": "Legal Compliance Popups (Disclaimer + Contact Consent)",
+      "status": "pending",
+      "phase": "Phase 2 - M3 - Legal compliance",
+      "description": "Two mandatory popups per Raphael (2026-03-31): (1) Results disclaimer before viewing scan results — checkbox 'I understand and agree', saves acknowledgment per scan. (2) Contact consent before first help request — stored for purpose of expert contacting customer, shows once per user.",
+      "files": [
+        "components/ui/DisclaimerModal.tsx",
+        "components/ui/ContactConsentModal.tsx",
+        "components/results/ResultsScreen.tsx",
+        "components/ui/ExpertContactModal.tsx",
+        "supabase/migration-m3-disclaimers.sql"
+      ],
+      "criteria": [
+        { "text": "Disclaimer popup: shows every time before viewing scan results", "done": false },
+        { "text": "Disclaimer popup: checkbox 'I understand and agree' required before proceeding", "done": false },
+        { "text": "Disclaimer popup: saves acknowledgment to DB (user_id, scan_id, timestamp)", "done": false },
+        { "text": "Disclaimer popup: German text — results are not legal advice, overview only", "done": false },
+        { "text": "Contact consent popup: shows once when user first clicks 'Professionelle Hilfe'", "done": false },
+        { "text": "Contact consent popup: after agreeing once, doesn't show again for that user", "done": false },
+        { "text": "Contact consent popup: text — contact info stored for purpose of expert contacting customer", "done": false },
+        { "text": "Contact consent popup: checkbox 'I agree' required", "done": false },
+        { "text": "Both popups: mobile responsive", "done": false },
+        { "text": "Both popups: i18n DE+EN", "done": false },
+        { "text": "Deployed + tested on VPS staging", "done": false }
+      ]
+    },
+    {
       "id": "F-102-FIX2",
       "title": "QR Code → Signup URL with Pre-filled Referral",
       "status": "done",

@@ -768,5 +768,19 @@
     "commission": "Provision",
     "commissionInitial": "Erstzahlung",
     "commissionRecurring": "laufend"
+  },
+  "Disclaimer": {
+    "title": "Wichtiger Hinweis",
+    "body": "Die folgenden Ergebnisse stellen keine Rechtsberatung dar. Sie bieten lediglich einen Überblick über möglicherweise relevante gesetzliche Vorschriften für Ihr Unternehmen. Die Ergebnisse ersetzen nicht die Beratung durch einen qualifizierten Rechtsanwalt oder Fachberater. Für eine verbindliche rechtliche Einschätzung wenden Sie sich bitte an einen Experten.",
+    "checkbox": "Ich habe verstanden und stimme zu, dass diese Ergebnisse keine Rechtsberatung darstellen",
+    "accept": "Ergebnisse anzeigen",
+    "decline": "Zurück"
+  },
+  "ContactConsent": {
+    "title": "Einwilligung zur Kontaktweiterleitung",
+    "body": "Ich erteile hiermit Smart-Lex die Erlaubnis, meine bei der Registrierung hinterlegte E-Mail-Adresse und Telefonnummer an einen qualifizierten Fachexperten weiterzuleiten, damit dieser mich bezüglich meiner Anfrage kontaktieren kann. Meine Kontaktdaten werden ausschließlich für diesen Zweck gespeichert und nur an den zugewiesenen Berater weitergegeben.",
+    "checkbox": "Ich stimme der Weiterleitung meiner Kontaktdaten zu",
+    "accept": "Zustimmen und fortfahren",
+    "decline": "Abbrechen"
   }
 }
