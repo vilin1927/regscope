@@ -1,7 +1,16 @@
 # ComplyRadar — Progress Log
 
 > **Last updated:** 2026-03-31
-> **Current state:** Phase 2 M3 — 100% COMPLETE on staging (46.225.92.189:3001). All fixes done. Awaiting Vlad's manual test + Raphael review → merge to production.
+> **Current state:** Phase 2 M3 — APPROVED by Raphael. Ready to merge to production + create PR.
+
+---
+
+### Session 2026-03-31 — M3 Approved by Raphael
+
+**Raphael approved the milestone.** Ready to merge to production.
+- Legal popups implemented and tested (disclaimer + contact consent)
+- All features verified on VPS staging (46.225.92.189:3001)
+- Next: create PR, merge to main, deploy to production (smart-lex.de)
 
 ---
 
