@@ -12,6 +12,9 @@ export type Screen =
   | "admin-newsletter"
   | "admin-users"
   | "admin-templates"
+  | "admin-consultants"
+  | "consultant-register"
+  | "consultant-dashboard"
   | "settings"
   | "impressum"
   | "datenschutz";

@@ -88,6 +88,27 @@ export function useAuth(): AuthState & AuthActions {
       setUserEmail(email);
       setUserId(result.data.user?.id);
       setIsGuest(false);
+
+      // Record referral if signup with referral code
+      if (mode === "signup" && typeof window !== "undefined") {
+        const referralCode = sessionStorage.getItem("complyradar_referral_code");
+        if (referralCode) {
+          sessionStorage.removeItem("complyradar_referral_code");
+          // Fire-and-forget: record referral in background
+          fetch(`/api/referral/validate?code=${encodeURIComponent(referralCode)}`)
+            .then((res) => res.json())
+            .then((data) => {
+              if (data.valid && data.consultantId && result.data.user?.id) {
+                supabase.from("referrals").insert({
+                  referral_code: referralCode,
+                  consultant_id: data.consultantId,
+                  customer_user_id: result.data.user.id,
+                }).then(() => {});
+              }
+            })
+            .catch(() => {});
+        }
+      }
     } catch {
       setAuthError("Authentifizierungsdienst nicht konfiguriert. Versuchen Sie den Gastmodus.");
     }

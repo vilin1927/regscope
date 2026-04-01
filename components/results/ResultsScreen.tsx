@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { RotateCcw, AlertTriangle, ArrowLeft } from "lucide-react";
 import { screenVariants, screenTransition } from "@/lib/motion";
@@ -28,6 +28,22 @@ export function ResultsScreen({ onReset, onBack }: ResultsScreenProps) {
     handleComplianceChange: onComplianceChange,
   } = useScanContext();
   const { isPro, onUnlock } = useSubscriptionContext();
+  const [activeTags, setActiveTags] = useState<string[]>([]);
+
+  // Fetch which categories have active consultants
+  useEffect(() => {
+    fetch("/api/consultant/active-tags")
+      .then((res) => res.json())
+      .then((data) => setActiveTags(data.tags || []))
+      .catch(() => {});
+  }, []);
+
+  const handleExpertContact = (category: RegulationCategory) => {
+    // Only open modal if there's an active consultant for this category
+    if (activeTags.includes(category)) {
+      setExpertModalCategory(category);
+    }
+  };
 
   const highPriority = regulations.filter(
     (r) => r.riskLevel === "hoch"
@@ -106,7 +122,8 @@ export function ResultsScreen({ onReset, onBack }: ResultsScreenProps) {
         regulations={regulations}
         complianceChecks={complianceChecks}
         onComplianceChange={onComplianceChange}
-        onExpertContact={setExpertModalCategory}
+        onExpertContact={handleExpertContact}
+        activeTags={activeTags}
         isPro={isPro}
         onUnlock={onUnlock}
       />

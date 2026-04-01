@@ -18,7 +18,11 @@ import { NewsletterScreen } from "../newsletter/NewsletterScreen";
 import { AdminNewsletterScreen } from "../admin/AdminNewsletterScreen";
 import { AdminUsersScreen } from "../admin/AdminUsersScreen";
 import { AdminTemplatesScreen } from "../admin/AdminTemplatesScreen";
+import { AdminConsultantsScreen } from "../admin/AdminConsultantsScreen";
+import { ConsultantRegisterScreen } from "../consultant/ConsultantRegisterScreen";
+import { ConsultantDashboardScreen } from "../consultant/ConsultantDashboardScreen";
 import { CompanySearchScreen } from "../company-search/CompanySearchScreen";
+import { DisclaimerModal } from "../ui/DisclaimerModal";
 import { useAuth } from "@/hooks/useAuth";
 import { SubscriptionProvider } from "@/components/providers/SubscriptionProvider";
 import { ScanProvider, useScanContext } from "@/components/providers/ScanProvider";
@@ -162,6 +166,28 @@ function ComplyRadarAppShell({
 
   const [dynamicLayers, setDynamicLayers] = useState<QuestionnaireLayer[] | undefined>();
   const [isGeneratingQuestions, setIsGeneratingQuestions] = useState(false);
+
+  // Legal disclaimer — tracks which scans have been acknowledged this session
+  const [acknowledgedScans, setAcknowledgedScans] = useState<Set<string>>(new Set());
+  const needsDisclaimer = currentScreen === "results" && scan.currentScanId && !acknowledgedScans.has(scan.currentScanId || "");
+
+  const handleDisclaimerAccept = () => {
+    const sid = scan.currentScanId;
+    if (sid) {
+      setAcknowledgedScans((prev) => new Set(prev).add(sid));
+      if (auth.userId) {
+        fetch("/api/disclaimer/acknowledge", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ scanId: sid }),
+        }).catch(() => {});
+      }
+    }
+  };
+
+  const handleDisclaimerDecline = () => {
+    setCurrentScreen("scan-history");
+  };
 
   const fetchDynamicQuestions = useCallback(async (gegenstand: string, companyName: string, company: CompanyResult) => {
     setIsGeneratingQuestions(true);
@@ -474,6 +500,22 @@ function ComplyRadarAppShell({
               <AdminTemplatesScreen key="admin-templates" />
             )}
 
+            {currentScreen === "admin-consultants" && (
+              <AdminConsultantsScreen key="admin-consultants" />
+            )}
+
+            {currentScreen === "consultant-register" && (
+              <ConsultantRegisterScreen
+                key="consultant-register"
+                userEmail={auth.userEmail}
+                onRegistered={() => setCurrentScreen("consultant-dashboard")}
+              />
+            )}
+
+            {currentScreen === "consultant-dashboard" && (
+              <ConsultantDashboardScreen key="consultant-dashboard" />
+            )}
+
             {currentScreen === "settings" && (
               <SettingsScreen
                 key="settings"
@@ -495,6 +537,15 @@ function ComplyRadarAppShell({
           </AnimatePresence>
         </div>
       </main>
+
+      {/* Legal popups */}
+      {needsDisclaimer && (
+        <DisclaimerModal
+          onAccept={handleDisclaimerAccept}
+          onDecline={handleDisclaimerDecline}
+        />
+      )}
+
     </div>
   );
 }
