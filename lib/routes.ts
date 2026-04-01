@@ -46,6 +46,10 @@ export function screenToPath(screen: Screen, scanId?: string | null): string {
       return "/impressum";
     case "datenschutz":
       return "/datenschutz";
+    case "checkout-success":
+      return "/checkout/success";
+    case "checkout-cancel":
+      return "/checkout/cancel";
     default:
       return "/dashboard";
   }
@@ -112,6 +116,10 @@ export function pathToScreen(pathname: string): { screen: Screen; scanId?: strin
       return { screen: "impressum" };
     case "/datenschutz":
       return { screen: "datenschutz" };
+    case "/checkout/success":
+      return { screen: "checkout-success" };
+    case "/checkout/cancel":
+      return { screen: "checkout-cancel" };
     default:
       return { screen: "dashboard" };
   }

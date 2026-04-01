@@ -15,6 +15,7 @@ import {
   Phone,
   Tag,
   QrCode,
+  Euro,
 } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { EXPERTISE_TAG_LABELS } from "@/lib/consultant-types";
@@ -29,6 +30,9 @@ interface DashboardData {
     activeReferrals: number;
     pendingRequests: number;
     totalRequests: number;
+    commissionInitialTotal: number;
+    commissionRecurringTotal: number;
+    commissionTotal: number;
   };
 }
 
@@ -162,6 +166,31 @@ export function ConsultantDashboardScreen() {
           ))}
         </div>
       </div>
+
+      {/* Commission Card */}
+      {stats.commissionTotal > 0 && (
+        <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-2xl shadow-sm border border-green-100 p-6">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+              <Euro className="w-5 h-5 text-green-700" />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-green-800">{t("commissionEarned")}</p>
+              <p className="text-2xl font-bold text-green-900">€{stats.commissionTotal.toFixed(2)}</p>
+            </div>
+          </div>
+          <div className="flex flex-wrap gap-4 text-sm">
+            <div>
+              <span className="text-green-600">{t("commissionFromInitial")}:</span>{" "}
+              <span className="font-semibold text-green-800">€{stats.commissionInitialTotal.toFixed(2)}</span>
+            </div>
+            <div>
+              <span className="text-green-600">{t("commissionFromRecurring")}:</span>{" "}
+              <span className="font-semibold text-green-800">€{stats.commissionRecurringTotal.toFixed(2)}</span>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Stats Grid */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">

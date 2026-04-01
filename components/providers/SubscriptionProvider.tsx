@@ -1,15 +1,17 @@
 "use client";
 
 import { createContext, useContext, useState, type ReactNode } from "react";
-import { useSubscription, type TrialStatus } from "@/hooks/useSubscription";
+import { useSubscription, type TrialStatus, type Plan, type SubscriptionStatus } from "@/hooks/useSubscription";
 import { UpgradeModal } from "@/components/ui/UpgradeModal";
 
 interface SubscriptionContextValue {
   isPro: boolean;
-  plan: "free" | "pro";
+  plan: Plan;
   trialStatus: TrialStatus;
+  subscriptionStatus: SubscriptionStatus;
   startTrial: () => void;
   resetTrial: () => void;
+  startCheckout: (referralCode?: string) => Promise<void>;
   showUpgradeModal: boolean;
   setShowUpgradeModal: (show: boolean) => void;
   onUnlock: () => void;
@@ -36,6 +38,8 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
       {showUpgradeModal && (
         <UpgradeModal
           trialStatus={subscription.trialStatus}
+          subscriptionStatus={subscription.subscriptionStatus}
+          onStartCheckout={subscription.startCheckout}
           onStartTrial={subscription.startTrial}
           onClose={() => setShowUpgradeModal(false)}
         />

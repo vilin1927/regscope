@@ -41,6 +41,11 @@ export async function GET() {
     const pendingRequests = helpRequests?.filter((r) => r.status === "pending").length || 0;
     const totalRequests = helpRequests?.length || 0;
 
+    // Commission totals
+    const commissionInitialTotal = referrals?.reduce((sum, r) => sum + (r.commission_initial || 0), 0) || 0;
+    const commissionRecurringTotal = referrals?.reduce((sum, r) => sum + (r.commission_recurring || 0), 0) || 0;
+    const commissionTotal = commissionInitialTotal + commissionRecurringTotal;
+
     return NextResponse.json({
       consultant,
       referrals: referrals || [],
@@ -50,6 +55,9 @@ export async function GET() {
         activeReferrals,
         pendingRequests,
         totalRequests,
+        commissionInitialTotal,
+        commissionRecurringTotal,
+        commissionTotal,
       },
     });
   } catch (err) {

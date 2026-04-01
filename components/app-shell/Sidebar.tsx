@@ -197,6 +197,10 @@ export function Sidebar({
                   <Sparkles className="w-2.5 h-2.5" />
                   {tPaywall("pro")}
                 </span>
+              ) : plan === "expired" ? (
+                <span className="shrink-0 px-1.5 py-0.5 bg-amber-100 text-amber-700 text-[10px] font-bold rounded-full uppercase">
+                  {tPaywall("expired")}
+                </span>
               ) : (
                 <span className="shrink-0 px-1.5 py-0.5 bg-gray-200 text-gray-600 text-[10px] font-bold rounded-full uppercase">
                   {tPaywall("free")}

@@ -611,7 +611,8 @@
     "deactivate": "Deaktivieren",
     "registeredOn": "Registriert am",
     "commissionInitial": "Provision Erst",
-    "commissionRecurring": "Provision laufend"
+    "commissionRecurring": "Provision laufend",
+    "commissionOwed": "Offene Provision"
   },
   "Expert": {
     "consultExpert": "Professionelle Hilfe",
@@ -685,6 +686,9 @@
     "proTitle": "ComplyRadar Pro",
     "proSubtitle": "Vollständiger Zugriff auf alle Compliance-Daten",
     "proPricing": "ab 29 EUR/Monat",
+    "priceSplit": "Nur €32,50/Monat — einmalig für 6 Monate",
+    "priceAfter": "Danach nur €29/Monat — jederzeit kündbar",
+    "valueTitle": "Das ist im Pro-Zugang enthalten:",
     "trialSubtitle": "Testen Sie den vollen Zugriff — kostenlos",
     "trialPricing": "1 Monat kostenlos",
     "trialExpiredSubtitle": "Ihre Testphase ist abgelaufen",
@@ -692,20 +696,30 @@
     "startTrialCta": "Kostenlos testen",
     "noCardRequired": "Keine Kreditkarte erforderlich",
     "contactSales": "Schließen",
-    "proFeature1": "Alle Vorschriften einsehen",
-    "proFeature2": "Vollständige Risikoanalyse",
-    "proFeature3": "Alle Empfehlungen",
-    "proFeature4": "Experten-Kontakt",
+    "proFeature1": "Vollständiger Compliance-Scan mit allen Vorschriften",
+    "proFeature2": "Detaillierte Risikoanalyse für Ihren Betrieb",
+    "proFeature3": "Personalisierte Handlungsempfehlungen",
+    "proFeature4": "Direkter Experten-Kontakt für professionelle Beratung",
+    "proFeature5": "Laufende Updates bei Gesetzesänderungen",
     "upgradeCta": "Jetzt freischalten",
+    "checkoutLoading": "Weiterleitung zu Stripe...",
+    "securePayment": "Sichere Zahlung über Stripe. SSL-verschlüsselt.",
+    "tryFreeCta": "Oder erst 30 Tage kostenlos testen",
     "upgradeSuccess": "Pro-Zugang aktiviert!",
     "trialStarted": "Testphase gestartet!",
     "free": "Free",
     "pro": "Pro",
+    "expired": "Abgelaufen",
     "trialSection": "Testphase",
     "trialActive": "Aktiv",
     "trialExpired": "Abgelaufen",
     "trialNone": "Nicht gestartet",
-    "resetTrial": "Testphase zurücksetzen"
+    "resetTrial": "Testphase zurücksetzen",
+    "checkoutSuccessTitle": "Zahlung erfolgreich!",
+    "checkoutSuccessMessage": "Ihr Pro-Zugang ist jetzt aktiv. Sie werden zum Dashboard weitergeleitet...",
+    "checkoutCancelTitle": "Zahlung abgebrochen",
+    "checkoutCancelMessage": "Die Zahlung wurde abgebrochen. Keine Kosten entstanden.",
+    "backToDashboard": "Zurück zum Dashboard"
   },
   "Common": {
     "yes": "Ja",
@@ -767,7 +781,10 @@
     "showQR": "QR-Code anzeigen",
     "commission": "Provision",
     "commissionInitial": "Erstzahlung",
-    "commissionRecurring": "laufend"
+    "commissionRecurring": "laufend",
+    "commissionEarned": "Verdiente Provision",
+    "commissionFromInitial": "Aus Erstzahlungen",
+    "commissionFromRecurring": "Aus laufenden Zahlungen"
   },
   "Disclaimer": {
     "title": "Wichtiger Hinweis",

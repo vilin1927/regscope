@@ -408,19 +408,20 @@
       "status": "awaiting_approval",
       "phase": "Phase 2 - Milestone 2",
       "price": "$170",
-      "description": "Real payment integration replacing trial system. Stripe Checkout for €190/6mo initial, then €30/month recurring. Webhook handles subscription lifecycle. Plan syncs to Supabase profiles. Commission tracking for consultants (30% initial / 10% recurring).",
+      "description": "Real payment integration replacing trial system. Stripe Checkout for €195 initial (scan + 6mo), then €29/month recurring. Webhook handles subscription lifecycle. Plan syncs to Supabase profiles. Commission tracking for consultants (30% initial / 10% recurring). Pricing display: show monthly split to reduce sticker shock + highlight software value.",
       "files": [],
       "criteria": [
-        { "text": "Stripe Checkout flow: €190 initial (scan + 6mo subscription)", "done": false },
-        { "text": "Recurring billing: €30/month after initial 6 months", "done": false },
+        { "text": "Stripe Checkout flow: €195 initial (scan + 6mo subscription)", "done": false },
+        { "text": "Recurring billing: €29/month after initial 6 months", "done": false },
         { "text": "Webhook handles subscription events (created, renewed, cancelled)", "done": false },
         { "text": "Plan status syncs to Supabase profiles (free → paid → expired)", "done": false },
         { "text": "Paywall blocks Pro features for non-subscribers", "done": false },
+        { "text": "Pricing display: show split (e.g. €195 = €32.50/Monat) + value highlights", "done": false },
         { "text": "Commission tracking: record payment amounts per referred customer", "done": false },
-        { "text": "Consultant dashboard: show earned amounts (30% × €190 initial + 10% × €30/mo recurring)", "done": false },
+        { "text": "Consultant dashboard: show earned amounts (30% × €195 initial + 10% × €29/mo recurring)", "done": false },
         { "text": "Admin: view total commission owed per consultant", "done": false }
       ],
-      "notes": "Pricing confirmed by Raphael (2026-03-28): €190 initial (scan + 6mo), then €30/month retainer. Commission: 30% first payment, 10% lifetime recurring. Payments go to Raphael's Stripe."
+      "notes": "Pricing updated by Raphael (2026-04-01): €195 initial (scan + 6mo), then €29/month. Show monthly split to soften big number + highlight value. Commission: 30% first payment, 10% lifetime recurring. Payments go to Raphael's Stripe. Test keys: pk_test_51TH0EW2... / sk_test_51TH0EW2..."
     },
     {
       "id": "F-102",

@@ -22,6 +22,8 @@ import { AdminConsultantsScreen } from "../admin/AdminConsultantsScreen";
 import { ConsultantRegisterScreen } from "../consultant/ConsultantRegisterScreen";
 import { ConsultantDashboardScreen } from "../consultant/ConsultantDashboardScreen";
 import { CompanySearchScreen } from "../company-search/CompanySearchScreen";
+import { CheckoutSuccessScreen } from "../checkout/CheckoutSuccessScreen";
+import { CheckoutCancelScreen } from "../checkout/CheckoutCancelScreen";
 import { DisclaimerModal } from "../ui/DisclaimerModal";
 import { useAuth } from "@/hooks/useAuth";
 import { SubscriptionProvider } from "@/components/providers/SubscriptionProvider";
@@ -523,6 +525,20 @@ function ComplyRadarAppShell({
                 isGuest={auth.isGuest}
                 onSignOut={handleSignOut}
                 onLegal={(page) => setCurrentScreen(page)}
+              />
+            )}
+
+            {currentScreen === "checkout-success" && (
+              <CheckoutSuccessScreen
+                key="checkout-success"
+                onNavigate={(screen) => setCurrentScreen(screen)}
+              />
+            )}
+
+            {currentScreen === "checkout-cancel" && (
+              <CheckoutCancelScreen
+                key="checkout-cancel"
+                onNavigate={(screen) => setCurrentScreen(screen)}
               />
             )}
 

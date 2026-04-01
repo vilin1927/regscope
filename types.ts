@@ -17,7 +17,9 @@ export type Screen =
   | "consultant-dashboard"
   | "settings"
   | "impressum"
-  | "datenschutz";
+  | "datenschutz"
+  | "checkout-success"
+  | "checkout-cancel";
 
 import type { MatchedRegulation } from "@/data/regulations/types";
 

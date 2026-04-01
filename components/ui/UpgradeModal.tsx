@@ -2,20 +2,29 @@
 
 import { useRef, useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Check, Clock, CheckCircle } from "lucide-react";
+import { X, Check, Shield, TrendingUp, Users, Bell, FileSearch } from "lucide-react";
 import { useTranslations } from "next-intl";
-import type { TrialStatus } from "@/hooks/useSubscription";
+import type { TrialStatus, SubscriptionStatus } from "@/hooks/useSubscription";
 
 interface UpgradeModalProps {
   trialStatus: TrialStatus;
+  subscriptionStatus: SubscriptionStatus;
+  onStartCheckout: (referralCode?: string) => Promise<void>;
   onStartTrial: () => void;
   onClose: () => void;
 }
 
-export function UpgradeModal({ trialStatus, onStartTrial, onClose }: UpgradeModalProps) {
+export function UpgradeModal({
+  trialStatus,
+  subscriptionStatus,
+  onStartCheckout,
+  onStartTrial,
+  onClose,
+}: UpgradeModalProps) {
   const t = useTranslations("Paywall");
   const overlayRef = useRef<HTMLDivElement>(null);
-  const [showSuccess, setShowSuccess] = useState(false);
+  const [isCheckingOut, setIsCheckingOut] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
@@ -29,22 +38,26 @@ export function UpgradeModal({ trialStatus, onStartTrial, onClose }: UpgradeModa
     if (e.target === overlayRef.current) onClose();
   };
 
-  const handleStartTrial = () => {
-    onStartTrial();
-    setShowSuccess(true);
-    setTimeout(() => {
-      onClose();
-    }, 1200);
+  const handleCheckout = async () => {
+    setIsCheckingOut(true);
+    setError(null);
+    try {
+      await onStartCheckout();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Fehler beim Checkout");
+      setIsCheckingOut(false);
+    }
   };
 
   const features = [
-    t("proFeature1"),
-    t("proFeature2"),
-    t("proFeature3"),
-    t("proFeature4"),
+    { icon: FileSearch, text: t("proFeature1") },
+    { icon: Shield, text: t("proFeature2") },
+    { icon: TrendingUp, text: t("proFeature3") },
+    { icon: Users, text: t("proFeature4") },
+    { icon: Bell, text: t("proFeature5") },
   ];
 
-  const isExpired = trialStatus === "expired";
+  const showTrialOption = trialStatus === "none" && subscriptionStatus === "free";
 
   return (
     <div
@@ -59,107 +72,84 @@ export function UpgradeModal({ trialStatus, onStartTrial, onClose }: UpgradeModa
         transition={{ type: "spring", duration: 0.4, bounce: 0.15 }}
         className="bg-white rounded-2xl w-full max-w-md shadow-xl overflow-hidden"
       >
-        <AnimatePresence mode="wait">
-          {showSuccess ? (
-            <motion.div
-              key="success"
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ type: "spring", duration: 0.4, bounce: 0.2 }}
-              className="p-10 text-center bg-gradient-to-br from-green-500 to-emerald-600"
+        {/* Header with pricing */}
+        <div className="p-6 text-white bg-gradient-to-br from-blue-600 to-blue-700">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-bold">{t("proTitle")}</h2>
+            <button
+              onClick={onClose}
+              className="p-1 hover:bg-white/20 rounded-lg transition-colors"
             >
-              <motion.div
-                initial={{ scale: 0 }}
-                animate={{ scale: 1 }}
-                transition={{ type: "spring", delay: 0.1, duration: 0.5, bounce: 0.4 }}
-              >
-                <CheckCircle className="w-16 h-16 text-white mx-auto mb-4" />
-              </motion.div>
-              <p className="text-xl font-bold text-white mb-1">
-                {t("trialStarted")}
-              </p>
-              <p className="text-green-100 text-sm">
-                {t("trialPricing")}
-              </p>
-            </motion.div>
-          ) : (
-            <motion.div
-              key="form"
-              exit={{ opacity: 0, scale: 0.95 }}
-              transition={{ duration: 0.15 }}
-            >
-              <div
-                className={`p-6 text-white ${
-                  isExpired
-                    ? "bg-gradient-to-br from-gray-600 to-gray-700"
-                    : "bg-gradient-to-br from-blue-600 to-blue-700"
-                }`}
-              >
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-xl font-bold">{t("proTitle")}</h2>
-                  <button
-                    onClick={onClose}
-                    className="p-1 hover:bg-white/20 rounded-lg transition-colors"
-                  >
-                    <X className="w-5 h-5" />
-                  </button>
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+
+          {/* Price display with monthly split */}
+          <div className="mb-2">
+            <div className="flex items-baseline gap-2">
+              <span className="text-4xl font-bold">€195</span>
+              <span className="text-blue-200 text-lg line-through">€270</span>
+            </div>
+            <p className="text-blue-100 text-sm mt-1">
+              {t("priceSplit")}
+            </p>
+            <p className="text-blue-200 text-xs mt-1">
+              {t("priceAfter")}
+            </p>
+          </div>
+        </div>
+
+        {/* Features / value highlights */}
+        <div className="p-6">
+          <p className="text-sm font-semibold text-gray-900 mb-3">
+            {t("valueTitle")}
+          </p>
+          <ul className="space-y-3 mb-6">
+            {features.map(({ icon: Icon, text }) => (
+              <li key={text} className="flex items-center gap-3">
+                <div className="w-8 h-8 bg-blue-50 rounded-lg flex items-center justify-center shrink-0">
+                  <Icon className="w-4 h-4 text-blue-600" />
                 </div>
-                {isExpired ? (
-                  <>
-                    <p className="text-gray-200 mb-1">{t("trialExpiredSubtitle")}</p>
-                    <p className="text-2xl font-bold">{t("proPricing")}</p>
-                  </>
-                ) : (
-                  <>
-                    <p className="text-blue-100 mb-1">{t("trialSubtitle")}</p>
-                    <p className="text-2xl font-bold">{t("trialPricing")}</p>
-                  </>
-                )}
-              </div>
+                <span className="text-sm text-gray-700">{text}</span>
+              </li>
+            ))}
+          </ul>
 
-              <div className="p-6">
-                <ul className="space-y-3 mb-6">
-                  {features.map((f) => (
-                    <li key={f} className="flex items-center gap-3">
-                      <div className="w-5 h-5 bg-green-100 rounded-full flex items-center justify-center shrink-0">
-                        <Check className="w-3 h-3 text-green-600" />
-                      </div>
-                      <span className="text-sm text-gray-700">{f}</span>
-                    </li>
-                  ))}
-                </ul>
-
-                {isExpired ? (
-                  <div>
-                    <div className="flex items-center gap-2 mb-3 p-3 bg-amber-50 rounded-lg border border-amber-200">
-                      <Clock className="w-4 h-4 text-amber-600 shrink-0" />
-                      <p className="text-sm text-amber-800">{t("trialExpiredMessage")}</p>
-                    </div>
-                    <button
-                      onClick={onClose}
-                      className="w-full py-3 bg-gray-200 text-gray-700 rounded-lg font-semibold hover:bg-gray-300 transition-colors"
-                    >
-                      {t("contactSales")}
-                    </button>
-                  </div>
-                ) : (
-                  <div>
-                    <motion.button
-                      onClick={handleStartTrial}
-                      whileTap={{ scale: 0.97 }}
-                      className="w-full py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors"
-                    >
-                      {t("startTrialCta")}
-                    </motion.button>
-                    <p className="text-xs text-gray-500 text-center mt-2">
-                      {t("noCardRequired")}
-                    </p>
-                  </div>
-                )}
-              </div>
-            </motion.div>
+          {error && (
+            <div className="mb-3 p-3 bg-red-50 rounded-lg border border-red-200">
+              <p className="text-sm text-red-800">{error}</p>
+            </div>
           )}
-        </AnimatePresence>
+
+          {/* CTA */}
+          <motion.button
+            onClick={handleCheckout}
+            disabled={isCheckingOut}
+            whileTap={{ scale: 0.97 }}
+            className="w-full py-3.5 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-wait"
+          >
+            {isCheckingOut ? t("checkoutLoading") : t("upgradeCta")}
+          </motion.button>
+
+          <p className="text-xs text-gray-500 text-center mt-2">
+            {t("securePayment")}
+          </p>
+
+          {/* Trial option for new users */}
+          {showTrialOption && (
+            <div className="mt-4 pt-4 border-t border-gray-100 text-center">
+              <button
+                onClick={() => {
+                  onStartTrial();
+                  onClose();
+                }}
+                className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+              >
+                {t("tryFreeCta")}
+              </button>
+            </div>
+          )}
+        </div>
       </motion.div>
     </div>
   );

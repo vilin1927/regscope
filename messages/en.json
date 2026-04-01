@@ -611,7 +611,8 @@
     "deactivate": "Deactivate",
     "registeredOn": "Registered on",
     "commissionInitial": "Initial Commission",
-    "commissionRecurring": "Recurring Commission"
+    "commissionRecurring": "Recurring Commission",
+    "commissionOwed": "Commission Owed"
   },
   "Expert": {
     "consultExpert": "Get Professional Help",
@@ -685,6 +686,9 @@
     "proTitle": "ComplyRadar Pro",
     "proSubtitle": "Full access to all compliance data",
     "proPricing": "from 29 EUR/month",
+    "priceSplit": "Only €32.50/month — one-time for 6 months",
+    "priceAfter": "Then just €29/month — cancel anytime",
+    "valueTitle": "What's included in Pro:",
     "trialSubtitle": "Try full access — for free",
     "trialPricing": "1 month free",
     "trialExpiredSubtitle": "Your trial has expired",
@@ -692,20 +696,30 @@
     "startTrialCta": "Start Free Trial",
     "noCardRequired": "No credit card required",
     "contactSales": "Close",
-    "proFeature1": "View all regulations",
-    "proFeature2": "Full risk analysis",
-    "proFeature3": "All recommendations",
-    "proFeature4": "Expert contact",
+    "proFeature1": "Complete compliance scan with all regulations",
+    "proFeature2": "Detailed risk analysis for your business",
+    "proFeature3": "Personalized action recommendations",
+    "proFeature4": "Direct expert contact for professional advice",
+    "proFeature5": "Ongoing updates on regulatory changes",
     "upgradeCta": "Unlock Now",
+    "checkoutLoading": "Redirecting to Stripe...",
+    "securePayment": "Secure payment via Stripe. SSL encrypted.",
+    "tryFreeCta": "Or try free for 30 days first",
     "upgradeSuccess": "Pro access activated!",
     "trialStarted": "Trial started!",
     "free": "Free",
     "pro": "Pro",
+    "expired": "Expired",
     "trialSection": "Trial",
     "trialActive": "Active",
     "trialExpired": "Expired",
     "trialNone": "Not started",
-    "resetTrial": "Reset Trial"
+    "resetTrial": "Reset Trial",
+    "checkoutSuccessTitle": "Payment successful!",
+    "checkoutSuccessMessage": "Your Pro access is now active. Redirecting to dashboard...",
+    "checkoutCancelTitle": "Payment cancelled",
+    "checkoutCancelMessage": "The payment was cancelled. No charges were made.",
+    "backToDashboard": "Back to Dashboard"
   },
   "Common": {
     "yes": "Yes",
@@ -767,7 +781,10 @@
     "showQR": "Show QR Code",
     "commission": "Commission",
     "commissionInitial": "First Payment",
-    "commissionRecurring": "Recurring"
+    "commissionRecurring": "Recurring",
+    "commissionEarned": "Commission Earned",
+    "commissionFromInitial": "From initial payments",
+    "commissionFromRecurring": "From recurring payments"
   },
   "Disclaimer": {
     "title": "Important Notice",

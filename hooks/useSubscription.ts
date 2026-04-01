@@ -2,8 +2,9 @@
 
 import { useState, useEffect, useCallback } from "react";
 
-type Plan = "free" | "pro";
+export type Plan = "free" | "pro" | "expired";
 export type TrialStatus = "none" | "active" | "expired";
+export type SubscriptionStatus = "free" | "active" | "past_due" | "cancelled" | "expired";
 
 const TRIAL_KEY = "complyradar_trial_v2";
 const TRIAL_DURATION_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
@@ -21,42 +22,82 @@ function evaluateTrial(startedAtMs: number | null): {
 export function useSubscription() {
   const [plan, setPlan] = useState<Plan>("free");
   const [trialStatus, setTrialStatus] = useState<TrialStatus>("none");
+  const [subscriptionStatus, setSubscriptionStatus] = useState<SubscriptionStatus>("free");
+  const [isLoading, setIsLoading] = useState(true);
 
   const applyLocal = useCallback(() => {
     if (typeof window === "undefined") return;
     const raw = localStorage.getItem(TRIAL_KEY);
     const result = evaluateTrial(raw ? parseInt(raw, 10) : null);
-    setPlan(result.plan);
-    setTrialStatus(result.trialStatus);
+    // Only use trial-based plan if no active subscription
+    return result;
   }, []);
 
-  // Sync from server — server is source of truth (admin can change it)
+  // Sync from server — server is source of truth
   const syncFromServer = useCallback(async () => {
     try {
-      const res = await fetch("/api/trial");
-      if (!res.ok) return;
-      const { trial_started_at } = await res.json();
-
-      if (trial_started_at) {
-        const serverMs = new Date(trial_started_at).getTime();
-        localStorage.setItem(TRIAL_KEY, serverMs.toString());
-      } else {
-        localStorage.removeItem(TRIAL_KEY);
+      const res = await fetch("/api/subscription");
+      if (!res.ok) {
+        // Fall back to trial check
+        const trialResult = applyLocal();
+        if (trialResult) {
+          setPlan(trialResult.plan);
+          setTrialStatus(trialResult.trialStatus);
+        }
+        setIsLoading(false);
+        return;
       }
-      applyLocal();
+
+      const { subscription_status, trial_started_at } = await res.json();
+
+      setSubscriptionStatus(subscription_status || "free");
+
+      // Paid subscription takes priority over trial
+      if (subscription_status === "active") {
+        setPlan("pro");
+        setTrialStatus("none");
+      } else if (subscription_status === "past_due") {
+        // Grace period — still pro
+        setPlan("pro");
+        setTrialStatus("none");
+      } else if (subscription_status === "cancelled" || subscription_status === "expired") {
+        setPlan("expired");
+        setTrialStatus("expired");
+        localStorage.removeItem(TRIAL_KEY);
+      } else {
+        // No subscription — check trial
+        if (trial_started_at) {
+          const serverMs = new Date(trial_started_at).getTime();
+          localStorage.setItem(TRIAL_KEY, serverMs.toString());
+        }
+        const trialResult = applyLocal();
+        if (trialResult) {
+          setPlan(trialResult.plan);
+          setTrialStatus(trialResult.trialStatus);
+        }
+      }
+
+      setIsLoading(false);
     } catch {
-      // Network error — keep using localStorage value
+      // Network error — fall back to localStorage
+      const trialResult = applyLocal();
+      if (trialResult) {
+        setPlan(trialResult.plan);
+        setTrialStatus(trialResult.trialStatus);
+      }
+      setIsLoading(false);
     }
   }, [applyLocal]);
 
   useEffect(() => {
     // Immediate: use localStorage for fast first paint
-    applyLocal();
-    // Then sync from server (admin may have changed it)
+    const trialResult = applyLocal();
+    if (trialResult) {
+      setPlan(trialResult.plan);
+      setTrialStatus(trialResult.trialStatus);
+    }
+    // Then sync from server
     syncFromServer();
-    // Keep checking localStorage for local changes
-    const interval = setInterval(applyLocal, 1000);
-    return () => clearInterval(interval);
   }, [applyLocal, syncFromServer]);
 
   const startTrial = useCallback(() => {
@@ -64,7 +105,6 @@ export function useSubscription() {
       localStorage.setItem(TRIAL_KEY, Date.now().toString());
       setPlan("pro");
       setTrialStatus("active");
-      // Sync to Supabase for admin visibility (fire-and-forget)
       fetch("/api/trial", { method: "POST" }).catch(() => {});
     }
   }, []);
@@ -77,11 +117,41 @@ export function useSubscription() {
     }
   }, []);
 
+  const startCheckout = useCallback(async (referralCode?: string) => {
+    try {
+      // Get current locale from URL path
+      const localeMatch = window.location.pathname.match(/^\/(en|de)/);
+      const locale = localeMatch?.[1] || "de";
+
+      const res = await fetch("/api/stripe/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ referral_code: referralCode, locale }),
+      });
+
+      if (!res.ok) {
+        const { error } = await res.json();
+        throw new Error(error || "Checkout fehlgeschlagen");
+      }
+
+      const { url } = await res.json();
+      if (url) {
+        window.location.href = url;
+      }
+    } catch (err) {
+      console.error("Checkout error:", err);
+      throw err;
+    }
+  }, []);
+
   return {
     isPro: plan === "pro",
     plan,
     trialStatus,
+    subscriptionStatus,
+    isLoading,
     startTrial,
     resetTrial,
+    startCheckout,
   };
 }

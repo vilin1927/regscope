@@ -16,14 +16,18 @@ export async function GET() {
     return NextResponse.json({ error: "Fehler beim Laden" }, { status: 500 });
   }
 
-  // Get referral counts per consultant
-  const { data: referralCounts } = await adminSupabase!
+  // Get referral counts + commission totals per consultant
+  const { data: referralData } = await adminSupabase!
     .from("referrals")
-    .select("consultant_id");
+    .select("consultant_id, commission_initial, commission_recurring");
 
   const countMap: Record<string, number> = {};
-  (referralCounts || []).forEach((r) => {
+  const commissionMap: Record<string, { initial: number; recurring: number }> = {};
+  (referralData || []).forEach((r) => {
     countMap[r.consultant_id] = (countMap[r.consultant_id] || 0) + 1;
+    if (!commissionMap[r.consultant_id]) commissionMap[r.consultant_id] = { initial: 0, recurring: 0 };
+    commissionMap[r.consultant_id].initial += r.commission_initial || 0;
+    commissionMap[r.consultant_id].recurring += r.commission_recurring || 0;
   });
 
   // Get help request counts per consultant
@@ -44,6 +48,9 @@ export async function GET() {
     referral_count: countMap[c.id] || 0,
     help_request_count: helpMap[c.id]?.total || 0,
     pending_requests: helpMap[c.id]?.pending || 0,
+    commission_owed: (commissionMap[c.id]?.initial || 0) + (commissionMap[c.id]?.recurring || 0),
+    commission_initial_total: commissionMap[c.id]?.initial || 0,
+    commission_recurring_total: commissionMap[c.id]?.recurring || 0,
   }));
 
   return NextResponse.json({ consultants: enriched });

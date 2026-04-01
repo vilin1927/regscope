@@ -19,6 +19,9 @@ interface ConsultantRow {
   referral_count: number;
   help_request_count: number;
   pending_requests: number;
+  commission_owed: number;
+  commission_initial_total: number;
+  commission_recurring_total: number;
   created_at: string;
 }
 
@@ -131,6 +134,11 @@ export function AdminConsultantsScreen() {
                 <div className="flex items-center gap-4 text-sm text-gray-600">
                   <span>{c.referral_count} {t("referrals")}</span>
                   <span>{c.help_request_count} {t("requests")}</span>
+                  {c.commission_owed > 0 && (
+                    <span className="px-2 py-0.5 bg-green-100 text-green-700 text-xs font-bold rounded-full">
+                      €{c.commission_owed.toFixed(2)}
+                    </span>
+                  )}
                   {c.pending_requests > 0 && (
                     <span className="px-2 py-0.5 bg-amber-100 text-amber-700 text-xs font-bold rounded-full">
                       {c.pending_requests} {t("pending")}
@@ -202,6 +210,18 @@ export function AdminConsultantsScreen() {
                       </select>
                     </div>
                   </div>
+
+                  {/* Commission owed */}
+                  {c.commission_owed > 0 && (
+                    <div className="p-3 bg-green-50 rounded-lg border border-green-100">
+                      <p className="text-xs font-medium text-green-800 mb-1">{t("commissionOwed")}</p>
+                      <p className="text-lg font-bold text-green-900">€{c.commission_owed.toFixed(2)}</p>
+                      <div className="flex gap-3 mt-1 text-xs text-green-700">
+                        <span>{t("commissionInitial")}: €{c.commission_initial_total.toFixed(2)}</span>
+                        <span>{t("commissionRecurring")}: €{c.commission_recurring_total.toFixed(2)}</span>
+                      </div>
+                    </div>
+                  )}
 
                   {/* Toggle active */}
                   <button

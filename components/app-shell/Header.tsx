@@ -31,6 +31,8 @@ const screenTitleKeys: Record<Screen, string> = {
   settings: "Settings.title",
   impressum: "Legal.impressum",
   datenschutz: "Legal.datenschutz",
+  "checkout-success": "Paywall.checkoutSuccessTitle",
+  "checkout-cancel": "Paywall.checkoutCancelTitle",
 };
 
 export function Header({ currentScreen, onMenuToggle }: HeaderProps) {
