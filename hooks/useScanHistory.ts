@@ -54,19 +54,23 @@ export function useScanHistory(
         if (!res.ok) throw new Error("Failed to load");
         const data = await res.json();
 
-        const mapped = (data.scans || []).map((scan: Record<string, unknown>) => ({
-          id: scan.id as string,
-          companyName:
-            (scan.business_profile as Record<string, unknown>)?.companyName as string || "Betrieb",
-          date: new Date(scan.created_at as string).toLocaleDateString("de-DE"),
-          regulationCount: (scan.matched_regulations as unknown[])?.length || 0,
-          complianceScore: Number(scan.compliance_score) || 0,
-          businessProfile: scan.business_profile as Record<string, unknown>,
-          matchedRegulationIds: ((scan.matched_regulations as Array<{ id: string }>) || []).map(
-            (r) => r.id
-          ),
-          matchedRegulations: scan.matched_regulations as MatchedRegulation[] | undefined,
-        }));
+        const mapped = (data.scans || []).map((scan: Record<string, unknown>) => {
+          // Drizzle returns camelCase, Supabase returned snake_case — support both
+          const bp = (scan.businessProfile || scan.business_profile) as Record<string, unknown>;
+          const mr = (scan.matchedRegulations || scan.matched_regulations) as unknown[];
+          const ca = (scan.createdAt || scan.created_at) as string;
+          const cs = scan.complianceScore ?? scan.compliance_score;
+          return {
+            id: scan.id as string,
+            companyName: (bp?.companyName as string) || "Betrieb",
+            date: new Date(ca).toLocaleDateString("de-DE"),
+            regulationCount: mr?.length || 0,
+            complianceScore: Number(cs) || 0,
+            businessProfile: bp,
+            matchedRegulationIds: ((mr as Array<{ id: string }>) || []).map((r) => r.id),
+            matchedRegulations: mr as MatchedRegulation[] | undefined,
+          };
+        });
         setScanHistory(mapped);
 
         // Auto-select most recent scan
@@ -98,7 +102,7 @@ export function useScanHistory(
       if (data.checks) {
         const checks: Record<string, boolean> = {};
         for (const row of data.checks) {
-          checks[row.regulation_id] = row.checked;
+          checks[row.regulationId || row.regulation_id] = row.checked;
         }
         setComplianceChecks(checks);
       }
@@ -117,7 +121,7 @@ export function useScanHistory(
         if (data.checks) {
           const checks: Record<string, boolean> = {};
           for (const row of data.checks) {
-            checks[row.regulation_id] = row.checked;
+            checks[row.regulationId || row.regulation_id] = row.checked;
           }
           return checks;
         }
