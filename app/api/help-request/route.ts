@@ -1,14 +1,15 @@
 import { NextResponse } from "next/server";
-import { createSupabaseServerClient, requireAuth } from "@/lib/api-helpers";
+import { requireAuth } from "@/lib/db/auth-checks";
+import { db } from "@/lib/db";
+import { consultants, referrals, helpRequests } from "@/lib/db/schema";
+import { eq, and, sql, desc } from "drizzle-orm";
 
 // POST — customer clicks "Get Professional Help" for a category
 export async function POST(request: Request) {
   try {
-    const supabase = await createSupabaseServerClient();
-    const { userId, error: authError } = await requireAuth(supabase);
-    if (!userId) {
-      return NextResponse.json({ error: authError }, { status: 401 });
-    }
+    const auth = await requireAuth();
+    if (auth.error) return auth.error;
+    const { userId } = auth;
 
     const body = await request.json();
     const { category, message, contactEmail, contactPhone } = body;
@@ -18,51 +19,50 @@ export async function POST(request: Request) {
     }
 
     // Find the consultant to assign:
-    // 1. If customer has a referral → always that consultant
-    // 2. Otherwise → random active consultant with matching tag
+    // 1. If customer has a referral -> always that consultant
+    // 2. Otherwise -> random active consultant with matching tag
     let consultantId: string | null = null;
 
     // Check if customer has a referral
-    const { data: referral } = await supabase
-      .from("referrals")
-      .select("consultant_id")
-      .eq("customer_user_id", userId)
-      .single();
+    const [referral] = await db
+      .select({ consultantId: referrals.consultantId })
+      .from(referrals)
+      .where(eq(referrals.customerUserId, userId))
+      .limit(1);
 
     if (referral) {
-      consultantId = referral.consultant_id;
+      consultantId = referral.consultantId;
     } else {
       // Find random active consultant with matching tag
-      const { data: matchingConsultants } = await supabase
-        .from("consultants")
-        .select("id")
-        .eq("is_active", true)
-        .contains("tags", [category.trim()]);
+      // Postgres array contains: tags @> ARRAY['category']
+      const matchingConsultants = await db
+        .select({ id: consultants.id })
+        .from(consultants)
+        .where(
+          and(
+            eq(consultants.isActive, true),
+            sql`${consultants.tags} @> ARRAY[${category.trim()}]::text[]`
+          )
+        );
 
-      if (matchingConsultants && matchingConsultants.length > 0) {
+      if (matchingConsultants.length > 0) {
         const randomIndex = Math.floor(Math.random() * matchingConsultants.length);
         consultantId = matchingConsultants[randomIndex].id;
       }
     }
 
-    const { data, error } = await supabase
-      .from("help_requests")
-      .insert({
-        customer_user_id: userId,
-        consultant_id: consultantId,
+    const [data] = await db
+      .insert(helpRequests)
+      .values({
+        customerUserId: userId,
+        consultantId,
         category: category.trim(),
         message: message?.trim() || null,
-        customer_email: contactEmail?.trim() || null,
-        customer_phone: contactPhone?.trim() || null,
-        contact_revealed: !!(contactEmail || contactPhone),
+        customerEmail: contactEmail?.trim() || null,
+        customerPhone: contactPhone?.trim() || null,
+        contactRevealed: !!(contactEmail || contactPhone),
       })
-      .select()
-      .single();
-
-    if (error) {
-      console.error("Help request insert error:", error);
-      return NextResponse.json({ error: "Anfrage konnte nicht erstellt werden" }, { status: 500 });
-    }
+      .returning();
 
     return NextResponse.json({
       helpRequest: data,
@@ -77,24 +77,17 @@ export async function POST(request: Request) {
 // GET — customer views their own help requests
 export async function GET() {
   try {
-    const supabase = await createSupabaseServerClient();
-    const { userId, error: authError } = await requireAuth(supabase);
-    if (!userId) {
-      return NextResponse.json({ error: authError }, { status: 401 });
-    }
+    const auth = await requireAuth();
+    if (auth.error) return auth.error;
+    const { userId } = auth;
 
-    const { data, error } = await supabase
-      .from("help_requests")
-      .select("*")
-      .eq("customer_user_id", userId)
-      .order("created_at", { ascending: false });
+    const data = await db
+      .select()
+      .from(helpRequests)
+      .where(eq(helpRequests.customerUserId, userId))
+      .orderBy(desc(helpRequests.createdAt));
 
-    if (error) {
-      console.error("Help requests fetch error:", error);
-      return NextResponse.json({ error: "Fehler beim Laden" }, { status: 500 });
-    }
-
-    return NextResponse.json({ helpRequests: data || [] });
+    return NextResponse.json({ helpRequests: data });
   } catch (err) {
     console.error("Help requests GET error:", err);
     return NextResponse.json({ error: "Interner Serverfehler" }, { status: 500 });

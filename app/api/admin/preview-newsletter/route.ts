@@ -1,7 +1,10 @@
 import { NextResponse } from "next/server";
 import { render } from "@react-email/components";
 import NewsletterDigest from "@/emails/newsletter-digest";
-import { requireAdmin } from "@/lib/admin-auth";
+import { requireAdmin } from "@/lib/db/auth-checks";
+import { db } from "@/lib/db";
+import { users, scans, newsletterPreferences } from "@/lib/db/schema";
+import { eq, desc } from "drizzle-orm";
 
 const areaLabels: Record<string, Record<string, string>> = {
   de: {
@@ -30,7 +33,6 @@ export async function POST(request: Request) {
   try {
     const auth = await requireAdmin();
     if (auth.error) return auth.error;
-    const { adminSupabase } = auth;
 
     let body: { subscriberId?: string } = {};
     try {
@@ -40,22 +42,32 @@ export async function POST(request: Request) {
     }
 
     // Find subscriber
-    let subscriberQuery = adminSupabase!
-      .from("newsletter_preferences")
-      .select("user_id, frequency, areas, locale")
-      .eq("opted_in", true)
-      .limit(1);
-
+    let subscriberRows;
     if (body.subscriberId) {
-      subscriberQuery = adminSupabase!
-        .from("newsletter_preferences")
-        .select("user_id, frequency, areas, locale")
-        .eq("user_id", body.subscriberId)
+      subscriberRows = await db
+        .select({
+          userId: newsletterPreferences.userId,
+          frequency: newsletterPreferences.frequency,
+          areas: newsletterPreferences.areas,
+          locale: newsletterPreferences.locale,
+        })
+        .from(newsletterPreferences)
+        .where(eq(newsletterPreferences.userId, body.subscriberId))
+        .limit(1);
+    } else {
+      subscriberRows = await db
+        .select({
+          userId: newsletterPreferences.userId,
+          frequency: newsletterPreferences.frequency,
+          areas: newsletterPreferences.areas,
+          locale: newsletterPreferences.locale,
+        })
+        .from(newsletterPreferences)
+        .where(eq(newsletterPreferences.optedIn, true))
         .limit(1);
     }
 
-    const { data: subscribers } = await subscriberQuery;
-    const sub = subscribers?.[0];
+    const sub = subscriberRows[0];
 
     if (!sub) {
       return NextResponse.json(
@@ -65,26 +77,38 @@ export async function POST(request: Request) {
     }
 
     // Get user email
-    const { data: userData } =
-      await adminSupabase!.auth.admin.getUserById(sub.user_id);
-    const email = userData?.user?.email || "user@example.com";
+    const [user] = await db
+      .select({ email: users.email })
+      .from(users)
+      .where(eq(users.id, sub.userId))
+      .limit(1);
+
+    const email = user?.email || "user@example.com";
     const locale: "de" | "en" = sub.locale === "en" ? "en" : "de";
 
     // Fetch latest scan
-    const { data: scan } = await adminSupabase!
-      .from("scans")
-      .select("matched_regulations, business_profile, compliance_score")
-      .eq("user_id", sub.user_id)
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .single();
+    const [scan] = await db
+      .select({
+        matchedRegulations: scans.matchedRegulations,
+        businessProfile: scans.businessProfile,
+        complianceScore: scans.complianceScore,
+      })
+      .from(scans)
+      .where(eq(scans.userId, sub.userId))
+      .orderBy(desc(scans.createdAt))
+      .limit(1);
 
     const allRegulations: Array<{
       name: string;
       category: string;
       riskLevel: string;
       summary: string;
-    }> = scan?.matched_regulations || [];
+    }> = (scan?.matchedRegulations as Array<{
+      name: string;
+      category: string;
+      riskLevel: string;
+      summary: string;
+    }>) || [];
 
     const userAreas: string[] = sub.areas || [];
     const filteredRegulations =
@@ -104,13 +128,13 @@ export async function POST(request: Request) {
       summary: r.summary,
     }));
 
-    const complianceScore = Math.round(Number(scan?.compliance_score) || 0);
+    const complianceScore = Math.round(Number(scan?.complianceScore) || 0);
     const totalRegulations = filteredRegulations.length;
     const highPriorityCount = filteredRegulations.filter(
       (r) => r.riskLevel === "hoch"
     ).length;
 
-    const profile = scan?.business_profile as Record<string, unknown> | null;
+    const profile = scan?.businessProfile as Record<string, unknown> | null;
     const userName =
       (profile?.companyName as string) || email.split("@")[0];
 
@@ -136,7 +160,7 @@ export async function POST(request: Request) {
         highPriorityCount,
         updates,
         dashboardUrl,
-        unsubscribeUrl: `${dashboardUrl}/newsletter/unsubscribe?uid=${sub.user_id}`,
+        unsubscribeUrl: `${dashboardUrl}/newsletter/unsubscribe?uid=${sub.userId}`,
       })
     );
 

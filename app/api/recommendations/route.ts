@@ -1,10 +1,9 @@
 import { NextResponse } from "next/server";
-import {
-  isRateLimited,
-  createSupabaseServerClient,
-  requireAuth,
-  callOpenAI,
-} from "@/lib/api-helpers";
+import { isRateLimited, callOpenAI } from "@/lib/api-helpers";
+import { requireAuth } from "@/lib/db/auth-checks";
+import { db } from "@/lib/db";
+import { scans, riskReports, recommendations } from "@/lib/db/schema";
+import { eq, and } from "drizzle-orm";
 import type { RecommendationItem } from "@/types/addons";
 
 // Allow up to 60s for OpenAI generation
@@ -16,11 +15,9 @@ const VALID_TYPES = ["action", "insurance"];
 export async function POST(request: Request) {
   try {
     // Auth (required)
-    const supabase = await createSupabaseServerClient();
-    const { userId, error: authError } = await requireAuth(supabase);
-    if (!userId) {
-      return NextResponse.json({ error: authError }, { status: 401 });
-    }
+    const authResult = await requireAuth();
+    if (authResult.error) return authResult.error;
+    const { userId } = authResult;
 
     // Parse body
     let body: { scanId?: string; force?: boolean; checkOnly?: boolean };
@@ -53,14 +50,17 @@ export async function POST(request: Request) {
     }
 
     // Verify scan ownership
-    const { data: scan, error: scanError } = await supabase
-      .from("scans")
-      .select("id, matched_regulations, business_profile")
-      .eq("id", scanId)
-      .eq("user_id", userId)
-      .single();
+    const [scan] = await db
+      .select({
+        id: scans.id,
+        matchedRegulations: scans.matchedRegulations,
+        businessProfile: scans.businessProfile,
+      })
+      .from(scans)
+      .where(and(eq(scans.id, scanId), eq(scans.userId, userId)))
+      .limit(1);
 
-    if (scanError || !scan) {
+    if (!scan) {
       return NextResponse.json(
         { error: "Scan nicht gefunden oder Zugriff verweigert" },
         { status: 404 }
@@ -69,19 +69,21 @@ export async function POST(request: Request) {
 
     // Delete existing report when force re-run
     if (force) {
-      await supabase
-        .from("recommendations")
-        .delete()
-        .eq("scan_id", scanId)
-        .eq("user_id", userId);
+      await db
+        .delete(recommendations)
+        .where(and(eq(recommendations.scanId, scanId), eq(recommendations.userId, userId)));
     } else {
       // Check for existing report (cache-first)
-      const { data: existing } = await supabase
-        .from("recommendations")
-        .select("id, report, status, created_at")
-        .eq("scan_id", scanId)
-        .eq("user_id", userId)
-        .single();
+      const [existing] = await db
+        .select({
+          id: recommendations.id,
+          report: recommendations.report,
+          status: recommendations.status,
+          createdAt: recommendations.createdAt,
+        })
+        .from(recommendations)
+        .where(and(eq(recommendations.scanId, scanId), eq(recommendations.userId, userId)))
+        .limit(1);
 
       if (existing) {
         // Completed report — return cached
@@ -90,15 +92,15 @@ export async function POST(request: Request) {
             report: {
               id: existing.id,
               scanId,
-              ...existing.report,
-              createdAt: existing.created_at,
+              ...(existing.report as Record<string, unknown>),
+              createdAt: existing.createdAt?.toISOString(),
             },
             cached: true,
           });
         }
 
         // Still generating — check if stale (>2 minutes)
-        const age = Date.now() - new Date(existing.created_at).getTime();
+        const age = Date.now() - new Date(existing.createdAt!).getTime();
         if (age < 2 * 60 * 1000) {
           return NextResponse.json({
             report: null,
@@ -108,10 +110,9 @@ export async function POST(request: Request) {
         }
 
         // Stale generating row — delete and regenerate
-        await supabase
-          .from("recommendations")
-          .delete()
-          .eq("id", existing.id);
+        await db
+          .delete(recommendations)
+          .where(eq(recommendations.id, existing.id));
       }
 
       // checkOnly mode: just checking for cache, don't generate
@@ -121,17 +122,15 @@ export async function POST(request: Request) {
     }
 
     // Optionally read risk report for enrichment
-    const { data: riskReport } = await supabase
-      .from("risk_reports")
-      .select("report")
-      .eq("scan_id", scanId)
-      .eq("user_id", userId)
-      .single();
+    const [riskReport] = await db
+      .select({ report: riskReports.report })
+      .from(riskReports)
+      .where(and(eq(riskReports.scanId, scanId), eq(riskReports.userId, userId)))
+      .limit(1);
 
-    const allRegulations = scan.matched_regulations || [];
-    const allNonCompliant = allRegulations.filter(
-      (r: { status: string }) =>
-        r.status === "fehlend" || r.status === "pruefung"
+    const matchedRegs = (scan.matchedRegulations || []) as Array<Record<string, unknown>>;
+    const allNonCompliant = matchedRegs.filter(
+      (r) => r.status === "fehlend" || r.status === "pruefung"
     );
 
     if (allNonCompliant.length === 0) {
@@ -142,32 +141,33 @@ export async function POST(request: Request) {
     }
 
     // Prioritize "fehlend" over "pruefung", cap at 10 to stay within timeout
-    const sorted = [...allNonCompliant].sort((a: { status: string }, b: { status: string }) =>
+    const sorted = [...allNonCompliant].sort((a, b) =>
       a.status === "fehlend" && b.status !== "fehlend" ? -1 : 0
     );
-    const nonCompliant = sorted.slice(0, 10).map((r: Record<string, unknown>) => ({
+    const nonCompliant = sorted.slice(0, 10).map((r) => ({
       id: r.id,
       name: r.name,
       category: r.category,
       status: r.status,
       riskLevel: r.riskLevel,
-      summary: typeof r.summary === "string" ? r.summary.slice(0, 150) : "",
+      summary: typeof r.summary === "string" ? (r.summary as string).slice(0, 150) : "",
     }));
 
     // Insert placeholder with 'generating' status
-    const { data: placeholder, error: placeholderError } = await supabase
-      .from("recommendations")
-      .insert({
-        scan_id: scanId,
-        user_id: userId,
-        report: {},
-        status: "generating",
-      })
-      .select("id")
-      .single();
-
-    if (placeholderError) {
-      // Race condition: another request already started generating
+    let placeholder: { id: string };
+    try {
+      const [inserted] = await db
+        .insert(recommendations)
+        .values({
+          scanId,
+          userId,
+          report: {},
+          status: "generating",
+        })
+        .returning({ id: recommendations.id });
+      placeholder = inserted;
+    } catch {
+      // Race condition: another request already started generating (unique constraint)
       return NextResponse.json({
         report: null,
         cached: false,
@@ -211,7 +211,7 @@ Regeln:
 - Wenn Risikoanalyse vorhanden: nutze die Schweregrade und Fristen daraus`;
 
     // Compact business profile — only essential fields
-    const bp = scan.business_profile as Record<string, unknown> | null;
+    const bp = scan.businessProfile as Record<string, unknown> | null;
     const compactProfile = bp ? {
       companyName: bp.companyName,
       trade: bp.trade,
@@ -238,7 +238,7 @@ ${JSON.stringify(nonCompliant)}${riskContextTruncated}`;
     );
 
     if (aiError) {
-      await supabase.from("recommendations").delete().eq("id", placeholder.id);
+      await db.delete(recommendations).where(eq(recommendations.id, placeholder.id));
       return NextResponse.json({ error: aiError }, { status: 502 });
     }
 
@@ -250,7 +250,7 @@ ${JSON.stringify(nonCompliant)}${riskContextTruncated}`;
         "Failed to parse recommendations response:",
         content.slice(0, 200)
       );
-      await supabase.from("recommendations").delete().eq("id", placeholder.id);
+      await db.delete(recommendations).where(eq(recommendations.id, placeholder.id));
       return NextResponse.json(
         { error: "Ungültiges Antwortformat von der KI" },
         { status: 502 }
@@ -258,7 +258,7 @@ ${JSON.stringify(nonCompliant)}${riskContextTruncated}`;
     }
 
     if (!parsed.items || !Array.isArray(parsed.items)) {
-      await supabase.from("recommendations").delete().eq("id", placeholder.id);
+      await db.delete(recommendations).where(eq(recommendations.id, placeholder.id));
       return NextResponse.json(
         { error: "Ungültiges Empfehlungsformat" },
         { status: 502 }
@@ -295,26 +295,28 @@ ${JSON.stringify(nonCompliant)}${riskContextTruncated}`;
     };
 
     // Update placeholder with completed report
-    const { data: updated, error: updateError } = await supabase
-      .from("recommendations")
-      .update({
-        report,
-        status: "complete",
-      })
-      .eq("id", placeholder.id)
-      .select("id, created_at")
-      .single();
-
-    if (updateError) {
+    let updatedId = placeholder.id;
+    let updatedCreatedAt = new Date().toISOString();
+    try {
+      const [updated] = await db
+        .update(recommendations)
+        .set({ report, status: "complete" })
+        .where(eq(recommendations.id, placeholder.id))
+        .returning({ id: recommendations.id, createdAt: recommendations.createdAt });
+      if (updated) {
+        updatedId = updated.id;
+        updatedCreatedAt = updated.createdAt?.toISOString() || updatedCreatedAt;
+      }
+    } catch (updateError) {
       console.error("Failed to store recommendations:", updateError);
     }
 
     return NextResponse.json({
       report: {
-        id: updated?.id || placeholder.id,
+        id: updatedId,
         scanId,
         ...report,
-        createdAt: updated?.created_at || new Date().toISOString(),
+        createdAt: updatedCreatedAt,
       },
       cached: false,
     });

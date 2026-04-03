@@ -1,7 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
-import { createClient } from "@/lib/supabase/client";
+import { useState, useEffect, useCallback } from "react";
 import { calculateComplianceScore } from "@/data/regulations/utils";
 import type { MatchedRegulation } from "@/data/regulations/types";
 import type { BusinessProfile } from "@/data/questionnaire/types";
@@ -41,10 +40,7 @@ export function useScanHistory(
   const [scanLoadError, setScanLoadError] = useState<string>();
   const [historyLoaded, setHistoryLoaded] = useState(false);
 
-  const supabaseRef = useRef(createClient());
-  const supabase = supabaseRef.current;
-
-  // Load scan history when userId changes
+  // Load scan history via API
   useEffect(() => {
     if (!userId || isGuest) {
       setHistoryLoaded(true);
@@ -54,45 +50,38 @@ export function useScanHistory(
     const load = async () => {
       try {
         setScanLoadError(undefined);
-        const { data, error } = await supabase
-          .from("scans")
-          .select("*")
-          .eq("user_id", userId)
-          .order("created_at", { ascending: false })
-          .limit(50);
+        const res = await fetch("/api/scans");
+        if (!res.ok) throw new Error("Failed to load");
+        const data = await res.json();
 
-        if (error) {
-          console.error("Failed to load scan history:", error.message);
-          setScanLoadError("Failed to load scan history");
-          return;
-        }
+        const mapped = (data.scans || []).map((scan: Record<string, unknown>) => {
+          // Drizzle returns camelCase, Supabase returned snake_case — support both
+          const bp = (scan.businessProfile || scan.business_profile) as Record<string, unknown>;
+          const mr = (scan.matchedRegulations || scan.matched_regulations) as unknown[];
+          const ca = (scan.createdAt || scan.created_at) as string;
+          const cs = scan.complianceScore ?? scan.compliance_score;
+          return {
+            id: scan.id as string,
+            companyName: (bp?.companyName as string) || "Betrieb",
+            date: new Date(ca).toLocaleDateString("de-DE"),
+            regulationCount: mr?.length || 0,
+            complianceScore: Number(cs) || 0,
+            businessProfile: bp,
+            matchedRegulationIds: ((mr as Array<{ id: string }>) || []).map((r) => r.id),
+            matchedRegulations: mr as MatchedRegulation[] | undefined,
+          };
+        });
+        setScanHistory(mapped);
 
-        if (data) {
-          const mapped = data.map((scan) => ({
-            id: scan.id,
-            companyName:
-              (scan.business_profile as Record<string, unknown>)?.companyName as string || "Betrieb",
-            date: new Date(scan.created_at).toLocaleDateString("de-DE"),
-            regulationCount: (scan.matched_regulations as unknown[])?.length || 0,
-            complianceScore: Number(scan.compliance_score) || 0,
-            businessProfile: scan.business_profile as Record<string, unknown>,
-            matchedRegulationIds: ((scan.matched_regulations as Array<{ id: string }>) || []).map(
-              (r) => r.id
-            ),
-            matchedRegulations: scan.matched_regulations as MatchedRegulation[] | undefined,
-          }));
-          setScanHistory(mapped);
-
-          // Auto-select the most recent scan so Risk Analysis / Recommendations work after re-login
-          if (mapped.length > 0 && !currentScanId) {
-            const latest = mapped[0];
-            setCurrentScanId(latest.id);
-            if (latest.matchedRegulations && latest.matchedRegulations.length > 0) {
-              setMatchedRegulations(latest.matchedRegulations);
-            }
-            setBusinessProfile(latest.businessProfile);
-            loadComplianceChecks(latest.id);
+        // Auto-select most recent scan
+        if (mapped.length > 0 && !currentScanId) {
+          const latest = mapped[0];
+          setCurrentScanId(latest.id);
+          if (latest.matchedRegulations && latest.matchedRegulations.length > 0) {
+            setMatchedRegulations(latest.matchedRegulations);
           }
+          setBusinessProfile(latest.businessProfile);
+          loadComplianceChecksFromApi(latest.id);
         }
       } catch (err) {
         console.error("Failed to load scan history:", err);
@@ -105,52 +94,43 @@ export function useScanHistory(
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId, isGuest]);
 
-  // Fix #4: Load compliance checks for a specific scan
-  const loadComplianceChecks = useCallback(
-    async (scanId: string) => {
-      if (!userId || isGuest) return;
-      try {
-        const { data } = await supabase
-          .from("compliance_checks")
-          .select("regulation_id, checked")
-          .eq("scan_id", scanId);
-
-        if (data) {
-          const checks: Record<string, boolean> = {};
-          for (const row of data) {
-            checks[row.regulation_id] = row.checked;
-          }
-          setComplianceChecks(checks);
+  const loadComplianceChecksFromApi = async (scanId: string) => {
+    try {
+      const res = await fetch(`/api/compliance-checks?scanId=${scanId}`);
+      if (!res.ok) return;
+      const data = await res.json();
+      if (data.checks) {
+        const checks: Record<string, boolean> = {};
+        for (const row of data.checks) {
+          checks[row.regulationId || row.regulation_id] = row.checked;
         }
-      } catch {
-        // compliance_checks table may not exist yet — that's ok
+        setComplianceChecks(checks);
       }
-    },
-    [userId, isGuest, supabase]
-  );
+    } catch {
+      // compliance_checks API may not exist yet
+    }
+  };
 
-  // Get compliance checks for a specific scan without updating global state
   const getComplianceChecksForScan = useCallback(
     async (scanId: string): Promise<Record<string, boolean>> => {
       if (!userId || isGuest) return {};
       try {
-        const { data } = await supabase
-          .from("compliance_checks")
-          .select("regulation_id, checked")
-          .eq("scan_id", scanId);
-        if (data) {
+        const res = await fetch(`/api/compliance-checks?scanId=${scanId}`);
+        if (!res.ok) return {};
+        const data = await res.json();
+        if (data.checks) {
           const checks: Record<string, boolean> = {};
-          for (const row of data) {
-            checks[row.regulation_id] = row.checked;
+          for (const row of data.checks) {
+            checks[row.regulationId || row.regulation_id] = row.checked;
           }
           return checks;
         }
       } catch {
-        // compliance_checks table may not exist yet
+        // compliance_checks API may not exist yet
       }
       return {};
     },
-    [userId, isGuest, supabase]
+    [userId, isGuest]
   );
 
   const saveScan = async (profile: BusinessProfile, matched: MatchedRegulation[]) => {
@@ -172,23 +152,22 @@ export function useScanHistory(
     }
 
     try {
-      const { data, error } = await supabase
-        .from("scans")
-        .insert({
-          user_id: userId,
-          business_profile: profile,
-          matched_regulations: matched,
-          compliance_score: calculateComplianceScore(matched),
-        })
-        .select()
-        .single();
+      const res = await fetch("/api/scans", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          businessProfile: profile,
+          matchedRegulations: matched,
+          complianceScore: calculateComplianceScore(matched),
+        }),
+      });
 
-      if (error) {
-        console.error("Failed to save scan:", error.message);
-        // Still keep local scan so user sees results
-      } else if (data) {
-        localScan.id = data.id;
-        localScan.complianceScore = Number(data.compliance_score) || 0;
+      if (res.ok) {
+        const data = await res.json();
+        if (data.scan) {
+          localScan.id = data.scan.id;
+          localScan.complianceScore = Number(data.scan.compliance_score) || 0;
+        }
       }
     } catch (err) {
       console.error("Failed to save scan:", err);
@@ -204,13 +183,11 @@ export function useScanHistory(
     setBusinessProfile(scan.businessProfile);
     setCurrentScanId(scanId);
 
-    // Load full regulations from stored data
     if (scan.matchedRegulations && scan.matchedRegulations.length > 0) {
       setMatchedRegulations(scan.matchedRegulations);
     }
 
-    // Fix #4: Load compliance checks for this specific scan
-    loadComplianceChecks(scanId);
+    loadComplianceChecksFromApi(scanId);
   };
 
   const handleRerunScan = (scanId: string): BusinessProfile | undefined => {
@@ -218,33 +195,27 @@ export function useScanHistory(
     return scan?.businessProfile;
   };
 
-  // Fix #3: Save compliance check to the currently viewed scan, not always [0]
   const handleComplianceChange = useCallback(
     async (regulationId: string, checked: boolean) => {
       setComplianceChecks((prev) => ({ ...prev, [regulationId]: checked }));
 
       if (userId && currentScanId) {
         try {
-          if (checked) {
-            await supabase.from("compliance_checks").upsert({
-              scan_id: currentScanId,
-              regulation_id: regulationId,
-              checked: true,
-              checked_at: new Date().toISOString(),
-            });
-          } else {
-            await supabase
-              .from("compliance_checks")
-              .delete()
-              .eq("scan_id", currentScanId)
-              .eq("regulation_id", regulationId);
-          }
+          await fetch("/api/compliance-checks", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              scanId: currentScanId,
+              regulationId,
+              checked,
+            }),
+          });
         } catch (err) {
           console.error("Failed to save compliance check:", err);
         }
       }
     },
-    [userId, currentScanId, supabase]
+    [userId, currentScanId]
   );
 
   const resetScan = () => {
@@ -254,7 +225,6 @@ export function useScanHistory(
     setCurrentScanId(null);
   };
 
-  // Fix #9 (partial): Clear local history for guest→auth transitions
   const clearHistory = () => {
     setScanHistory([]);
     resetScan();

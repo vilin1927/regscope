@@ -1,23 +1,24 @@
 import { NextResponse } from "next/server";
-import { createSupabaseServerClient, requireAuth } from "@/lib/api-helpers";
+import { requireAuth } from "@/lib/db/auth-checks";
+import { db } from "@/lib/db";
+import { consultants } from "@/lib/db/schema";
+import { eq } from "drizzle-orm";
 import { EXPERTISE_TAGS } from "@/lib/consultant-types";
 
 // GET — fetch own consultant profile
 export async function GET() {
   try {
-    const supabase = await createSupabaseServerClient();
-    const { userId, error: authError } = await requireAuth(supabase);
-    if (!userId) {
-      return NextResponse.json({ error: authError }, { status: 401 });
-    }
+    const auth = await requireAuth();
+    if (auth.error) return auth.error;
+    const { userId } = auth;
 
-    const { data, error } = await supabase
-      .from("consultants")
-      .select("*")
-      .eq("user_id", userId)
-      .single();
+    const [data] = await db
+      .select()
+      .from(consultants)
+      .where(eq(consultants.userId, userId))
+      .limit(1);
 
-    if (error || !data) {
+    if (!data) {
       return NextResponse.json({ consultant: null });
     }
 
@@ -31,11 +32,9 @@ export async function GET() {
 // PATCH — update own consultant profile
 export async function PATCH(request: Request) {
   try {
-    const supabase = await createSupabaseServerClient();
-    const { userId, error: authError } = await requireAuth(supabase);
-    if (!userId) {
-      return NextResponse.json({ error: authError }, { status: 401 });
-    }
+    const auth = await requireAuth();
+    if (auth.error) return auth.error;
+    const { userId } = auth;
 
     const body = await request.json();
     const updates: Record<string, unknown> = {};
@@ -46,20 +45,18 @@ export async function PATCH(request: Request) {
     if (body.bio !== undefined) updates.bio = body.bio?.trim() || null;
     if (body.tags !== undefined) {
       updates.tags = (body.tags || []).filter((t: string) =>
-        EXPERTISE_TAGS.includes(t as typeof EXPERTISE_TAGS[number])
+        EXPERTISE_TAGS.includes(t as (typeof EXPERTISE_TAGS)[number])
       );
     }
-    updates.updated_at = new Date().toISOString();
+    updates.updatedAt = new Date();
 
-    const { data, error } = await supabase
-      .from("consultants")
-      .update(updates)
-      .eq("user_id", userId)
-      .select()
-      .single();
+    const [data] = await db
+      .update(consultants)
+      .set(updates)
+      .where(eq(consultants.userId, userId))
+      .returning();
 
-    if (error) {
-      console.error("Consultant profile update error:", error);
+    if (!data) {
       return NextResponse.json({ error: "Aktualisierung fehlgeschlagen" }, { status: 500 });
     }
 

@@ -1,18 +1,18 @@
 import { NextResponse } from "next/server";
-import { createSupabaseServerClient, requireAuth } from "@/lib/api-helpers";
+import { db } from "@/lib/db";
+import { profiles } from "@/lib/db/schema";
+import { eq } from "drizzle-orm";
+import { requireAuth } from "@/lib/db/auth-checks";
 
 export async function POST() {
   try {
-    const supabase = await createSupabaseServerClient();
-    const { userId, error: authError } = await requireAuth(supabase);
-    if (!userId) {
-      return NextResponse.json({ error: authError }, { status: 401 });
-    }
+    const auth = await requireAuth();
+    if (auth.error) return auth.error;
 
-    await supabase
-      .from("profiles")
-      .update({ contact_consent_given: true })
-      .eq("id", userId);
+    await db
+      .update(profiles)
+      .set({ contactConsentGiven: true })
+      .where(eq(profiles.id, auth.userId));
 
     return NextResponse.json({ ok: true });
   } catch {

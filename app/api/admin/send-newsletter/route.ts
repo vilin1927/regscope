@@ -1,32 +1,30 @@
 import { NextResponse } from "next/server";
-import { requireAdmin } from "@/lib/admin-auth";
+import { requireAdmin } from "@/lib/db/auth-checks";
 
 /**
- * Proxy for /api/send-newsletter that uses session-based admin auth
- * instead of API key from client. Calls the existing send endpoint internally.
+ * Proxy for /api/send-newsletter that uses session-based admin auth.
+ * Since the main send-newsletter endpoint now also uses requireAdmin(),
+ * this proxy simply forwards the request.
  */
 export async function POST(request: Request) {
   try {
     const auth = await requireAdmin();
     if (auth.error) return auth.error;
 
-    // Call the existing send-newsletter endpoint with the server-side API key
-    const adminApiKey = process.env.ADMIN_API_KEY;
-    if (!adminApiKey) {
-      return NextResponse.json(
-        { error: "Admin API-Schlüssel nicht konfiguriert" },
-        { status: 500 }
-      );
-    }
-
-    const origin = request.headers.get("origin") || request.headers.get("host") || "";
+    const origin =
+      request.headers.get("origin") ||
+      request.headers.get("host") ||
+      "";
     const protocol = origin.startsWith("localhost") ? "http" : "https";
-    const baseUrl = origin.startsWith("http") ? origin : `${protocol}://${origin}`;
+    const baseUrl = origin.startsWith("http")
+      ? origin
+      : `${protocol}://${origin}`;
 
+    // Forward with the same cookies so /api/send-newsletter can authenticate
     const res = await fetch(`${baseUrl}/api/send-newsletter`, {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${adminApiKey}`,
+        cookie: request.headers.get("cookie") || "",
       },
     });
 

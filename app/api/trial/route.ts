@@ -1,22 +1,22 @@
 import { NextResponse } from "next/server";
-import { createSupabaseServerClient, requireAuth } from "@/lib/api-helpers";
+import { db } from "@/lib/db";
+import { profiles } from "@/lib/db/schema";
+import { eq } from "drizzle-orm";
+import { requireAuth } from "@/lib/db/auth-checks";
 
 export async function GET() {
   try {
-    const supabase = await createSupabaseServerClient();
-    const { userId, error } = await requireAuth(supabase);
-    if (!userId) {
-      return NextResponse.json({ error }, { status: 401 });
-    }
+    const auth = await requireAuth();
+    if (auth.error) return auth.error;
 
-    const { data } = await supabase
-      .from("profiles")
-      .select("trial_started_at")
-      .eq("id", userId)
-      .single();
+    const [profile] = await db
+      .select({ trialStartedAt: profiles.trialStartedAt })
+      .from(profiles)
+      .where(eq(profiles.id, auth.userId))
+      .limit(1);
 
     return NextResponse.json({
-      trial_started_at: data?.trial_started_at ?? null,
+      trial_started_at: profile?.trialStartedAt ?? null,
     });
   } catch (error) {
     console.error("Trial GET error:", error);
@@ -29,28 +29,28 @@ export async function GET() {
 
 export async function POST() {
   try {
-    const supabase = await createSupabaseServerClient();
-    const { userId, error } = await requireAuth(supabase);
-    if (!userId) {
-      return NextResponse.json({ error }, { status: 401 });
-    }
+    const auth = await requireAuth();
+    if (auth.error) return auth.error;
 
-    const now = new Date().toISOString();
+    const now = new Date();
 
-    const { error: updateError } = await supabase
-      .from("profiles")
-      .update({ trial_started_at: now })
-      .eq("id", userId);
+    const result = await db
+      .update(profiles)
+      .set({ trialStartedAt: now })
+      .where(eq(profiles.id, auth.userId))
+      .returning({ trialStartedAt: profiles.trialStartedAt });
 
-    if (updateError) {
-      console.error("Trial update error:", updateError);
+    if (result.length === 0) {
+      console.error("Trial update: no profile found for userId", auth.userId);
       return NextResponse.json(
         { error: "Testphase konnte nicht gestartet werden" },
         { status: 500 }
       );
     }
 
-    return NextResponse.json({ trial_started_at: now });
+    return NextResponse.json({
+      trial_started_at: result[0].trialStartedAt?.toISOString() ?? now.toISOString(),
+    });
   } catch (error) {
     console.error("Trial error:", error);
     return NextResponse.json(

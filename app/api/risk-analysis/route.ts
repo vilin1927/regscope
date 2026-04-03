@@ -1,10 +1,9 @@
 import { NextResponse } from "next/server";
-import {
-  isRateLimited,
-  createSupabaseServerClient,
-  requireAuth,
-  callOpenAI,
-} from "@/lib/api-helpers";
+import { isRateLimited, callOpenAI } from "@/lib/api-helpers";
+import { requireAuth } from "@/lib/db/auth-checks";
+import { db } from "@/lib/db";
+import { scans, riskReports } from "@/lib/db/schema";
+import { eq, and } from "drizzle-orm";
 import type { RiskItem } from "@/types/addons";
 
 // Allow up to 60s for OpenAI generation
@@ -15,11 +14,9 @@ const VALID_SEVERITIES = ["kritisch", "hoch", "mittel", "niedrig"];
 export async function POST(request: Request) {
   try {
     // Auth (required — no guests)
-    const supabase = await createSupabaseServerClient();
-    const { userId, error: authError } = await requireAuth(supabase);
-    if (!userId) {
-      return NextResponse.json({ error: authError }, { status: 401 });
-    }
+    const authResult = await requireAuth();
+    if (authResult.error) return authResult.error;
+    const { userId } = authResult;
 
     // Parse body
     let body: { scanId?: string; force?: boolean; checkOnly?: boolean };
@@ -55,14 +52,17 @@ export async function POST(request: Request) {
     }
 
     // Verify scan ownership
-    const { data: scan, error: scanError } = await supabase
-      .from("scans")
-      .select("id, matched_regulations, business_profile")
-      .eq("id", scanId)
-      .eq("user_id", userId)
-      .single();
+    const [scan] = await db
+      .select({
+        id: scans.id,
+        matchedRegulations: scans.matchedRegulations,
+        businessProfile: scans.businessProfile,
+      })
+      .from(scans)
+      .where(and(eq(scans.id, scanId), eq(scans.userId, userId)))
+      .limit(1);
 
-    if (scanError || !scan) {
+    if (!scan) {
       return NextResponse.json(
         { error: "Scan nicht gefunden oder Zugriff verweigert" },
         { status: 404 }
@@ -71,19 +71,21 @@ export async function POST(request: Request) {
 
     // Delete existing report when force re-run
     if (force) {
-      await supabase
-        .from("risk_reports")
-        .delete()
-        .eq("scan_id", scanId)
-        .eq("user_id", userId);
+      await db
+        .delete(riskReports)
+        .where(and(eq(riskReports.scanId, scanId), eq(riskReports.userId, userId)));
     } else {
       // Check for existing report (cache-first)
-      const { data: existing } = await supabase
-        .from("risk_reports")
-        .select("id, report, status, created_at")
-        .eq("scan_id", scanId)
-        .eq("user_id", userId)
-        .single();
+      const [existing] = await db
+        .select({
+          id: riskReports.id,
+          report: riskReports.report,
+          status: riskReports.status,
+          createdAt: riskReports.createdAt,
+        })
+        .from(riskReports)
+        .where(and(eq(riskReports.scanId, scanId), eq(riskReports.userId, userId)))
+        .limit(1);
 
       if (existing) {
         // Completed report — return cached
@@ -92,15 +94,15 @@ export async function POST(request: Request) {
             report: {
               id: existing.id,
               scanId,
-              ...existing.report,
-              createdAt: existing.created_at,
+              ...(existing.report as Record<string, unknown>),
+              createdAt: existing.createdAt?.toISOString(),
             },
             cached: true,
           });
         }
 
         // Still generating — check if stale (>2 minutes)
-        const age = Date.now() - new Date(existing.created_at).getTime();
+        const age = Date.now() - new Date(existing.createdAt!).getTime();
         if (age < 2 * 60 * 1000) {
           return NextResponse.json({
             report: null,
@@ -110,10 +112,9 @@ export async function POST(request: Request) {
         }
 
         // Stale generating row — delete and regenerate
-        await supabase
-          .from("risk_reports")
-          .delete()
-          .eq("id", existing.id);
+        await db
+          .delete(riskReports)
+          .where(eq(riskReports.id, existing.id));
       }
 
       // checkOnly mode: just checking for cache, don't generate
@@ -123,9 +124,9 @@ export async function POST(request: Request) {
     }
 
     // Filter to non-compliant regulations
-    const allNonCompliant = (scan.matched_regulations || []).filter(
-      (r: { status: string }) =>
-        r.status === "fehlend" || r.status === "pruefung"
+    const matchedRegs = (scan.matchedRegulations || []) as Array<Record<string, unknown>>;
+    const allNonCompliant = matchedRegs.filter(
+      (r) => r.status === "fehlend" || r.status === "pruefung"
     );
 
     if (allNonCompliant.length === 0) {
@@ -136,11 +137,10 @@ export async function POST(request: Request) {
     }
 
     // Prioritize "fehlend" over "pruefung", cap at 5 to stay within Vercel 60s limit
-    // (tested: 5 regs = ~13s OpenAI, 10 regs = ~30-40s — too risky with cold start)
-    const sorted = [...allNonCompliant].sort((a: { status: string }, b: { status: string }) =>
+    const sorted = [...allNonCompliant].sort((a, b) =>
       a.status === "fehlend" && b.status !== "fehlend" ? -1 : 0
     );
-    const regulations = sorted.slice(0, 5).map((r: Record<string, unknown>) => ({
+    const regulations = sorted.slice(0, 5).map((r) => ({
       id: r.id,
       name: r.name,
       category: r.category,
@@ -149,19 +149,20 @@ export async function POST(request: Request) {
     }));
 
     // Insert placeholder with 'generating' status
-    const { data: placeholder, error: placeholderError } = await supabase
-      .from("risk_reports")
-      .insert({
-        scan_id: scanId,
-        user_id: userId,
-        report: {},
-        status: "generating",
-      })
-      .select("id")
-      .single();
-
-    if (placeholderError) {
-      // Race condition: another request already started generating
+    let placeholder: { id: string };
+    try {
+      const [inserted] = await db
+        .insert(riskReports)
+        .values({
+          scanId,
+          userId,
+          report: {},
+          status: "generating",
+        })
+        .returning({ id: riskReports.id });
+      placeholder = inserted;
+    } catch {
+      // Race condition: another request already started generating (unique constraint)
       return NextResponse.json({
         report: null,
         cached: false,
@@ -175,7 +176,7 @@ export async function POST(request: Request) {
 Sortiere: kritisch>hoch>mittel>niedrig. Verwende nur IDs aus der Liste. Kurz und präzise antworten.`;
 
     // Compact business profile — only essential fields
-    const bp = scan.business_profile as Record<string, unknown> | null;
+    const bp = scan.businessProfile as Record<string, unknown> | null;
     const compactProfile = bp ? {
       companyName: bp.companyName,
       trade: bp.trade,
@@ -195,7 +196,7 @@ Vorschriften (${allNonCompliant.length} gesamt, Top ${regulations.length}): ${JS
 
     if (aiError) {
       // Clean up placeholder on failure
-      await supabase.from("risk_reports").delete().eq("id", placeholder.id);
+      await db.delete(riskReports).where(eq(riskReports.id, placeholder.id));
       return NextResponse.json({ error: aiError }, { status: 502 });
     }
 
@@ -204,7 +205,7 @@ Vorschriften (${allNonCompliant.length} gesamt, Top ${regulations.length}): ${JS
       parsed = JSON.parse(content);
     } catch {
       console.error("Failed to parse risk analysis response:", content.slice(0, 200));
-      await supabase.from("risk_reports").delete().eq("id", placeholder.id);
+      await db.delete(riskReports).where(eq(riskReports.id, placeholder.id));
       return NextResponse.json(
         { error: "Ungültiges Antwortformat von der KI" },
         { status: 502 }
@@ -213,7 +214,7 @@ Vorschriften (${allNonCompliant.length} gesamt, Top ${regulations.length}): ${JS
 
     // Validate items
     if (!parsed.items || !Array.isArray(parsed.items)) {
-      await supabase.from("risk_reports").delete().eq("id", placeholder.id);
+      await db.delete(riskReports).where(eq(riskReports.id, placeholder.id));
       return NextResponse.json(
         { error: "Ungültiges Risikoanalyse-Format" },
         { status: 502 }
@@ -250,26 +251,28 @@ Vorschriften (${allNonCompliant.length} gesamt, Top ${regulations.length}): ${JS
     };
 
     // Update placeholder with completed report
-    const { data: updated, error: updateError } = await supabase
-      .from("risk_reports")
-      .update({
-        report,
-        status: "complete",
-      })
-      .eq("id", placeholder.id)
-      .select("id, created_at")
-      .single();
-
-    if (updateError) {
+    let updatedId = placeholder.id;
+    let updatedCreatedAt = new Date().toISOString();
+    try {
+      const [updated] = await db
+        .update(riskReports)
+        .set({ report, status: "complete" })
+        .where(eq(riskReports.id, placeholder.id))
+        .returning({ id: riskReports.id, createdAt: riskReports.createdAt });
+      if (updated) {
+        updatedId = updated.id;
+        updatedCreatedAt = updated.createdAt?.toISOString() || updatedCreatedAt;
+      }
+    } catch (updateError) {
       console.error("Failed to store risk report:", updateError);
     }
 
     return NextResponse.json({
       report: {
-        id: updated?.id || placeholder.id,
+        id: updatedId,
         scanId,
         ...report,
-        createdAt: updated?.created_at || new Date().toISOString(),
+        createdAt: updatedCreatedAt,
       },
       cached: false,
     });

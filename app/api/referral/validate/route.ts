@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
-import { createSupabaseServerClient } from "@/lib/api-helpers";
+import { db } from "@/lib/db";
+import { consultants } from "@/lib/db/schema";
+import { eq, and } from "drizzle-orm";
 
 // GET — validate a referral code and return consultant name
 export async function GET(request: Request) {
@@ -11,14 +13,20 @@ export async function GET(request: Request) {
       return NextResponse.json({ valid: false, error: "Kein Code angegeben" });
     }
 
-    const supabase = await createSupabaseServerClient();
-
-    const { data: consultant } = await supabase
-      .from("consultants")
-      .select("id, name, tags")
-      .eq("referral_code", code)
-      .eq("is_active", true)
-      .single();
+    const [consultant] = await db
+      .select({
+        id: consultants.id,
+        name: consultants.name,
+        tags: consultants.tags,
+      })
+      .from(consultants)
+      .where(
+        and(
+          eq(consultants.referralCode, code),
+          eq(consultants.isActive, true)
+        )
+      )
+      .limit(1);
 
     if (!consultant) {
       return NextResponse.json({ valid: false, error: "Ungültiger Empfehlungscode" });
