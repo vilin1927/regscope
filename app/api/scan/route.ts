@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
-import { createServerClient } from "@supabase/ssr";
-import { cookies } from "next/headers";
+import { auth } from "@/lib/auth";
 import { carpentryRegulations } from "@/data/regulations/carpentry-regulations";
 import { callOpenAI } from "@/lib/api-helpers";
 import type {
@@ -308,13 +307,7 @@ export async function POST(request: Request) {
     }
 
     // Auth check — allow both authenticated users and guests
-    const cookieStore = await cookies();
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      { cookies: { getAll: () => cookieStore.getAll() } }
-    );
-    const { data: { session } } = await supabase.auth.getSession();
+    const session = await auth();
     const userId = session?.user?.id ?? "guest";
     console.info(`Scan request from user: ${userId}`);
 

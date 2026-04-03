@@ -1,42 +1,39 @@
 import { NextResponse } from "next/server";
-import { requireAdmin } from "@/lib/admin-auth";
+import { requireAdmin } from "@/lib/db/auth-checks";
+import { db } from "@/lib/db";
+import { users, newsletterPreferences } from "@/lib/db/schema";
+import { eq, desc } from "drizzle-orm";
 
 export async function GET() {
   try {
     const auth = await requireAdmin();
     if (auth.error) return auth.error;
-    const { adminSupabase } = auth;
 
-    const { data: subscribers, error: fetchError } = await adminSupabase!
-      .from("newsletter_preferences")
-      .select("user_id, opted_in, frequency, areas, locale, updated_at")
-      .eq("opted_in", true)
-      .order("updated_at", { ascending: false });
-
-    if (fetchError) {
-      console.error("Admin subscribers fetch error:", fetchError);
-      return NextResponse.json(
-        { error: "Abonnenten konnten nicht geladen werden" },
-        { status: 500 }
-      );
-    }
-
-    // Enrich with email from auth
-    const enriched = await Promise.all(
-      (subscribers || []).map(async (sub) => {
-        const { data: userData } =
-          await adminSupabase!.auth.admin.getUserById(sub.user_id);
-        return {
-          userId: sub.user_id,
-          email: userData?.user?.email || "unknown",
-          optedIn: sub.opted_in,
-          frequency: sub.frequency,
-          areas: sub.areas || [],
-          locale: sub.locale || "de",
-          updatedAt: sub.updated_at,
-        };
+    // Fetch opted-in subscribers joined with users for email
+    const subscribers = await db
+      .select({
+        userId: newsletterPreferences.userId,
+        optedIn: newsletterPreferences.optedIn,
+        frequency: newsletterPreferences.frequency,
+        areas: newsletterPreferences.areas,
+        locale: newsletterPreferences.locale,
+        updatedAt: newsletterPreferences.updatedAt,
+        email: users.email,
       })
-    );
+      .from(newsletterPreferences)
+      .innerJoin(users, eq(newsletterPreferences.userId, users.id))
+      .where(eq(newsletterPreferences.optedIn, true))
+      .orderBy(desc(newsletterPreferences.updatedAt));
+
+    const enriched = subscribers.map((sub) => ({
+      userId: sub.userId,
+      email: sub.email || "unknown",
+      optedIn: sub.optedIn,
+      frequency: sub.frequency,
+      areas: sub.areas || [],
+      locale: sub.locale || "de",
+      updatedAt: sub.updatedAt?.toISOString() || null,
+    }));
 
     const optedInCount = enriched.filter((s) => s.optedIn).length;
 

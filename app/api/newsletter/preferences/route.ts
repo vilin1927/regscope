@@ -1,9 +1,8 @@
 import { NextResponse } from "next/server";
-import {
-  isRateLimited,
-  createSupabaseServerClient,
-  requireAuth,
-} from "@/lib/api-helpers";
+import { db } from "@/lib/db";
+import { newsletterPreferences } from "@/lib/db/schema";
+import { eq } from "drizzle-orm";
+import { requireAuth } from "@/lib/db/auth-checks";
 
 const VALID_FREQUENCIES = ["weekly", "monthly"];
 const VALID_LOCALES = ["de", "en"];
@@ -17,34 +16,25 @@ const VALID_AREAS = [
   "versicherungspflichten",
 ];
 
-export async function GET(request: Request) {
+export async function GET() {
   try {
-    const ip =
-      request.headers.get("x-forwarded-for") ??
-      request.headers.get("x-real-ip") ??
-      "unknown";
-    if (isRateLimited(ip)) {
-      return NextResponse.json(
-        { error: "Zu viele Anfragen" },
-        { status: 429 }
-      );
-    }
+    const auth = await requireAuth();
+    if (auth.error) return auth.error;
 
-    const supabase = await createSupabaseServerClient();
-    const { userId, error: authError } = await requireAuth(supabase);
-    if (!userId) {
-      return NextResponse.json({ error: authError }, { status: 401 });
-    }
-
-    const { data } = await supabase
-      .from("newsletter_preferences")
-      .select("opted_in, frequency, areas, locale")
-      .eq("user_id", userId)
-      .single();
+    const [data] = await db
+      .select({
+        optedIn: newsletterPreferences.optedIn,
+        frequency: newsletterPreferences.frequency,
+        areas: newsletterPreferences.areas,
+        locale: newsletterPreferences.locale,
+      })
+      .from(newsletterPreferences)
+      .where(eq(newsletterPreferences.userId, auth.userId))
+      .limit(1);
 
     if (data) {
       return NextResponse.json({
-        optedIn: data.opted_in,
+        optedIn: data.optedIn,
         frequency: data.frequency,
         areas: data.areas,
         locale: data.locale ?? "de",
@@ -69,24 +59,15 @@ export async function GET(request: Request) {
 
 export async function PUT(request: Request) {
   try {
-    const ip =
-      request.headers.get("x-forwarded-for") ??
-      request.headers.get("x-real-ip") ??
-      "unknown";
-    if (isRateLimited(ip)) {
-      return NextResponse.json(
-        { error: "Zu viele Anfragen" },
-        { status: 429 }
-      );
-    }
+    const auth = await requireAuth();
+    if (auth.error) return auth.error;
 
-    const supabase = await createSupabaseServerClient();
-    const { userId, error: authError } = await requireAuth(supabase);
-    if (!userId) {
-      return NextResponse.json({ error: authError }, { status: 401 });
-    }
-
-    let body: { optedIn?: boolean; frequency?: string; areas?: string[]; locale?: string };
+    let body: {
+      optedIn?: boolean;
+      frequency?: string;
+      areas?: string[];
+      locale?: string;
+    };
     try {
       body = await request.json();
     } catch {
@@ -113,27 +94,26 @@ export async function PUT(request: Request) {
         : "de";
 
     // Upsert
-    const { error: upsertError } = await supabase
-      .from("newsletter_preferences")
-      .upsert(
-        {
-          user_id: userId,
-          opted_in: optedIn,
+    await db
+      .insert(newsletterPreferences)
+      .values({
+        userId: auth.userId,
+        optedIn,
+        frequency,
+        areas,
+        locale,
+        updatedAt: new Date(),
+      })
+      .onConflictDoUpdate({
+        target: newsletterPreferences.userId,
+        set: {
+          optedIn,
           frequency,
           areas,
           locale,
-          updated_at: new Date().toISOString(),
+          updatedAt: new Date(),
         },
-        { onConflict: "user_id" }
-      );
-
-    if (upsertError) {
-      console.error("Newsletter preferences upsert error:", upsertError);
-      return NextResponse.json(
-        { error: "Einstellungen konnten nicht gespeichert werden" },
-        { status: 500 }
-      );
-    }
+      });
 
     return NextResponse.json({ optedIn, frequency, areas, locale });
   } catch (error) {

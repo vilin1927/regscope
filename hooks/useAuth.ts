@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
-import { createClient } from "@/lib/supabase/client";
+import { useState, useEffect, useCallback } from "react";
+import { useSession, signIn, signOut } from "next-auth/react";
 
 interface AuthState {
   isGuest: boolean;
@@ -18,16 +18,14 @@ interface AuthActions {
 }
 
 export function useAuth(): AuthState & AuthActions {
+  const { data: session, status } = useSession();
   const [isGuest, setIsGuestState] = useState(() => {
     if (typeof window !== "undefined") {
       return sessionStorage.getItem("complyradar_guest") === "true";
     }
     return false;
   });
-  const [userEmail, setUserEmail] = useState<string>();
-  const [userId, setUserId] = useState<string>();
   const [authError, setAuthError] = useState<string>();
-  const [isLoading, setIsLoading] = useState(true);
 
   const setIsGuest = (value: boolean) => {
     setIsGuestState(value);
@@ -40,99 +38,89 @@ export function useAuth(): AuthState & AuthActions {
     }
   };
 
-  const supabaseRef = useRef(createClient());
-  const supabase = supabaseRef.current;
-
+  // Clear guest mode when user logs in
   useEffect(() => {
-    const checkAuth = async () => {
+    if (session?.user) {
+      setIsGuest(false);
+    }
+  }, [session]);
+
+  const handleAuth = useCallback(
+    async (email: string, password: string, mode: "signin" | "signup") => {
+      setAuthError(undefined);
       try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session?.user) {
-          setUserEmail(session.user.email ?? undefined);
-          setUserId(session.user.id);
+        if (mode === "signup") {
+          // Get referral code from session storage
+          const referralCode =
+            typeof window !== "undefined"
+              ? sessionStorage.getItem("complyradar_referral_code")
+              : null;
+
+          // Register first
+          const res = await fetch("/api/auth/register", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email, password, referralCode }),
+          });
+
+          const data = await res.json();
+          if (!res.ok) {
+            setAuthError(data.error);
+            return;
+          }
+
+          // Clear referral code after successful signup
+          if (referralCode && typeof window !== "undefined") {
+            sessionStorage.removeItem("complyradar_referral_code");
+          }
+
+          // Auto sign-in after registration
+          const result = await signIn("credentials", {
+            email,
+            password,
+            redirect: false,
+          });
+
+          if (result?.error) {
+            setAuthError("Registrierung erfolgreich, aber Anmeldung fehlgeschlagen. Bitte melden Sie sich an.");
+            return;
+          }
+        } else {
+          const result = await signIn("credentials", {
+            email,
+            password,
+            redirect: false,
+          });
+
+          if (result?.error) {
+            setAuthError("Ungültige E-Mail oder Passwort");
+            return;
+          }
         }
+
+        setIsGuest(false);
       } catch {
-        // Supabase not configured
-      } finally {
-        setIsLoading(false);
+        setAuthError("Authentifizierungsdienst nicht konfiguriert. Versuchen Sie den Gastmodus.");
       }
-    };
-    checkAuth();
+    },
+    []
+  );
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session?.user) {
-        setUserEmail(session.user.email ?? undefined);
-        setUserId(session.user.id);
-      } else {
-        setUserEmail(undefined);
-        setUserId(undefined);
-      }
-    });
-
-    return () => subscription.unsubscribe();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const handleGuest = useCallback(() => {
+    setIsGuest(true);
   }, []);
 
-  const handleAuth = async (email: string, password: string, mode: "signin" | "signup") => {
-    setAuthError(undefined);
-    try {
-      const result = mode === "signup"
-        ? await supabase.auth.signUp({ email, password })
-        : await supabase.auth.signInWithPassword({ email, password });
-
-      if (result.error) {
-        setAuthError(result.error.message);
-        return;
-      }
-
-      setUserEmail(email);
-      setUserId(result.data.user?.id);
-      setIsGuest(false);
-
-      // Record referral if signup with referral code
-      if (mode === "signup" && typeof window !== "undefined") {
-        const referralCode = sessionStorage.getItem("complyradar_referral_code");
-        if (referralCode) {
-          sessionStorage.removeItem("complyradar_referral_code");
-          // Fire-and-forget: record referral in background
-          fetch(`/api/referral/validate?code=${encodeURIComponent(referralCode)}`)
-            .then((res) => res.json())
-            .then((data) => {
-              if (data.valid && data.consultantId && result.data.user?.id) {
-                supabase.from("referrals").insert({
-                  referral_code: referralCode,
-                  consultant_id: data.consultantId,
-                  customer_user_id: result.data.user.id,
-                }).then(() => {});
-              }
-            })
-            .catch(() => {});
-        }
-      }
-    } catch {
-      setAuthError("Authentifizierungsdienst nicht konfiguriert. Versuchen Sie den Gastmodus.");
-    }
-  };
-
-  const handleGuest = () => {
-    setIsGuest(true);
-    setUserEmail(undefined);
-    setUserId(undefined);
-  };
-
-  const handleSignOut = async () => {
-    await supabase.auth.signOut();
+  const handleSignOut = useCallback(async () => {
+    await signOut({ redirect: false });
     setIsGuest(false);
-    setUserEmail(undefined);
-    setUserId(undefined);
-  };
+  }, []);
 
   return {
     isGuest,
-    userEmail,
-    userId,
+    userEmail: session?.user?.email ?? undefined,
+    userId: session?.user?.id ?? undefined,
     authError,
-    isLoading,
+    isLoading: status === "loading",
     handleAuth,
     handleGuest,
     handleSignOut,

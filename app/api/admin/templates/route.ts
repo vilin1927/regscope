@@ -1,24 +1,18 @@
 import { NextResponse } from "next/server";
-import { requireAdmin } from "@/lib/admin-auth";
+import { requireAdmin } from "@/lib/db/auth-checks";
+import { db } from "@/lib/db";
+import { industryTemplates } from "@/lib/db/schema";
+import { desc } from "drizzle-orm";
 
 export async function GET() {
   try {
     const auth = await requireAdmin();
     if (auth.error) return auth.error;
-    const { adminSupabase } = auth;
 
-    const { data: templates, error } = await adminSupabase!
-      .from("industry_templates")
-      .select("*")
-      .order("usage_count", { ascending: false });
-
-    if (error) {
-      console.error("Admin templates fetch error:", error);
-      return NextResponse.json(
-        { error: "Vorlagen konnten nicht geladen werden" },
-        { status: 500 }
-      );
-    }
+    const templates = await db
+      .select()
+      .from(industryTemplates)
+      .orderBy(desc(industryTemplates.usageCount));
 
     return NextResponse.json({ templates: templates || [] });
   } catch (err) {

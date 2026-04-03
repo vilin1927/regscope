@@ -1,50 +1,55 @@
 import { NextResponse } from "next/server";
-import { createSupabaseServerClient, requireAuth } from "@/lib/api-helpers";
+import { requireAuth, verifyConsultantOwnership } from "@/lib/db/auth-checks";
+import { db } from "@/lib/db";
+import { consultants, referrals, helpRequests } from "@/lib/db/schema";
+import { eq, desc } from "drizzle-orm";
 
 // GET — consultant dashboard data (referrals, help requests, stats)
 export async function GET() {
   try {
-    const supabase = await createSupabaseServerClient();
-    const { userId, error: authError } = await requireAuth(supabase);
-    if (!userId) {
-      return NextResponse.json({ error: authError }, { status: 401 });
+    const auth = await requireAuth();
+    if (auth.error) return auth.error;
+    const { userId } = auth;
+
+    const consultantId = await verifyConsultantOwnership(userId);
+    if (!consultantId) {
+      return NextResponse.json(
+        { error: "Kein Beraterprofil gefunden" },
+        { status: 404 }
+      );
     }
 
     // Get consultant profile
-    const { data: consultant, error: consultantError } = await supabase
-      .from("consultants")
-      .select("*")
-      .eq("user_id", userId)
-      .single();
-
-    if (consultantError || !consultant) {
-      return NextResponse.json({ error: "Kein Beraterprofil gefunden" }, { status: 404 });
-    }
+    const [consultant] = await db
+      .select()
+      .from(consultants)
+      .where(eq(consultants.userId, userId))
+      .limit(1);
 
     // Get referrals
-    const { data: referrals } = await supabase
-      .from("referrals")
-      .select("*")
-      .eq("consultant_id", consultant.id)
-      .order("created_at", { ascending: false });
+    const referralList = await db
+      .select()
+      .from(referrals)
+      .where(eq(referrals.consultantId, consultantId))
+      .orderBy(desc(referrals.createdAt));
 
     // Get help requests
-    const { data: helpRequests } = await supabase
-      .from("help_requests")
-      .select("*")
-      .eq("consultant_id", consultant.id)
-      .order("created_at", { ascending: false });
+    const helpRequestList = await db
+      .select()
+      .from(helpRequests)
+      .where(eq(helpRequests.consultantId, consultantId))
+      .orderBy(desc(helpRequests.createdAt));
 
     // Calculate stats
-    const totalReferrals = referrals?.length || 0;
-    const activeReferrals = referrals?.filter((r) => r.status === "active").length || 0;
-    const pendingRequests = helpRequests?.filter((r) => r.status === "pending").length || 0;
-    const totalRequests = helpRequests?.length || 0;
+    const totalReferrals = referralList.length;
+    const activeReferrals = referralList.filter((r) => r.status === "active").length;
+    const pendingRequests = helpRequestList.filter((r) => r.status === "pending").length;
+    const totalRequests = helpRequestList.length;
 
     return NextResponse.json({
       consultant,
-      referrals: referrals || [],
-      helpRequests: helpRequests || [],
+      referrals: referralList,
+      helpRequests: helpRequestList,
       stats: {
         totalReferrals,
         activeReferrals,

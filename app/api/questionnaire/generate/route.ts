@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { isRateLimited, createSupabaseServerClient } from "@/lib/api-helpers";
+import { isRateLimited } from "@/lib/api-helpers";
 import { classifyIndustry } from "@/lib/industry-detector";
 import { generateQuestionnaire } from "@/data/questionnaire/dynamic-generator";
+import { db } from "@/lib/db";
+import { industryTemplates } from "@/lib/db/schema";
+import { eq, sql } from "drizzle-orm";
 
 export const maxDuration = 60;
 
@@ -35,28 +38,28 @@ export async function POST(request: NextRequest) {
     // Step 1: Classify industry
     const classification = await classifyIndustry(gegenstand, companyName);
 
-    // Step 2: Check cache in Supabase (gracefully handle missing table)
-    let cached: { questions: unknown; usage_count?: number } | null = null;
+    // Step 2: Check cache in database (gracefully handle errors)
+    let cached: { questions: unknown; usageCount: number } | null = null;
     try {
-      const supabase = await createSupabaseServerClient();
-      const { data } = await supabase
-        .from("industry_templates")
-        .select("questions, usage_count")
-        .eq("industry_code", classification.industry_code)
-        .single();
-      cached = data;
+      const [row] = await db
+        .select({
+          questions: industryTemplates.questions,
+          usageCount: industryTemplates.usageCount,
+        })
+        .from(industryTemplates)
+        .where(eq(industryTemplates.industryCode, classification.industry_code))
+        .limit(1);
+      cached = row || null;
     } catch {
       // Table may not exist yet — skip cache
     }
 
     if (cached?.questions) {
-      // Try to increment usage count in background
+      // Increment usage count in background (fire-and-forget)
       try {
-        const supabase = await createSupabaseServerClient();
-        supabase
-          .from("industry_templates")
-          .update({ usage_count: (cached.usage_count || 0) + 1 })
-          .eq("industry_code", classification.industry_code)
+        db.update(industryTemplates)
+          .set({ usageCount: sql`${industryTemplates.usageCount} + 1` })
+          .where(eq(industryTemplates.industryCode, classification.industry_code))
           .then(() => {});
       } catch { /* ignore */ }
 
@@ -76,15 +79,22 @@ export async function POST(request: NextRequest) {
 
     // Step 4: Cache the generated template (non-blocking, graceful)
     try {
-      const supabase = await createSupabaseServerClient();
-      supabase
-        .from("industry_templates")
-        .upsert({
-          industry_code: classification.industry_code,
-          industry_label: classification.industry_label_de,
+      db.insert(industryTemplates)
+        .values({
+          industryCode: classification.industry_code,
+          industryLabel: classification.industry_label_de,
           questions: layers,
-          gegenstand_sample: gegenstand.substring(0, 500),
-          usage_count: 1,
+          gegenstandSample: gegenstand.substring(0, 500),
+          usageCount: 1,
+        })
+        .onConflictDoUpdate({
+          target: industryTemplates.industryCode,
+          set: {
+            questions: layers,
+            gegenstandSample: gegenstand.substring(0, 500),
+            usageCount: sql`${industryTemplates.usageCount} + 1`,
+            updatedAt: new Date(),
+          },
         })
         .then(() => {});
     } catch { /* table may not exist yet */ }

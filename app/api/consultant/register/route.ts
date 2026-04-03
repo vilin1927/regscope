@@ -1,15 +1,16 @@
 import { NextResponse } from "next/server";
-import { createSupabaseServerClient, requireAuth } from "@/lib/api-helpers";
+import { requireAuth } from "@/lib/db/auth-checks";
+import { db } from "@/lib/db";
+import { consultants } from "@/lib/db/schema";
+import { eq } from "drizzle-orm";
 import { EXPERTISE_TAGS } from "@/lib/consultant-types";
 import { nanoid } from "nanoid";
 
 export async function POST(request: Request) {
   try {
-    const supabase = await createSupabaseServerClient();
-    const { userId, error: authError } = await requireAuth(supabase);
-    if (!userId) {
-      return NextResponse.json({ error: authError }, { status: 401 });
-    }
+    const auth = await requireAuth();
+    if (auth.error) return auth.error;
+    const { userId } = auth;
 
     const body = await request.json();
     const { name, email, phone, bio, tags } = body;
@@ -23,43 +24,45 @@ export async function POST(request: Request) {
     }
 
     // Validate tags
-    const validTags = (tags || []).filter((t: string) => EXPERTISE_TAGS.includes(t as typeof EXPERTISE_TAGS[number]));
+    const validTags = (tags || []).filter((t: string) =>
+      EXPERTISE_TAGS.includes(t as (typeof EXPERTISE_TAGS)[number])
+    );
     if (validTags.length === 0) {
-      return NextResponse.json({ error: "Mindestens ein Fachgebiet ist erforderlich" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Mindestens ein Fachgebiet ist erforderlich" },
+        { status: 400 }
+      );
     }
 
     // Check if user already registered as consultant
-    const { data: existing } = await supabase
-      .from("consultants")
-      .select("id")
-      .eq("user_id", userId)
-      .single();
+    const [existing] = await db
+      .select({ id: consultants.id })
+      .from(consultants)
+      .where(eq(consultants.userId, userId))
+      .limit(1);
 
     if (existing) {
-      return NextResponse.json({ error: "Sie sind bereits als Berater registriert" }, { status: 409 });
+      return NextResponse.json(
+        { error: "Sie sind bereits als Berater registriert" },
+        { status: 409 }
+      );
     }
 
     // Generate unique referral code (8 chars, URL-safe)
     const referralCode = nanoid(8).toUpperCase();
 
-    const { data, error } = await supabase
-      .from("consultants")
-      .insert({
-        user_id: userId,
+    const [data] = await db
+      .insert(consultants)
+      .values({
+        userId,
         name: name.trim(),
         email: email.trim(),
         phone: phone?.trim() || null,
         bio: bio?.trim() || null,
         tags: validTags,
-        referral_code: referralCode,
+        referralCode,
       })
-      .select()
-      .single();
-
-    if (error) {
-      console.error("Consultant registration error:", error);
-      return NextResponse.json({ error: "Registrierung fehlgeschlagen" }, { status: 500 });
-    }
+      .returning();
 
     return NextResponse.json({ consultant: data });
   } catch (err) {

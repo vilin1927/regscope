@@ -1,7 +1,65 @@
 # ComplyRadar — Progress Log
 
-> **Last updated:** 2026-03-31
-> **Current state:** Phase 2 M3 — APPROVED by Raphael. Ready to merge to production + create PR.
+> **Last updated:** 2026-04-03
+> **Current state:** MIGRATING — Supabase → self-hosted PostgreSQL + NextAuth.js. Branch: `feat/supabase-migration`.
+
+---
+
+### Session 2026-04-03 — Migration Implementation
+
+**Decision:** Full migration from Supabase to self-hosted PostgreSQL. Nobody has Supabase dashboard access.
+**Branch:** `feat/supabase-migration` (from main)
+**PRD:** `docs/PRD-MIGRATION.md`
+
+**Completed:**
+- T2: Drizzle schema (13 tables), migration SQL generated, deps installed
+- T3: NextAuth.js v5 (credentials, register, forgot-password, reset-password)
+- T4: Authorization middleware (requireAuth, requireAdmin, verifyScanOwnership, verifyConsultantOwnership)
+- api-helpers.ts rewritten (no Supabase imports)
+- admin-auth.ts rewritten (no service role key)
+
+**Completed (continued):**
+- T5: Client-side auth (useAuth→NextAuth useSession, useScanHistory→fetch API, SessionProvider, lib/supabase/ deleted)
+- T7: Data export + import scripts written
+
+**Completed (T6):**
+- T6: All 25+ API routes rewritten — 4 parallel agents, all done
+- `@supabase/supabase-js` and `@supabase/ssr` removed from package.json
+- `grep -r '@supabase' app/ lib/ hooks/ components/` = 0 results
+- `npm run build` passes with ZERO errors
+- `lib/stripe.ts` created (from feat/stripe-paywall branch)
+
+**Remaining for deploy:**
+- T1: Install PostgreSQL on VPS (need SSH access)
+- T8: Run data export, import, cutover, E2E test
+
+**T6 batch 2 — 8 admin routes rewritten (Supabase → Drizzle + requireAdmin):**
+- REWRITTEN: `app/api/admin/users/route.ts` — GET (list all users + scan stats + newsletter + trial)
+- REWRITTEN: `app/api/admin/users/plan/route.ts` — PATCH (start_trial / revoke_trial)
+- REWRITTEN: `app/api/admin/consultants/route.ts` — GET (list consultants + referral counts) + PATCH (update commission/active)
+- REWRITTEN: `app/api/admin/subscribers/route.ts` — GET (opted-in subscribers joined with users)
+- REWRITTEN: `app/api/admin/preview-newsletter/route.ts` — POST (render newsletter HTML for preview)
+- REWRITTEN: `app/api/admin/templates/route.ts` — GET (industry templates by usage)
+- REWRITTEN: `app/api/send-newsletter/route.ts` — POST (send newsletters to opted-in subscribers via Resend)
+- REWRITTEN: `app/api/admin/send-newsletter/route.ts` — POST (proxy, updated to forward cookies instead of API key)
+
+**T6 batch 3 — 6 AI/Stripe routes rewritten (Supabase → Drizzle):**
+- REWRITTEN: `app/api/risk-analysis/route.ts` — POST (auth, scan ownership, cache, OpenAI generation)
+- REWRITTEN: `app/api/recommendations/route.ts` — POST (auth, scan ownership, cache, OpenAI generation)
+- REWRITTEN: `app/api/questionnaire/generate/route.ts` — POST (no auth, industry template cache + AI generation)
+- REWRITTEN: `app/api/scan/route.ts` — POST (optional auth via NextAuth `auth()`, static+dynamic scan modes)
+- CREATED: `app/api/stripe/checkout/route.ts` — POST (auth, Stripe customer, checkout session)
+- CREATED: `app/api/stripe/webhook/route.ts` — POST (no auth, handles checkout.completed/invoice.paid/subscription events)
+- CREATED: `lib/stripe.ts` — Stripe SDK init + price config
+
+**T6 batch 1 — 7 routes rewritten (Supabase → Drizzle + requireAuth):**
+- NEW: `app/api/scans/route.ts` — GET (list user scans) + POST (save scan)
+- NEW: `app/api/compliance-checks/route.ts` — GET (by scanId) + POST (upsert/delete check)
+- NEW: `app/api/subscription/route.ts` — GET (subscription status + trial info)
+- REWRITTEN: `app/api/trial/route.ts` — GET + POST (trial_started_at)
+- REWRITTEN: `app/api/consent/contact/route.ts` — POST (contact_consent_given)
+- REWRITTEN: `app/api/disclaimer/acknowledge/route.ts` — POST (disclaimer ack)
+- REWRITTEN: `app/api/newsletter/preferences/route.ts` — GET + PUT (upsert prefs)
 
 ---
 

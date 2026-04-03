@@ -1,5 +1,5 @@
-import { createServerClient } from "@supabase/ssr";
-import { cookies } from "next/headers";
+// Re-export auth helpers for backward compatibility with API routes
+export { requireAuth, requireAdmin } from "@/lib/db/auth-checks";
 
 // Shared rate limiter (per-IP, resets on cold start)
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
@@ -15,36 +15,6 @@ export function isRateLimited(ip: string): boolean {
   }
   entry.count++;
   return entry.count > RATE_LIMIT;
-}
-
-export async function createSupabaseServerClient() {
-  const cookieStore = await cookies();
-  return createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll: () => cookieStore.getAll(),
-        setAll: (cookiesToSet) => {
-          try {
-            cookiesToSet.forEach(({ name, value, options }) =>
-              cookieStore.set(name, value, options)
-            );
-          } catch {
-            // setAll called from Server Component — ignore
-          }
-        },
-      },
-    }
-  );
-}
-
-export async function requireAuth(supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>) {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user?.id) {
-    return { userId: null, error: "Anmeldung erforderlich" };
-  }
-  return { userId: user.id, error: null };
 }
 
 export async function callOpenAI(
