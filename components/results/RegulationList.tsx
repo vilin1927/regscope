@@ -1,13 +1,27 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useTranslations } from "next-intl";
+import { Lock } from "lucide-react";
 import { RegulationCard } from "./RegulationCard";
 import { ScrollableRow } from "@/components/ui/ScrollableRow";
 import { ExpertAvatar } from "@/components/ui/ExpertAvatar";
 import { getExpertForCategory } from "@/data/experts";
 import type { MatchedRegulation } from "@/data/regulations/types";
 import type { RegulationCategory } from "@/data/regulations/types";
+
+function parsePenaltyAmount(penalty: string): number {
+  const matches = penalty.match(/[\d.]+/g);
+  if (!matches) return 0;
+  // Take the largest number (e.g., "bis 50.000" → 50000)
+  return Math.max(...matches.map((m) => parseInt(m.replace(/\./g, ""), 10) || 0));
+}
+
+function formatPenalty(amount: number): string {
+  if (amount >= 1_000_000) return `${(amount / 1_000_000).toFixed(1).replace(/\.0$/, "")} Mio. €`;
+  if (amount >= 1_000) return `${(amount / 1_000).toFixed(0).replace(/\.0$/, "")}.000 €`;
+  return `${amount} €`;
+}
 
 interface RegulationListProps {
   regulations: MatchedRegulation[];
@@ -55,6 +69,22 @@ export function RegulationList({
     activeTab === "all"
       ? grouped
       : grouped.filter((g) => g.category === activeTab);
+
+  // Calculate total hidden regulations and penalty sum for unlock CTA
+  const { hiddenCount, totalPenalty } = useMemo(() => {
+    let hidden = 0;
+    let penalty = 0;
+    for (const group of visibleGroups) {
+      if (!isPro && group.items.length > 1) {
+        const hiddenItems = group.items.slice(1);
+        hidden += hiddenItems.length;
+        for (const item of hiddenItems) {
+          penalty += parsePenaltyAmount(item.potentialPenalty);
+        }
+      }
+    }
+    return { hiddenCount: hidden, totalPenalty: penalty };
+  }, [visibleGroups, isPro]);
 
   let cardIndex = 0;
 
@@ -138,23 +168,34 @@ export function RegulationList({
                     />
                   );
                 })}
-                {/* Freemium blur overlay for remaining cards */}
-                {!isPro && group.items.length > 1 && (
-                  <div className="relative rounded-xl border border-gray-200 bg-white p-6 text-center">
-                    <div className="absolute inset-0 bg-white/60 backdrop-blur-sm rounded-xl" />
-                    <div className="relative z-10">
-                      <p className="text-sm font-medium text-gray-700 mb-2">
-                        {tPaywall("moreRegulations", { count: group.items.length - 1 })}
-                      </p>
-                      <button
-                        onClick={onUnlock}
-                        className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 active:scale-95 transition-all"
-                      >
+                {/* Freemium unlock CTA for remaining cards */}
+                {!isPro && group.items.length > 1 && (() => {
+                  const groupHidden = group.items.length - 1;
+                  const groupPenalty = group.items
+                    .slice(1)
+                    .reduce((sum, item) => sum + parsePenaltyAmount(item.potentialPenalty), 0);
+                  return (
+                    <button
+                      onClick={onUnlock}
+                      className="w-full rounded-xl border-2 border-dashed border-blue-300 bg-blue-50/50 p-5 text-center hover:bg-blue-50 hover:border-blue-400 transition-all group active:scale-[0.99]"
+                    >
+                      <div className="flex items-center justify-center gap-2 mb-1">
+                        <Lock className="w-4 h-4 text-blue-600" />
+                        <p className="text-sm font-semibold text-blue-700">
+                          {groupPenalty > 0
+                            ? tPaywall("moreRegulationsWithPenalty", {
+                                count: groupHidden,
+                                penalty: formatPenalty(groupPenalty),
+                              })
+                            : tPaywall("moreRegulations", { count: groupHidden })}
+                        </p>
+                      </div>
+                      <p className="text-xs text-blue-500 group-hover:text-blue-600 font-medium">
                         {tPaywall("unlockAll")}
-                      </button>
-                    </div>
-                  </div>
-                )}
+                      </p>
+                    </button>
+                  );
+                })()}
               </div>
             </div>
           );

@@ -1,21 +1,31 @@
 "use client";
 
-import { useRef, useEffect, useState } from "react";
+import { useRef, useEffect, useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Check, Clock, CheckCircle } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { X, Check, CheckCircle, Lock, Shield, Loader2 } from "lucide-react";
+import { useTranslations, useLocale } from "next-intl";
 import type { TrialStatus } from "@/hooks/useSubscription";
 
 interface UpgradeModalProps {
   trialStatus: TrialStatus;
+  isGuest: boolean;
   onStartTrial: () => void;
+  onRequestAuth: () => void;
   onClose: () => void;
 }
 
-export function UpgradeModal({ trialStatus, onStartTrial, onClose }: UpgradeModalProps) {
+export function UpgradeModal({
+  trialStatus,
+  isGuest,
+  onStartTrial,
+  onRequestAuth,
+  onClose,
+}: UpgradeModalProps) {
   const t = useTranslations("Paywall");
+  const locale = useLocale();
   const overlayRef = useRef<HTMLDivElement>(null);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [isCheckoutLoading, setIsCheckoutLoading] = useState(false);
 
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
@@ -37,14 +47,40 @@ export function UpgradeModal({ trialStatus, onStartTrial, onClose }: UpgradeModa
     }, 1200);
   };
 
+  const handleCheckout = useCallback(async () => {
+    setIsCheckoutLoading(true);
+    try {
+      const res = await fetch("/api/stripe/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ locale }),
+      });
+      const data = await res.json();
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        setIsCheckoutLoading(false);
+      }
+    } catch {
+      setIsCheckoutLoading(false);
+    }
+  }, [locale]);
+
+  const handleGuestUpgrade = () => {
+    onRequestAuth();
+  };
+
   const features = [
     t("proFeature1"),
     t("proFeature2"),
     t("proFeature3"),
     t("proFeature4"),
+    t("proFeature5"),
   ];
 
   const isExpired = trialStatus === "expired";
+  const canStartTrial = !isGuest && trialStatus === "none";
+  const isAuthenticated = !isGuest;
 
   return (
     <div
@@ -88,15 +124,13 @@ export function UpgradeModal({ trialStatus, onStartTrial, onClose }: UpgradeModa
               exit={{ opacity: 0, scale: 0.95 }}
               transition={{ duration: 0.15 }}
             >
-              <div
-                className={`p-6 text-white ${
-                  isExpired
-                    ? "bg-gradient-to-br from-gray-600 to-gray-700"
-                    : "bg-gradient-to-br from-blue-600 to-blue-700"
-                }`}
-              >
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-xl font-bold">{t("proTitle")}</h2>
+              {/* Header */}
+              <div className="bg-gradient-to-br from-blue-600 to-blue-700 p-6 text-white">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <Shield className="w-6 h-6" />
+                    <h2 className="text-xl font-bold">{t("proTitle")}</h2>
+                  </div>
                   <button
                     onClick={onClose}
                     className="p-1 hover:bg-white/20 rounded-lg transition-colors"
@@ -104,20 +138,22 @@ export function UpgradeModal({ trialStatus, onStartTrial, onClose }: UpgradeModa
                     <X className="w-5 h-5" />
                   </button>
                 </div>
-                {isExpired ? (
-                  <>
-                    <p className="text-gray-200 mb-1">{t("trialExpiredSubtitle")}</p>
-                    <p className="text-2xl font-bold">{t("proPricing")}</p>
-                  </>
-                ) : (
-                  <>
-                    <p className="text-blue-100 mb-1">{t("trialSubtitle")}</p>
-                    <p className="text-2xl font-bold">{t("trialPricing")}</p>
-                  </>
-                )}
+                <p className="text-blue-100 text-sm mb-3">{t("proSubtitle")}</p>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-3xl font-bold">{t("proPricing")}</span>
+                  <span className="text-blue-200 text-sm">{t("proPricingLabel")}</span>
+                </div>
               </div>
 
+              {/* Features */}
               <div className="p-6">
+                {isExpired && (
+                  <div className="flex items-center gap-2 mb-4 p-3 bg-amber-50 rounded-lg border border-amber-200">
+                    <Lock className="w-4 h-4 text-amber-600 shrink-0" />
+                    <p className="text-sm text-amber-800">{t("trialExpiredMessage")}</p>
+                  </div>
+                )}
+
                 <ul className="space-y-3 mb-6">
                   {features.map((f) => (
                     <li key={f} className="flex items-center gap-3">
@@ -129,33 +165,51 @@ export function UpgradeModal({ trialStatus, onStartTrial, onClose }: UpgradeModa
                   ))}
                 </ul>
 
-                {isExpired ? (
-                  <div>
-                    <div className="flex items-center gap-2 mb-3 p-3 bg-amber-50 rounded-lg border border-amber-200">
-                      <Clock className="w-4 h-4 text-amber-600 shrink-0" />
-                      <p className="text-sm text-amber-800">{t("trialExpiredMessage")}</p>
-                    </div>
-                    <button
-                      onClick={onClose}
-                      className="w-full py-3 bg-gray-200 text-gray-700 rounded-lg font-semibold hover:bg-gray-300 transition-colors"
-                    >
-                      {t("contactSales")}
-                    </button>
-                  </div>
+                {/* Primary CTA: Purchase */}
+                {isAuthenticated ? (
+                  <motion.button
+                    onClick={handleCheckout}
+                    disabled={isCheckoutLoading}
+                    whileTap={{ scale: 0.97 }}
+                    className="w-full py-3.5 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors flex items-center justify-center gap-2 disabled:opacity-70"
+                  >
+                    {isCheckoutLoading ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        {t("upgradeLoading")}
+                      </>
+                    ) : (
+                      <>
+                        <Lock className="w-4 h-4" />
+                        {t("upgradeCta")}
+                      </>
+                    )}
+                  </motion.button>
                 ) : (
-                  <div>
-                    <motion.button
-                      onClick={handleStartTrial}
-                      whileTap={{ scale: 0.97 }}
-                      className="w-full py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors"
-                    >
-                      {t("startTrialCta")}
-                    </motion.button>
-                    <p className="text-xs text-gray-500 text-center mt-2">
-                      {t("noCardRequired")}
-                    </p>
-                  </div>
+                  <motion.button
+                    onClick={handleGuestUpgrade}
+                    whileTap={{ scale: 0.97 }}
+                    className="w-full py-3.5 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
+                  >
+                    <Lock className="w-4 h-4" />
+                    {t("guestUpgradeCta")}
+                  </motion.button>
                 )}
+
+                {/* Secondary CTA: Free trial (only for authenticated users who haven't tried yet) */}
+                {canStartTrial && (
+                  <button
+                    onClick={handleStartTrial}
+                    className="w-full mt-3 py-2.5 text-blue-600 text-sm font-medium hover:bg-blue-50 rounded-lg transition-colors"
+                  >
+                    {t("startTrialCta")}
+                  </button>
+                )}
+
+                {/* Trust badge */}
+                <p className="text-xs text-gray-400 text-center mt-4">
+                  {t("guaranteeText")}
+                </p>
               </div>
             </motion.div>
           )}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Sidebar } from "./Sidebar";
 import { Header } from "./Header";
@@ -34,8 +34,17 @@ import type { CompanyResult } from "@/lib/handelsregister-client";
 export function ComplyRadarApp() {
   const auth = useAuth();
 
+  const handleRequestAuth = useCallback(() => {
+    // Store checkout intent so we redirect to Stripe after registration
+    if (typeof window !== "undefined") {
+      sessionStorage.setItem("complyradar_checkout_intent", "true");
+    }
+    // Exit guest mode — app will show auth screen automatically
+    auth.handleSignOut();
+  }, [auth]);
+
   return (
-    <SubscriptionProvider>
+    <SubscriptionProvider isGuest={auth.isGuest} onRequestAuth={handleRequestAuth}>
       <ComplyRadarAppInner auth={auth} />
     </SubscriptionProvider>
   );
@@ -143,6 +152,32 @@ function ComplyRadarAppShell({
       }
     }
   }, [hydrated, urlScanId, scan.scanHistory.length]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Post-auth: check for pending checkout intent (guest → register → Stripe)
+  const checkoutIntentHandled = useRef(false);
+  useEffect(() => {
+    if (!auth.userId || checkoutIntentHandled.current) return;
+    if (typeof window === "undefined") return;
+    const intent = sessionStorage.getItem("complyradar_checkout_intent");
+    if (intent) {
+      sessionStorage.removeItem("complyradar_checkout_intent");
+      checkoutIntentHandled.current = true;
+      // Trigger Stripe checkout after short delay to let auth settle
+      setTimeout(async () => {
+        try {
+          const res = await fetch("/api/stripe/checkout", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ locale: window.location.pathname.startsWith("/en") ? "en" : "de" }),
+          });
+          const data = await res.json();
+          if (data.url) window.location.href = data.url;
+        } catch {
+          // Checkout failed — user can try again from the upgrade modal
+        }
+      }, 500);
+    }
+  }, [auth.userId]);
 
   // Navigate to dashboard once auth resolves
   // Fix #19: Also reset to dashboard if screen requires data we don't have
