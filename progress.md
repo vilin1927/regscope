@@ -20,9 +20,15 @@
 - Events: checkout.session.completed, invoice.paid, customer.subscription.updated, customer.subscription.deleted
 - Endpoint: https://smart-lex.de/api/stripe/webhook
 
+**What was completed:**
+- PR #22 merged to `main` ✓
+- VPS pulled `main`, rebuilt, restarted PM2 ✓
+- Health check: smart-lex.de → 200, webhook endpoint → 400 (correct, rejects unsigned) ✓
+
 **What comes next:**
-- Create PR for `feat/supabase-migration` → `main` (2 commits)
-- After merge, pull `main` on VPS and switch production to `main`
+- Waiting on Raphael to test Stripe checkout in sandbox mode (test card 4242...)
+- After Raphael confirms, swap to live Stripe keys (`sk_live_`, `pk_live_`, live `whsec_`, live `price_` IDs)
+- Rebuild + restart on VPS → real payments live
 
 ---
 
