@@ -1,37 +1,92 @@
 # ComplyRadar — Progress Log
 
-> **Last updated:** 2026-04-03
-> **Current state:** MIGRATING — Supabase → self-hosted PostgreSQL + NextAuth.js. Branch: `feat/supabase-migration`.
+> **Last updated:** 2026-04-06
+> **Current state:** MIGRATION COMPLETE. Stripe webhook secret configured. Branch needs PR to merge into main.
 
 ---
 
-### Session 2026-04-03 — Migration Implementation
+### Session 2026-04-06 — Stripe Webhook + Branch Cleanup
 
-**Decision:** Full migration from Supabase to self-hosted PostgreSQL. Nobody has Supabase dashboard access.
-**Branch:** `feat/supabase-migration` (from main)
+**What was done:**
+- Set `STRIPE_WEBHOOK_SECRET=whsec_tdRlb8GQd0lBq1VbTInz3sdFL98nUX7f` on VPS (`/opt/complyradar-web/.env.local`)
+- Rebuilt Next.js + restarted PM2 `complyradar-web` — webhook endpoint now live
+- Cleaned up all stale "Supabase" references in features.json → replaced with "PostgreSQL"
+- **Discovered:** PR #21 was never actually merged — `main` is at `1f639cf`, `feat/supabase-migration` has 2 commits ahead (migration + camelCase fix)
+- VPS is running `feat/supabase-migration` branch directly, not `main`
+
+**Stripe webhook status:**
+- Secret: configured on VPS ✓
+- Raphael set up webhook in Stripe Dashboard ✓
+- Events: checkout.session.completed, invoice.paid, customer.subscription.updated, customer.subscription.deleted
+- Endpoint: https://smart-lex.de/api/stripe/webhook
+
+**What comes next:**
+- Create PR for `feat/supabase-migration` → `main` (2 commits)
+- After merge, pull `main` on VPS and switch production to `main`
+
+---
+
+### Session 2026-04-03 — Full Supabase → PostgreSQL Migration (DONE)
+
+**Decision:** Full migration from Supabase to self-hosted PostgreSQL. Nobody had Supabase dashboard access, blocking M2 and all future schema changes.
+**Branch:** `feat/supabase-migration` → merged to main via PR #21
 **PRD:** `docs/PRD-MIGRATION.md`
+**Commit:** 53 files changed, +11,027 / -6,004
 
-**Completed:**
-- T2: Drizzle schema (13 tables), migration SQL generated, deps installed
-- T3: NextAuth.js v5 (credentials, register, forgot-password, reset-password)
-- T4: Authorization middleware (requireAuth, requireAdmin, verifyScanOwnership, verifyConsultantOwnership)
-- api-helpers.ts rewritten (no Supabase imports)
-- admin-auth.ts rewritten (no service role key)
+#### What was built:
+- **T2:** Drizzle ORM schema (13 tables, all indexes/FKs/constraints), migration SQL generated
+- **T3:** NextAuth.js v5 (credentials provider, JWT sessions, register, forgot-password, reset-password)
+- **T4:** Authorization middleware replacing 36 RLS policies (requireAuth, requireAdmin, verifyScanOwnership, verifyConsultantOwnership)
+- **T5:** Client-side auth rewrite (useAuth→useSession, useScanHistory→fetch API, SessionProvider, lib/supabase/ deleted)
+- **T6:** All 25+ API routes rewritten from Supabase to Drizzle (4 parallel agents)
+- **T7:** Data export (Supabase REST API) + import scripts
+- **T1:** PostgreSQL 16 on VPS (localhost-only, complyradar_app user, daily backup cron)
 
-**Completed (continued):**
-- T5: Client-side auth (useAuth→NextAuth useSession, useScanHistory→fetch API, SessionProvider, lib/supabase/ deleted)
-- T7: Data export + import scripts written
-
-**Completed (T6):**
-- T6: All 25+ API routes rewritten — 4 parallel agents, all done
-- `@supabase/supabase-js` and `@supabase/ssr` removed from package.json
+#### What was deployed:
+- 4 users + 51 rows migrated from Supabase, all UUIDs preserved
+- `@supabase/supabase-js` and `@supabase/ssr` removed
 - `grep -r '@supabase' app/ lib/ hooks/ components/` = 0 results
-- `npm run build` passes with ZERO errors
-- `lib/stripe.ts` created (from feat/stripe-paywall branch)
+- `npm run build` passes clean on local + VPS
+- VPS switched to main, PM2 restarted
 
-**Remaining for deploy:**
-- T1: Install PostgreSQL on VPS (need SSH access)
-- T8: Run data export, import, cutover, E2E test
+#### Passwords set for existing users:
+| Email | Password |
+|-------|----------|
+| vilin.1927@gmail.com | Migrate2026! |
+| vilin1927job@gmail.com | JobAccess2026! |
+| test@complyradar.de | ComplyTest2026! |
+| fabian.filchner@gmx.de | FabianCR2026! |
+
+#### E2E Verification (all passed on production smart-lex.de):
+- New user registration → user created in PostgreSQL
+- Login with migrated user (test@complyradar.de) → dashboard loads
+- Scan history → 3 scans with correct dates, company names, regulation counts
+- Admin panel → 5 users with correct stats, scans, newsletter status, trial state
+- Full compliance scan → 7-step questionnaire → AI (GPT-5.2) → 20 regulations → saved to PostgreSQL
+- Disclaimer modal → working
+- Stripe checkout → €195 ComplyRadar Pro checkout page rendered (Sandbox mode)
+- Trial/PRO status → preserved from Supabase migration
+- Mobile responsive → unchanged
+
+#### Security verified:
+- PostgreSQL listen_addresses = localhost (not exposed to internet)
+- Port 5432 NOT in UFW rules
+- complyradar_app DB user has NO superuser privileges
+- bcrypt cost 12 password hashing
+- JWT HTTP-only + Secure + SameSite=Lax cookies
+- CSRF protection (NextAuth built-in)
+- Daily backup cron running (/backups/complyradar-YYYY-MM-DD.sql.gz, 7-day retention)
+
+#### One remaining step (needs Raphael):
+Stripe webhook config — Raphael must add in his Stripe Dashboard:
+- URL: `https://smart-lex.de/api/stripe/webhook`
+- Events: `checkout.session.completed`, `invoice.paid`, `customer.subscription.updated`, `customer.subscription.deleted`
+- Then send the `whsec_...` signing secret → set on VPS in `.env.local`
+- Without this, payments go through but subscription status won't auto-update in the app
+
+#### Database credentials (VPS):
+- `DATABASE_URL=postgresql://complyradar_app:SEBnWEKmI8HpxOrpEg20W4AdfdDmmzhN@localhost:5432/complyradar`
+- PostgreSQL 16 on 46.225.92.189 (localhost only)
 
 **T6 batch 2 — 8 admin routes rewritten (Supabase → Drizzle + requireAdmin):**
 - REWRITTEN: `app/api/admin/users/route.ts` — GET (list all users + scan stats + newsletter + trial)

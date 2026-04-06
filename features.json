@@ -1,6 +1,6 @@
 {
   "project": "ComplyRadar (RegScope)",
-  "lastUpdated": "2026-03-26",
+  "lastUpdated": "2026-04-06",
   "features": [
     {
       "id": "F-001",
@@ -53,7 +53,7 @@
         { "text": "Stats bar: Regulations Found, High Priority, EU Coverage, Compliance Score", "done": true },
         { "text": "Regulation cards with jurisdiction badges", "done": true },
         { "text": "Risk level badges with color coding", "done": true },
-        { "text": "Compliance checkboxes persist to Supabase", "done": true },
+        { "text": "Compliance checkboxes persist to PostgreSQL", "done": true },
         { "text": "Null-safe rendering with fallback values", "done": true }
       ]
     },
@@ -61,11 +61,10 @@
       "id": "F-004",
       "title": "Authentication & User Persistence",
       "status": "done",
-      "description": "Supabase Auth with email/password. Sign up, sign in, sign out with confirmation dialog. Guest mode (1 scan, no persistence). Session persistence across refreshes.",
+      "description": "NextAuth.js v5 with email/password (credentials provider). Sign up, sign in, sign out with confirmation dialog. Guest mode (1 scan, no persistence). Session persistence across refreshes.",
       "files": [
         "components/auth/",
-        "hooks/useAuth.ts",
-        "lib/supabase/"
+        "lib/auth.ts"
       ],
       "criteria": [
         { "text": "Sign up with password validation (8+ chars, uppercase, number)", "done": true },
@@ -113,7 +112,7 @@
       "id": "F-007",
       "title": "Risk Analysis (Phase 2 Addon)",
       "status": "done",
-      "description": "AI-powered gap analysis with severity table, deadlines, penalty exposure, and mitigation recommendations. Persists to Supabase risk_reports table.",
+      "description": "AI-powered gap analysis with severity table, deadlines, penalty exposure, and mitigation recommendations. Persists to PostgreSQL risk_reports table.",
       "files": [
         "app/api/risk-analysis/route.ts",
         "hooks/useRiskAnalysis.ts",
@@ -122,7 +121,7 @@
       "criteria": [
         { "text": "AI generates gap analysis from scan results", "done": true },
         { "text": "Severity table with penalties and deadlines", "done": true },
-        { "text": "Persists to Supabase", "done": true },
+        { "text": "Persists to PostgreSQL", "done": true },
         { "text": "60s Vercel function timeout configured", "done": true }
       ]
     },
@@ -157,7 +156,7 @@
       ],
       "criteria": [
         { "text": "User can opt-in/out and set frequency", "done": true },
-        { "text": "Preference auto-saves to Supabase", "done": true },
+        { "text": "Preference auto-saves to PostgreSQL", "done": true },
         { "text": "React Email template renders digest", "done": true },
         { "text": "Admin can send newsletter via Resend", "done": true }
       ]
@@ -184,7 +183,7 @@
       "id": "F-011",
       "title": "Freemium Model & Trial System",
       "status": "done",
-      "description": "Free plan (basic scan) vs Pro plan (risk analysis, recommendations, newsletter). 30-day trial via localStorage + Supabase sync. Admin can control trial per user.",
+      "description": "Free plan (basic scan) vs Pro plan (risk analysis, recommendations, newsletter). 30-day trial via localStorage + PostgreSQL sync. Admin can control trial per user.",
       "files": [
         "hooks/useSubscription.ts",
         "app/api/trial/route.ts",
@@ -193,7 +192,7 @@
       "criteria": [
         { "text": "Free vs Pro feature gating works", "done": true },
         { "text": "30-day trial starts on user action", "done": true },
-        { "text": "Trial syncs to Supabase for admin visibility", "done": true },
+        { "text": "Trial syncs to PostgreSQL for admin visibility", "done": true },
         { "text": "Admin can set/reset user plan", "done": true }
       ]
     },
@@ -319,7 +318,7 @@
       "title": "Epic 3: AI Industry Detection + Question Generation",
       "status": "done",
       "phase": "Phase 2 - M1 - Day 3 (Fri Mar 21)",
-      "description": "AI classifies Gegenstand into industry code, generates industry-specific compliance questions, caches templates in Supabase for reuse.",
+      "description": "AI classifies Gegenstand into industry code, generates industry-specific compliance questions, caches templates in PostgreSQL for reuse.",
       "files": [
         "lib/industry-detector.ts",
         "data/questionnaire/dynamic-generator.ts",
@@ -328,7 +327,7 @@
       ],
       "criteria": [
         { "text": "E3.1 — lib/industry-detector.ts: Gegenstand → industry_code via GPT-5.2", "done": true },
-        { "text": "E3.2 — Supabase migration: industry_templates table", "done": true },
+        { "text": "E3.2 — PostgreSQL migration: industry_templates table", "done": true },
         { "text": "E3.3 — Template caching: check DB before generating new questions", "done": true },
         { "text": "E3.4 — data/questionnaire/dynamic-generator.ts: GPT-5.2 generates structured question layers", "done": true },
         { "text": "E3.5 — API route: POST /api/questionnaire/generate (Gegenstand → questions)", "done": true },
@@ -408,13 +407,13 @@
       "status": "awaiting_approval",
       "phase": "Phase 2 - Milestone 2",
       "price": "$170",
-      "description": "Real payment integration replacing trial system. Stripe Checkout for €190/6mo initial, then €30/month recurring. Webhook handles subscription lifecycle. Plan syncs to Supabase profiles. Commission tracking for consultants (30% initial / 10% recurring).",
+      "description": "Real payment integration replacing trial system. Stripe Checkout for €190/6mo initial, then €30/month recurring. Webhook handles subscription lifecycle. Plan syncs to PostgreSQL profiles. Commission tracking for consultants (30% initial / 10% recurring).",
       "files": [],
       "criteria": [
         { "text": "Stripe Checkout flow: €190 initial (scan + 6mo subscription)", "done": false },
         { "text": "Recurring billing: €30/month after initial 6 months", "done": false },
         { "text": "Webhook handles subscription events (created, renewed, cancelled)", "done": false },
-        { "text": "Plan status syncs to Supabase profiles (free → paid → expired)", "done": false },
+        { "text": "Plan status syncs to PostgreSQL profiles (free → paid → expired)", "done": false },
         { "text": "Paywall blocks Pro features for non-subscribers", "done": false },
         { "text": "Commission tracking: record payment amounts per referred customer", "done": false },
         { "text": "Consultant dashboard: show earned amounts (30% × €190 initial + 10% × €30/mo recurring)", "done": false },
@@ -506,7 +505,7 @@
       "title": "Epic 1: Database Schema + Consultant Accounts",
       "status": "done",
       "phase": "Phase 2 - M3 - Day 1",
-      "description": "Supabase tables for consultants, referral codes, and help requests. Consultant registration flow with expertise tag selection. Referral code auto-generation.",
+      "description": "PostgreSQL tables for consultants, referral codes, and help requests. Consultant registration flow with expertise tag selection. Referral code auto-generation.",
       "files": [
         "supabase/migration-m3.sql",
         "app/api/consultant/register/route.ts",
@@ -514,9 +513,9 @@
         "lib/consultant-types.ts"
       ],
       "criteria": [
-        { "text": "E1.1 — Supabase migration: consultants table (user_id, name, email, phone, bio, tags[], referral_code, commission_rate, is_active)", "done": true },
-        { "text": "E1.2 — Supabase migration: referrals table (referral_code, customer_user_id, consultant_id, status, created_at)", "done": true },
-        { "text": "E1.3 — Supabase migration: help_requests table (customer_user_id, consultant_id, category, status, contact_revealed, created_at)", "done": true },
+        { "text": "E1.1 — PostgreSQL schema: consultants table (user_id, name, email, phone, bio, tags[], referral_code, commission_rate, is_active)", "done": true },
+        { "text": "E1.2 — PostgreSQL schema: referrals table (referral_code, customer_user_id, consultant_id, status, created_at)", "done": true },
+        { "text": "E1.3 — PostgreSQL schema: help_requests table (customer_user_id, consultant_id, category, status, contact_revealed, created_at)", "done": true },
         { "text": "E1.4 — Consultant registration API: POST /api/consultant/register (creates consultant profile + generates unique referral code)", "done": true },
         { "text": "E1.5 — Consultant profile API: GET/PATCH /api/consultant/profile (read + update tags, bio, contact info)", "done": true },
         { "text": "E1.6 — Expertise tags system: predefined categories matching compliance scan categories (labor law, insurance, tax, environment, etc.)", "done": true },
