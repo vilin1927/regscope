@@ -1,7 +1,38 @@
 # ComplyRadar — Progress Log
 
 > **Last updated:** 2026-04-06
-> **Current state:** MIGRATION COMPLETE. Stripe webhook secret configured. Branch needs PR to merge into main.
+> **Current state:** Upgrade/paywall redesign complete on feat/supabase-migration. Needs PR to main.
+
+---
+
+### Session 2026-04-06 — Upgrade Modal + Paywall Redesign (Raphael Feedback)
+
+**What was done:**
+- Redesigned UpgradeModal: proper pricing card (€195), features list, Stripe checkout CTA
+- Fixed guest → purchase flow: guest clicks upgrade → redirected to register → auto-checkout after auth
+- Enhanced unlock buttons across all screens (RegulationList, RiskAnalysis, Recommendations) with Lock icon + dynamic penalty sum
+- Updated i18n strings (de.json + en.json) — fixed stale "ab 29 EUR/Monat" → "195 €", added trust badge, new CTAs
+- Build passes clean
+
+**What was changed (files):**
+- `components/ui/UpgradeModal.tsx` — Complete rewrite: pricing box, Stripe integration, guest/auth flows
+- `components/providers/SubscriptionProvider.tsx` — Added isGuest + onRequestAuth props
+- `components/app-shell/ComplyRadarApp.tsx` — Guest→register→checkout flow, checkout intent handler
+- `components/results/RegulationList.tsx` — Enhanced unlock CTA with Lock icon + penalty sum
+- `components/risk-analysis/RiskAnalysisScreen.tsx` — Enhanced unlock CTA
+- `components/recommendations/RecommendationsScreen.tsx` — Enhanced unlock CTA
+- `messages/de.json` + `messages/en.json` — Updated Paywall namespace
+
+**Decisions:**
+- Price shown: €195 einmalig (matches actual Stripe config)
+- Purchase CTA is primary, trial is secondary (Raphael wants direct purchase without contacting support)
+- Penalty sum parsed from potentialPenalty strings (regex extracts numbers from "Bußgeld bis X.XXX €")
+- Guest → upgrade stores intent in sessionStorage, exits guest mode, auto-checkout after registration
+
+**What comes next:**
+- Create PR to main
+- Deploy to VPS (smart-lex.de) for Raphael to test
+- Get Raphael's feedback on the new upgrade flow
 
 ---
 
@@ -20,9 +51,15 @@
 - Events: checkout.session.completed, invoice.paid, customer.subscription.updated, customer.subscription.deleted
 - Endpoint: https://smart-lex.de/api/stripe/webhook
 
+**What was completed:**
+- PR #22 merged to `main` ✓
+- VPS pulled `main`, rebuilt, restarted PM2 ✓
+- Health check: smart-lex.de → 200, webhook endpoint → 400 (correct, rejects unsigned) ✓
+
 **What comes next:**
-- Create PR for `feat/supabase-migration` → `main` (2 commits)
-- After merge, pull `main` on VPS and switch production to `main`
+- Waiting on Raphael to test Stripe checkout in sandbox mode (test card 4242...)
+- After Raphael confirms, swap to live Stripe keys (`sk_live_`, `pk_live_`, live `whsec_`, live `price_` IDs)
+- Rebuild + restart on VPS → real payments live
 
 ---
 

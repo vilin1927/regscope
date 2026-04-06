@@ -17,11 +17,26 @@ interface SubscriptionContextValue {
 
 const SubscriptionContext = createContext<SubscriptionContextValue | null>(null);
 
-export function SubscriptionProvider({ children }: { children: ReactNode }) {
+interface SubscriptionProviderProps {
+  children: ReactNode;
+  isGuest?: boolean;
+  onRequestAuth?: () => void;
+}
+
+export function SubscriptionProvider({
+  children,
+  isGuest = false,
+  onRequestAuth,
+}: SubscriptionProviderProps) {
   const subscription = useSubscription();
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
 
   const onUnlock = () => setShowUpgradeModal(true);
+
+  const handleRequestAuth = () => {
+    setShowUpgradeModal(false);
+    onRequestAuth?.();
+  };
 
   return (
     <SubscriptionContext.Provider
@@ -36,7 +51,9 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
       {showUpgradeModal && (
         <UpgradeModal
           trialStatus={subscription.trialStatus}
+          isGuest={isGuest}
           onStartTrial={subscription.startTrial}
+          onRequestAuth={handleRequestAuth}
           onClose={() => setShowUpgradeModal(false)}
         />
       )}

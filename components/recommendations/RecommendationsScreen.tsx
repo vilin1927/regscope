@@ -12,6 +12,7 @@ import {
   Info,
   BarChart3,
   RefreshCw,
+  Lock,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { screenVariants, screenTransition } from "@/lib/motion";
@@ -314,24 +315,24 @@ export function RecommendationsScreen() {
                     </div>
                   );
                 })}
-                {/* Freemium blur for remaining items */}
+                {/* Freemium unlock CTA for remaining items */}
                 {!isPro && grouped[timeline].length > 1 && (
-                  <div className="relative rounded-xl border border-gray-200 bg-white p-6 text-center">
-                    <div className="absolute inset-0 bg-white/60 backdrop-blur-sm rounded-xl" />
-                    <div className="relative z-10">
-                      <p className="text-sm font-medium text-gray-700 mb-2">
+                  <button
+                    onClick={onUnlock}
+                    className="w-full rounded-xl border-2 border-dashed border-blue-300 bg-blue-50/50 p-5 text-center hover:bg-blue-50 hover:border-blue-400 transition-all group active:scale-[0.99]"
+                  >
+                    <div className="flex items-center justify-center gap-2 mb-1">
+                      <Lock className="w-4 h-4 text-blue-600" />
+                      <p className="text-sm font-semibold text-blue-700">
                         {tPaywall("moreRecommendations", {
                           count: grouped[timeline].length - 1,
                         })}
                       </p>
-                      <button
-                        onClick={onUnlock}
-                        className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 active:scale-95 transition-all"
-                      >
-                        {tPaywall("unlockAll")}
-                      </button>
                     </div>
-                  </div>
+                    <p className="text-xs text-blue-500 group-hover:text-blue-600 font-medium">
+                      {tPaywall("unlockAll")}
+                    </p>
+                  </button>
                 )}
               </div>
             </div>
