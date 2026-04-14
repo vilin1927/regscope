@@ -101,12 +101,15 @@ export function Sidebar({
           active={currentScreen === "risk-analysis"}
           onClick={() => onNavigate("risk-analysis")}
         />
-        <NavItem
-          icon={Lightbulb}
-          label={t("recommendations")}
-          active={currentScreen === "recommendations"}
-          onClick={() => onNavigate("recommendations")}
-        />
+        {/* Recommendations hidden — feature kept but not shown in nav */}
+        {false && (
+          <NavItem
+            icon={Lightbulb}
+            label={t("recommendations")}
+            active={currentScreen === "recommendations"}
+            onClick={() => onNavigate("recommendations")}
+          />
+        )}
         <NavItem
           icon={Mail}
           label={t("newsletter")}
