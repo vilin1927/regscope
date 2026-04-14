@@ -9,7 +9,7 @@
     "newScan": "New Scan",
     "scanHistory": "Scan History",
     "analysis": "ANALYSIS",
-    "riskAnalysis": "Risk Analysis",
+    "riskAnalysis": "Highest Risks",
     "recommendations": "Recommendations",
     "newsletter": "Newsletter",
     "admin": "ADMIN",
@@ -449,7 +449,7 @@
     "confirmLogout": "Are you sure you want to sign out?"
   },
   "RiskAnalysis": {
-    "title": "Risk Analysis",
+    "title": "Highest Risks",
     "description": "AI-powered analysis of your business profile against each matched regulation. Compliance gaps, deadlines, and penalty exposure categorized by severity.",
     "noScanResults": "Run a compliance scan first to generate a risk analysis.",
     "loading": "Checking for existing analysis...",
@@ -471,7 +471,11 @@
       "hoch": "High",
       "mittel": "Medium",
       "niedrig": "Low"
-    }
+    },
+    "subtitle": "The 5 most urgent risks from your scan",
+    "ctaHeading": "Need support?",
+    "ctaSubtext": "Our experts help you manage these risks",
+    "ctaButton": "Contact experts"
   },
   "Recommendations": {
     "title": "Recommendations",
@@ -753,7 +757,7 @@
     "registrationFailed": "Registration failed",
     "dashboardTitle": "Consultant Dashboard",
     "referralCode": "Referral Code",
-    "copyCode": "Copy code",
+    "copyCode": "Copy link",
     "totalReferrals": "Total Referrals",
     "activeReferrals": "Active Referrals",
     "pendingRequests": "Pending Requests",

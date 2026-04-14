@@ -9,7 +9,7 @@
     "newScan": "Neuer Scan",
     "scanHistory": "Scan-Verlauf",
     "analysis": "ANALYSE",
-    "riskAnalysis": "Risikoanalyse",
+    "riskAnalysis": "Höchste Risiken",
     "recommendations": "Empfehlungen",
     "newsletter": "Newsletter",
     "admin": "ADMIN",
@@ -449,7 +449,7 @@
     "confirmLogout": "Möchten Sie sich wirklich abmelden?"
   },
   "RiskAnalysis": {
-    "title": "Risikoanalyse",
+    "title": "Höchste Risiken",
     "description": "KI-gestützte Analyse Ihres Unternehmensprofils gegen jede relevante Vorschrift. Compliance-Lücken, Fristen und Bußgeldrisiken werden nach Schweregrad kategorisiert.",
     "noScanResults": "Führen Sie zuerst einen Compliance-Scan durch, um eine Risikoanalyse zu erstellen.",
     "loading": "Prüfe vorhandene Analyse...",
@@ -471,7 +471,11 @@
       "hoch": "Hoch",
       "mittel": "Mittel",
       "niedrig": "Niedrig"
-    }
+    },
+    "subtitle": "Die 5 dringendsten Risiken aus Ihrem Scan",
+    "ctaHeading": "Brauchen Sie Unterstützung?",
+    "ctaSubtext": "Unsere Experten helfen Ihnen, diese Risiken zu bewältigen",
+    "ctaButton": "Experten kontaktieren"
   },
   "Recommendations": {
     "title": "Empfehlungen",
@@ -753,7 +757,7 @@
     "registrationFailed": "Registrierung fehlgeschlagen",
     "dashboardTitle": "Berater-Dashboard",
     "referralCode": "Empfehlungscode",
-    "copyCode": "Code kopieren",
+    "copyCode": "Link kopieren",
     "totalReferrals": "Empfehlungen gesamt",
     "activeReferrals": "Aktive Empfehlungen",
     "pendingRequests": "Offene Anfragen",

@@ -62,8 +62,22 @@ export function ConsultantDashboardScreen() {
 
   const copyReferralCode = async () => {
     if (!data?.consultant.referral_code) return;
-    await navigator.clipboard.writeText(data.consultant.referral_code);
-    setCopied(true);
+    const referralUrl = `https://smart-lex.de/de?ref=${data.consultant.referral_code}`;
+    try {
+      await navigator.clipboard.writeText(referralUrl);
+      setCopied(true);
+    } catch {
+      // Fallback for browsers/contexts where clipboard API is unavailable
+      const textarea = document.createElement("textarea");
+      textarea.value = referralUrl;
+      textarea.style.position = "fixed";
+      textarea.style.opacity = "0";
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand("copy");
+      document.body.removeChild(textarea);
+      setCopied(true);
+    }
     setTimeout(() => setCopied(false), 2000);
   };
 

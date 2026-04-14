@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { ShieldAlert, AlertTriangle, Loader2, BarChart3, RefreshCw, Lock } from "lucide-react";
+import { ShieldAlert, AlertTriangle, Loader2, BarChart3, RefreshCw, Lock, Users } from "lucide-react";
 import { ScrollableRow } from "@/components/ui/ScrollableRow";
 import { screenVariants, screenTransition } from "@/lib/motion";
 import { useTranslations } from "next-intl";
@@ -180,7 +180,8 @@ export function RiskAnalysisScreen() {
           <div className="flex flex-wrap items-start justify-between gap-2">
             <div>
               <h1 className="text-2xl font-bold text-gray-900">{t("title")}</h1>
-              <p className="text-gray-500 text-sm mt-1">
+              <p className="text-gray-500 text-sm mt-0.5">{t("subtitle")}</p>
+              <p className="text-gray-400 text-xs mt-0.5">
                 {t("foundIssues", { count: report.items.length })}
               </p>
             </div>
@@ -333,6 +334,25 @@ export function RiskAnalysisScreen() {
               <p className="text-sm text-gray-600">{item.mitigation}</p>
             </div>
           ))}
+      </div>
+
+      {/* Consultant CTA */}
+      <div className="mt-6 rounded-xl bg-gradient-to-br from-blue-600 to-blue-700 p-6 sm:p-8 text-white">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+          <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center shrink-0">
+            <Users className="w-6 h-6 text-white" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <h3 className="text-lg font-bold">{t("ctaHeading")}</h3>
+            <p className="text-blue-100 text-sm mt-1">{t("ctaSubtext")}</p>
+          </div>
+          <button
+            onClick={() => setExpertModalOpen(true)}
+            className="shrink-0 w-full sm:w-auto px-6 py-3 bg-white text-blue-700 rounded-lg font-semibold text-sm hover:bg-blue-50 active:scale-95 transition-all text-center"
+          >
+            {t("ctaButton")}
+          </button>
+        </div>
       </div>
 
       {expertModalOpen && (
