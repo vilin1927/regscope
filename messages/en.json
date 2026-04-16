@@ -437,7 +437,8 @@
     "referralCode": "Referral Code (optional)",
     "referralPlaceholder": "Enter code here",
     "referralValid": "Referred by",
-    "referralInvalid": "Invalid code"
+    "referralInvalid": "Invalid code",
+    "consultantSignupLink": "Register as Consultant"
   },
   "Settings": {
     "title": "Settings",
@@ -780,6 +781,36 @@
     "commission": "Commission",
     "commissionInitial": "First Payment",
     "commissionRecurring": "Recurring"
+  },
+  "ConsultantSignup": {
+    "title": "Create Consultant Account",
+    "subtitle": "Register and go straight to your consultant dashboard",
+    "sectionAccount": "ACCOUNT",
+    "sectionProfile": "CONSULTANT PROFILE",
+    "email": "Email Address",
+    "emailPlaceholder": "consultant@firm.com",
+    "emailRequired": "Email is required",
+    "password": "Password",
+    "passwordPlaceholder": "At least 8 characters",
+    "passwordRequired": "Password is required",
+    "passwordHint": "Min. 8 characters, one uppercase letter and one number",
+    "name": "Full Name",
+    "namePlaceholder": "e.g. Dr. Klaus Weber",
+    "nameRequired": "Name is required",
+    "phone": "Phone Number (optional)",
+    "phonePlaceholder": "+49 123 456789",
+    "bio": "Short Bio (optional)",
+    "bioPlaceholder": "Brief description of your expertise and experience...",
+    "expertise": "Areas of Expertise",
+    "tagsRequired": "At least one area of expertise is required",
+    "submit": "Create Account & Get Started",
+    "submitting": "Creating...",
+    "signupFailed": "Registration failed",
+    "signupSuccessLoginFailed": "Account created but login failed. Please sign in manually.",
+    "backToLogin": "Back to login",
+    "alreadyHaveAccount": "Already have an account?",
+    "loginLink": "Sign in",
+    "consultantSignupLink": "Register as Consultant"
   },
   "Disclaimer": {
     "title": "Important Notice",

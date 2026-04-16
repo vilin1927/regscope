@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { ScanSearch } from "lucide-react";
+import { ScanSearch, Briefcase } from "lucide-react";
 import { screenVariants, screenTransition } from "@/lib/motion";
 import { useTranslations } from "next-intl";
 import { AuthForm } from "./AuthForm";
@@ -11,10 +11,11 @@ interface AuthScreenProps {
   onAuth: (email: string, password: string, mode: "signin" | "signup") => Promise<void>;
   onGuest: () => void;
   onLegal: (page: "impressum" | "datenschutz") => void;
+  onConsultantSignup?: () => void;
   error?: string;
 }
 
-export function AuthScreen({ onAuth, onGuest, onLegal, error }: AuthScreenProps) {
+export function AuthScreen({ onAuth, onGuest, onLegal, onConsultantSignup, error }: AuthScreenProps) {
   // Check for ?ref= param → auto-switch to signup
   const refFromUrl = typeof window !== "undefined"
     ? new URLSearchParams(window.location.search).get("ref") || ""
@@ -85,6 +86,17 @@ export function AuthScreen({ onAuth, onGuest, onLegal, error }: AuthScreenProps)
             </p>
           </div>
         </div>
+
+        {/* Consultant direct signup link */}
+        {onConsultantSignup && (
+          <button
+            onClick={onConsultantSignup}
+            className="w-full mt-4 py-2.5 border border-blue-200 bg-blue-50 text-blue-700 rounded-xl font-medium hover:bg-blue-100 transition-colors flex items-center justify-center gap-2 text-sm"
+          >
+            <Briefcase className="w-4 h-4" />
+            {t("consultantSignupLink")}
+          </button>
+        )}
 
         <div className="flex items-center justify-center gap-3 mt-6 text-xs text-gray-400">
           <button

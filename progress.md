@@ -1,7 +1,43 @@
 # ComplyRadar — Progress Log
 
-> **Last updated:** 2026-04-06
-> **Current state:** Upgrade/paywall redesign complete on feat/supabase-migration. Needs PR to main.
+> **Last updated:** 2026-04-15
+> **Current state:** M4 consultant direct signup on feat/m4-consultant-direct-signup. Build passes. Needs PR to main.
+
+---
+
+### Session 2026-04-15 — M4: Direct Consultant Registration Without Scan
+
+**What was done:**
+- Created direct consultant signup flow: `/consultant/signup` route lets consultants register without needing a compliance scan
+- New API route `app/api/consultant/signup/route.ts` — creates user + profile + consultant record in one DB transaction
+- New component `components/consultant/ConsultantSignupScreen.tsx` — combined account + consultant profile form
+- Auth screen now has "Als Berater registrieren" link that navigates to consultant signup
+- After successful signup + auto sign-in, consultant lands directly on their dashboard
+- Added `consultant-signup` Screen type, URL routes, header mapping
+- i18n: Added `ConsultantSignup` namespace + `Auth.consultantSignupLink` to both de.json and en.json
+- Mobile-responsive: uses Tailwind responsive prefixes (sm:, md:)
+- Build passes clean
+
+**Files changed:**
+- `types.ts` — Added `consultant-signup` to Screen union
+- `lib/routes.ts` — Added `/consultant/signup` route mapping
+- `app/api/consultant/signup/route.ts` — NEW: combined user + consultant registration endpoint
+- `components/consultant/ConsultantSignupScreen.tsx` — NEW: direct signup form
+- `components/app-shell/ComplyRadarApp.tsx` — Wire up new screen, handle pre-auth rendering
+- `components/app-shell/Header.tsx` — Added title key for consultant-signup
+- `components/auth/AuthScreen.tsx` — Added consultant signup link + `onConsultantSignup` prop
+- `messages/de.json` — Added ConsultantSignup namespace + Auth.consultantSignupLink
+- `messages/en.json` — Added ConsultantSignup namespace + Auth.consultantSignupLink
+
+**Decisions:**
+- Consultant signup is a pre-auth screen (like auth, impressum, datenschutz) — no login required to view it
+- One-step flow: creates user account + profile + consultant record in a single transaction
+- After signup, auto sign-in via NextAuth credentials provider, then redirect to consultant-dashboard
+- Existing flows preserved: logged-in users can still register as consultant via sidebar "Berater werden"
+
+**What comes next:**
+- Create PR to main
+- Existing consultant register (for already-logged-in users) still works as before
 
 ---
 

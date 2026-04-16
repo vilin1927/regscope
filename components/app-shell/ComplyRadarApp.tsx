@@ -20,6 +20,7 @@ import { AdminUsersScreen } from "../admin/AdminUsersScreen";
 import { AdminTemplatesScreen } from "../admin/AdminTemplatesScreen";
 import { AdminConsultantsScreen } from "../admin/AdminConsultantsScreen";
 import { ConsultantRegisterScreen } from "../consultant/ConsultantRegisterScreen";
+import { ConsultantSignupScreen } from "../consultant/ConsultantSignupScreen";
 import { ConsultantDashboardScreen } from "../consultant/ConsultantDashboardScreen";
 import { CompanySearchScreen } from "../company-search/CompanySearchScreen";
 import { DisclaimerModal } from "../ui/DisclaimerModal";
@@ -186,6 +187,9 @@ function ComplyRadarAppShell({
     if (auth.userId || auth.isGuest) {
       if (currentScreen === "auth") {
         setCurrentScreen("dashboard");
+      } else if (currentScreen === "consultant-signup") {
+        // Consultant just signed up and session loaded — go to their dashboard
+        setCurrentScreen("consultant-dashboard");
       } else if (
         scan.historyLoaded &&
         !urlScanId &&
@@ -194,7 +198,7 @@ function ComplyRadarAppShell({
       ) {
         setCurrentScreen("dashboard");
       }
-    } else if (currentScreen !== "impressum" && currentScreen !== "datenschutz") {
+    } else if (currentScreen !== "impressum" && currentScreen !== "datenschutz" && currentScreen !== "consultant-signup") {
       setCurrentScreen("auth");
     }
   }, [hydrated, auth.isLoading, auth.userId, auth.isGuest, scan.historyLoaded]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -387,7 +391,17 @@ function ComplyRadarAppShell({
         onAuth={auth.handleAuth}
         onGuest={() => { auth.handleGuest(); setCurrentScreen("dashboard"); }}
         onLegal={(page) => setCurrentScreen(page)}
+        onConsultantSignup={() => setCurrentScreen("consultant-signup")}
         error={auth.authError}
+      />
+    );
+  }
+
+  if (currentScreen === "consultant-signup" && !auth.userId) {
+    return (
+      <ConsultantSignupScreen
+        onSuccess={() => setCurrentScreen("consultant-dashboard")}
+        onBack={() => setCurrentScreen("auth")}
       />
     );
   }
