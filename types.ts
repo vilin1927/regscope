@@ -14,6 +14,7 @@ export type Screen =
   | "admin-templates"
   | "admin-consultants"
   | "consultant-register"
+  | "consultant-signup"
   | "consultant-dashboard"
   | "settings"
   | "impressum"

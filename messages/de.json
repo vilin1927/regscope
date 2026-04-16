@@ -437,7 +437,8 @@
     "referralCode": "Empfehlungscode (optional)",
     "referralPlaceholder": "Code hier eingeben",
     "referralValid": "Empfohlen von",
-    "referralInvalid": "Ungültiger Code"
+    "referralInvalid": "Ungültiger Code",
+    "consultantSignupLink": "Als Berater registrieren"
   },
   "Settings": {
     "title": "Einstellungen",
@@ -780,6 +781,36 @@
     "commission": "Provision",
     "commissionInitial": "Erstzahlung",
     "commissionRecurring": "laufend"
+  },
+  "ConsultantSignup": {
+    "title": "Berater-Konto erstellen",
+    "subtitle": "Registrieren Sie sich und starten Sie direkt mit Ihrem Berater-Dashboard",
+    "sectionAccount": "ZUGANGSDATEN",
+    "sectionProfile": "BERATERPROFIL",
+    "email": "E-Mail-Adresse",
+    "emailPlaceholder": "berater@kanzlei.de",
+    "emailRequired": "E-Mail ist erforderlich",
+    "password": "Passwort",
+    "passwordPlaceholder": "Mindestens 8 Zeichen",
+    "passwordRequired": "Passwort ist erforderlich",
+    "passwordHint": "Mind. 8 Zeichen, ein Grossbuchstabe und eine Zahl",
+    "name": "Vollstaendiger Name",
+    "namePlaceholder": "z.B. Dr. Klaus Weber",
+    "nameRequired": "Name ist erforderlich",
+    "phone": "Telefonnummer (optional)",
+    "phonePlaceholder": "+49 123 456789",
+    "bio": "Kurzprofil (optional)",
+    "bioPlaceholder": "Kurze Beschreibung Ihrer Expertise und Erfahrung...",
+    "expertise": "Fachgebiete",
+    "tagsRequired": "Mindestens ein Fachgebiet ist erforderlich",
+    "submit": "Konto erstellen & loslegen",
+    "submitting": "Wird erstellt...",
+    "signupFailed": "Registrierung fehlgeschlagen",
+    "signupSuccessLoginFailed": "Konto erstellt, aber Anmeldung fehlgeschlagen. Bitte melden Sie sich manuell an.",
+    "backToLogin": "Zurueck zur Anmeldung",
+    "alreadyHaveAccount": "Bereits ein Konto?",
+    "loginLink": "Jetzt anmelden",
+    "consultantSignupLink": "Als Berater registrieren"
   },
   "Disclaimer": {
     "title": "Wichtiger Hinweis",

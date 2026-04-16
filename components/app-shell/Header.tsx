@@ -27,6 +27,7 @@ const screenTitleKeys: Record<Screen, string> = {
   "admin-templates": "Admin.templates",
   "admin-consultants": "Admin.consultantsTitle",
   "consultant-register": "Consultant.registerTitle",
+  "consultant-signup": "ConsultantSignup.title",
   "consultant-dashboard": "Consultant.dashboardTitle",
   settings: "Settings.title",
   impressum: "Legal.impressum",

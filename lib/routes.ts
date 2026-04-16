@@ -38,6 +38,8 @@ export function screenToPath(screen: Screen, scanId?: string | null): string {
       return "/admin/consultants";
     case "consultant-register":
       return "/consultant/register";
+    case "consultant-signup":
+      return "/consultant/signup";
     case "consultant-dashboard":
       return "/consultant/dashboard";
     case "settings":
@@ -104,6 +106,8 @@ export function pathToScreen(pathname: string): { screen: Screen; scanId?: strin
       return { screen: "admin-consultants" };
     case "/consultant/register":
       return { screen: "consultant-register" };
+    case "/consultant/signup":
+      return { screen: "consultant-signup" };
     case "/consultant/dashboard":
       return { screen: "consultant-dashboard" };
     case "/settings":
