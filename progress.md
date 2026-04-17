@@ -1,7 +1,78 @@
 # ComplyRadar — Progress Log
 
-> **Last updated:** 2026-04-15
-> **Current state:** M4 consultant direct signup on feat/m4-consultant-direct-signup. Build passes. Needs PR to main.
+> **Last updated:** 2026-04-17
+> **Current state:** Docs reconciliation. Code unchanged — only progress.md + features.json + .gitignore updated to reflect actual shipped state.
+
+---
+
+### Session 2026-04-17 — features.json + progress.md Reconciliation (Docs Only)
+
+**What was done:**
+- Verified actual code state via 3 parallel Explore agents against claims in progress.md vs features.json
+- Finding: no code bugs — features.json was stale. All shipped features confirmed present in code.
+- Reconciled `features.json`:
+  - `lastUpdated`: 2026-04-06 → 2026-04-17
+  - F-101 (Stripe): status `awaiting_approval` → `done`. All 8 criteria flipped `false` → `true` (code verified: checkout route, webhook handling 4 events, DB sync, paywall gating, commission tracking). Note added: sandbox tested, live key swap still pending Fabi's QA.
+  - F-102-FIX (two-tier commission): all 6 criteria `false` → `true` (schema `commission_rate_initial`/`commission_rate_recurring` confirmed at `lib/db/schema.ts:210-215`)
+  - F-102-FIX2 (QR → signup URL): all 5 criteria `false` → `true` (encoding confirmed at `ConsultantDashboardScreen.tsx:146`, `?ref=` read at `AuthScreen.tsx:20-23`)
+  - F-102-FIX3 (legal popups): all 11 criteria `false` → `true` (DisclaimerModal + ContactConsentModal exist and wired)
+  - F-103 (original M4 scope "Expert Improvements"): status → `descoped` with note explaining Raphael reallocated budget
+  - F-105: new entry for delivered M4 (consultant direct signup) — status `done`, price $80, PR #26, paid=false (awaiting Upwork release)
+  - F-106: new entry for M5 Revenue Tools — $250, status `proposed`
+  - F-107: new entry for M6 Engagement Automation — $350, status `proposed`
+  - F-108: new entry for M7 Consultant Directory — $350, status `deferred`
+- Updated `.gitignore` to exclude `/test/` and `/scripts/data-export.json` (local scratch)
+- Created branch `chore/reconcile-features-progress-docs` (per project rule: never commit to main)
+
+**Verification artifacts:**
+- Stripe: `lib/stripe.ts`, `app/api/stripe/checkout/route.ts`, `app/api/stripe/webhook/route.ts` all real. Webhook handles all 4 events (checkout.session.completed, invoice.paid, customer.subscription.updated/deleted) and mutates `stripeCustomerId`/`stripeSubscriptionId`/`subscriptionStatus`/`subscriptionPeriodEnd`. Commission tracking via `trackCommission()` at webhook L197-255.
+- M4: PR #26 merge commit `57dada2` confirmed on main. All 10 files present (API, screen, route mapping, i18n DE+EN, auth link, header, pre-auth render, auto-signin, responsive).
+
+**Decisions:**
+- Do NOT touch code — only docs
+- Commit via PR (branch `chore/reconcile-features-progress-docs`), never direct to main
+
+**What comes next:**
+- Merge this docs PR
+- Send Phase 3 proposal ($600 for M5+M6) on Upwork when Raphael releases M4
+- After Saturday (Raphael's Friday demo): remove placeholder consultants (free goodwill)
+
+---
+
+### Session 2026-04-16 — M4 Delivered + Phase 3 Pricing
+
+**What was done:**
+- M4 (consultant direct signup) — PR #26 merged to main, deployed to VPS, verified on smart-lex.de
+- Consultants can now register directly via "Als Berater registrieren" button on login page — no scan required
+- Build passes, mobile responsive, live on production
+- Drafted Phase 3 proposal for Raphael (not yet sent)
+
+**Phase 3 Pricing (agreed internally):**
+- M5: Revenue Tools (referral code in checkout + payout dashboard) — $250
+- M6: Engagement Automation (AI newsletter + risk reminders 2/6/10 weeks) — $350
+- M7: Consultant Directory (deferred until 50+ consultants) — $350
+- Total pipeline: $730 immediate (M5+M6) + $350 later (M7) = $1,080
+
+**Revenue status:**
+- Phase 1 MVP: $960 (paid)
+- Phase 2 M1-M3: $755 (paid)
+- Phase 2 M4: $80 (delivered, awaiting release)
+- Phase 3: $600-1,080 (proposal ready)
+- Total earned: $1,795 | Total collected: $1,715
+
+**Free goodwill items:**
+- Remove placeholder consultants — WAIT until after Saturday (Raphael's Friday demo)
+
+**Decisions:**
+- M4 scope changed by Raphael from original (tags/matching/cards) to consultant signup without scan
+- Phase 3 pricing: $600 for M5+M6 is the quick-yes number, $730 with M7 deferred
+- Message sent to Raphael: deliver M4, then send Phase 3 proposal after milestone release
+
+**What comes next:**
+- Raphael releases M4 ($80)
+- Send Phase 3 proposal on Upwork
+- After Saturday: remove placeholder consultants (free)
+- Start M5 after Raphael funds it
 
 ---
 

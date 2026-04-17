@@ -1,6 +1,6 @@
 {
   "project": "ComplyRadar (RegScope)",
-  "lastUpdated": "2026-04-06",
+  "lastUpdated": "2026-04-17",
   "features": [
     {
       "id": "F-001",
@@ -404,22 +404,29 @@
     {
       "id": "F-101",
       "title": "Stripe + Paywall",
-      "status": "awaiting_approval",
+      "status": "done",
       "phase": "Phase 2 - Milestone 2",
       "price": "$170",
+      "paid": true,
       "description": "Real payment integration replacing trial system. Stripe Checkout for €190/6mo initial, then €30/month recurring. Webhook handles subscription lifecycle. Plan syncs to PostgreSQL profiles. Commission tracking for consultants (30% initial / 10% recurring).",
-      "files": [],
-      "criteria": [
-        { "text": "Stripe Checkout flow: €190 initial (scan + 6mo subscription)", "done": false },
-        { "text": "Recurring billing: €30/month after initial 6 months", "done": false },
-        { "text": "Webhook handles subscription events (created, renewed, cancelled)", "done": false },
-        { "text": "Plan status syncs to PostgreSQL profiles (free → paid → expired)", "done": false },
-        { "text": "Paywall blocks Pro features for non-subscribers", "done": false },
-        { "text": "Commission tracking: record payment amounts per referred customer", "done": false },
-        { "text": "Consultant dashboard: show earned amounts (30% × €190 initial + 10% × €30/mo recurring)", "done": false },
-        { "text": "Admin: view total commission owed per consultant", "done": false }
+      "files": [
+        "lib/stripe.ts",
+        "app/api/stripe/checkout/route.ts",
+        "app/api/stripe/webhook/route.ts",
+        "components/ui/UpgradeModal.tsx",
+        "components/providers/SubscriptionProvider.tsx"
       ],
-      "notes": "Pricing confirmed by Raphael (2026-03-28): €190 initial (scan + 6mo), then €30/month retainer. Commission: 30% first payment, 10% lifetime recurring. Payments go to Raphael's Stripe."
+      "criteria": [
+        { "text": "Stripe Checkout flow: €190 initial (scan + 6mo subscription)", "done": true },
+        { "text": "Recurring billing: €30/month after initial 6 months", "done": true },
+        { "text": "Webhook handles subscription events (created, renewed, cancelled)", "done": true },
+        { "text": "Plan status syncs to PostgreSQL profiles (free → paid → expired)", "done": true },
+        { "text": "Paywall blocks Pro features for non-subscribers", "done": true },
+        { "text": "Commission tracking: record payment amounts per referred customer", "done": true },
+        { "text": "Consultant dashboard: show earned amounts (30% × €190 initial + 10% × €30/mo recurring)", "done": true },
+        { "text": "Admin: view total commission owed per consultant", "done": true }
+      ],
+      "notes": "Code complete + deployed on smart-lex.de. Sandbox/test mode verified E2E (checkout → webhook → DB sync). Live Stripe key swap (sk_live_, pk_live_, live price_ids, live whsec_) pending Fabi's final QA approval before going live. Pricing: €190 initial (scan + 6mo), then €30/month. Commission: 30% first payment, 10% lifetime recurring."
     },
     {
       "id": "F-102",
@@ -446,12 +453,12 @@
         "app/api/admin/consultants/route.ts"
       ],
       "criteria": [
-        { "text": "DB migration: rename commission_rate → commission_rate_initial (default 30), add commission_rate_recurring (default 10)", "done": false },
-        { "text": "Consultant registration: set defaults 30/10 on new signups", "done": false },
-        { "text": "Consultant dashboard: show both rates (30% erste Zahlung / 10% laufend)", "done": false },
-        { "text": "Admin panel: edit both rates per consultant", "done": false },
-        { "text": "TypeScript types updated", "done": false },
-        { "text": "Deployed + tested on VPS staging", "done": false }
+        { "text": "DB migration: rename commission_rate → commission_rate_initial (default 30), add commission_rate_recurring (default 10)", "done": true },
+        { "text": "Consultant registration: set defaults 30/10 on new signups", "done": true },
+        { "text": "Consultant dashboard: show both rates (30% erste Zahlung / 10% laufend)", "done": true },
+        { "text": "Admin panel: edit both rates per consultant", "done": true },
+        { "text": "TypeScript types updated", "done": true },
+        { "text": "Deployed + tested on VPS staging", "done": true }
       ]
     },
     {
@@ -468,17 +475,17 @@
         "supabase/migration-m3-disclaimers.sql"
       ],
       "criteria": [
-        { "text": "Disclaimer popup: shows every time before viewing scan results", "done": false },
-        { "text": "Disclaimer popup: checkbox 'I understand and agree' required before proceeding", "done": false },
-        { "text": "Disclaimer popup: saves acknowledgment to DB (user_id, scan_id, timestamp)", "done": false },
-        { "text": "Disclaimer popup: German text — results are not legal advice, overview only", "done": false },
-        { "text": "Contact consent popup: shows once when user first clicks 'Professionelle Hilfe'", "done": false },
-        { "text": "Contact consent popup: after agreeing once, doesn't show again for that user", "done": false },
-        { "text": "Contact consent popup: text — contact info stored for purpose of expert contacting customer", "done": false },
-        { "text": "Contact consent popup: checkbox 'I agree' required", "done": false },
-        { "text": "Both popups: mobile responsive", "done": false },
-        { "text": "Both popups: i18n DE+EN", "done": false },
-        { "text": "Deployed + tested on VPS staging", "done": false }
+        { "text": "Disclaimer popup: shows every time before viewing scan results", "done": true },
+        { "text": "Disclaimer popup: checkbox 'I understand and agree' required before proceeding", "done": true },
+        { "text": "Disclaimer popup: saves acknowledgment to DB (user_id, scan_id, timestamp)", "done": true },
+        { "text": "Disclaimer popup: German text — results are not legal advice, overview only", "done": true },
+        { "text": "Contact consent popup: shows once when user first clicks 'Professionelle Hilfe'", "done": true },
+        { "text": "Contact consent popup: after agreeing once, doesn't show again for that user", "done": true },
+        { "text": "Contact consent popup: text — contact info stored for purpose of expert contacting customer", "done": true },
+        { "text": "Contact consent popup: checkbox 'I agree' required", "done": true },
+        { "text": "Both popups: mobile responsive", "done": true },
+        { "text": "Both popups: i18n DE+EN", "done": true },
+        { "text": "Deployed + tested on VPS staging", "done": true }
       ]
     },
     {
@@ -493,11 +500,11 @@
         "components/app-shell/ComplyRadarApp.tsx"
       ],
       "criteria": [
-        { "text": "QR code value: encode full URL https://smart-lex.de/de?ref=CODE instead of plain text", "done": false },
-        { "text": "AuthForm: on mount, read ?ref= from URL and pre-fill referral code field", "done": false },
-        { "text": "AuthForm: auto-switch to 'Registrieren' tab when ?ref= is present", "done": false },
-        { "text": "AuthForm: auto-validate the pre-filled code (show green check + consultant name)", "done": false },
-        { "text": "Deployed + tested on VPS staging", "done": false }
+        { "text": "QR code value: encode full URL https://smart-lex.de/de?ref=CODE instead of plain text", "done": true },
+        { "text": "AuthForm: on mount, read ?ref= from URL and pre-fill referral code field", "done": true },
+        { "text": "AuthForm: auto-switch to 'Registrieren' tab when ?ref= is present", "done": true },
+        { "text": "AuthForm: auto-validate the pre-filled code (show green check + consultant name)", "done": true },
+        { "text": "Deployed + tested on VPS staging", "done": true }
       ]
     },
     {
@@ -579,20 +586,102 @@
     },
     {
       "id": "F-103",
-      "title": "Expert Improvements",
-      "status": "awaiting_approval",
-      "phase": "Phase 2 - Milestone 4",
+      "title": "Expert Improvements (original M4 scope)",
+      "status": "descoped",
+      "phase": "Phase 2 - Milestone 4 (original)",
       "price": "$80",
-      "description": "Improved expert card UI. Industry-to-expert matching based on scan results. Future: experts can buy marketing priority (paid placement when customer has no referral code).",
-      "files": [
-        "data/experts.ts",
-        "components/experts/"
-      ],
+      "description": "ORIGINAL scope: improved expert card UI + industry-to-expert matching + expert priority logic. DESCOPED by Raphael on 2026-04-14 and replaced with F-105 (direct consultant signup without scan) at same price.",
+      "files": [],
       "criteria": [
         { "text": "Improved expert card design", "done": false },
         { "text": "Industry-to-expert matching from scan results", "done": false },
         { "text": "Expert priority display logic (referral-linked first, then random from matching tags)", "done": false }
-      ]
+      ],
+      "notes": "Raphael reallocated M4 budget to a more urgent need: letting consultants self-onboard without having to complete a compliance scan first. See F-105 for the delivered M4."
+    },
+    {
+      "id": "F-105",
+      "title": "Direct Consultant Signup (delivered M4)",
+      "status": "done",
+      "phase": "Phase 2 - Milestone 4 (rescoped)",
+      "price": "$80",
+      "paid": false,
+      "description": "Consultants can register directly via 'Als Berater registrieren' link on login page — no compliance scan required. One-step flow creates user + profile + consultant records in a single DB transaction, then auto-signs in and routes to consultant-dashboard. Shipped via PR #26 (merge commit 57dada2), deployed to smart-lex.de on 2026-04-16.",
+      "files": [
+        "app/api/consultant/signup/route.ts",
+        "components/consultant/ConsultantSignupScreen.tsx",
+        "components/auth/AuthScreen.tsx",
+        "components/app-shell/ComplyRadarApp.tsx",
+        "components/app-shell/Header.tsx",
+        "lib/routes.ts",
+        "types.ts",
+        "messages/de.json",
+        "messages/en.json"
+      ],
+      "criteria": [
+        { "text": "POST /api/consultant/signup creates user + profile + consultant in a single transaction", "done": true },
+        { "text": "ConsultantSignupScreen renders combined account + consultant profile form", "done": true },
+        { "text": "'Als Berater registrieren' link on AuthScreen routes to signup form", "done": true },
+        { "text": "After signup, auto-sign-in via NextAuth credentials → consultant-dashboard", "done": true },
+        { "text": "'consultant-signup' added to Screen union + /consultant/signup route mapping", "done": true },
+        { "text": "Pre-auth rendering (accessible without login, like auth/impressum/datenschutz)", "done": true },
+        { "text": "i18n: ConsultantSignup namespace + Auth.consultantSignupLink in de.json + en.json", "done": true },
+        { "text": "Mobile responsive (Tailwind sm:/md: prefixes)", "done": true },
+        { "text": "Merged to main (PR #26) + deployed to smart-lex.de", "done": true }
+      ],
+      "notes": "M4 milestone delivered 2026-04-16. Awaiting Raphael's milestone release on Upwork for payment. Existing flow preserved: logged-in users can still register as consultant via sidebar 'Berater werden'."
+    },
+    {
+      "id": "F-106",
+      "title": "M5 — Revenue Tools (Phase 3)",
+      "status": "proposed",
+      "phase": "Phase 3 - Milestone 5",
+      "price": "$250",
+      "description": "Two revenue-side features: (1) referral code field in the purchase/Stripe checkout flow so consultants get commission on paying customers, not just signups. (2) Consultant payout dashboard tab showing accrued commission totals (initial + recurring) with payout history.",
+      "files": [],
+      "criteria": [
+        { "text": "Referral code field on Stripe checkout (pre-fill from ?ref= if present)", "done": false },
+        { "text": "Commission accrues on actual payment events (not just signup)", "done": false },
+        { "text": "Consultant dashboard: 'Auszahlungen' tab with accrued totals (initial + recurring)", "done": false },
+        { "text": "Admin: mark payouts as paid, keep history", "done": false },
+        { "text": "Mobile responsive + i18n DE+EN", "done": false }
+      ],
+      "notes": "Part of Phase 3 proposal ($600 for M5+M6 quick-yes bundle). Not yet sent on Upwork. Stripe Connect deferred — manual payout tracking is enough for MVP."
+    },
+    {
+      "id": "F-107",
+      "title": "M6 — Engagement Automation (Phase 3)",
+      "status": "proposed",
+      "phase": "Phase 3 - Milestone 6",
+      "price": "$350",
+      "description": "Two engagement features: (1) Automated AI-generated weekly/monthly newsletter from regulation updates (replaces manual admin send). (2) Risk reminder emails at 2/6/10 weeks post-scan nudging users to revisit results and upgrade.",
+      "files": [],
+      "criteria": [
+        { "text": "Scheduled job generates newsletter content via GPT-5.2 from recent regulation changes", "done": false },
+        { "text": "Admin preview + approve before send (or full auto-send opt-in)", "done": false },
+        { "text": "Risk reminder emails triggered at 2, 6, 10 weeks after scan completion", "done": false },
+        { "text": "Reminder respects newsletter_preferences opt-out", "done": false },
+        { "text": "Links deep-link back to user's scan + upgrade CTA", "done": false },
+        { "text": "Mobile responsive emails + i18n DE+EN", "done": false }
+      ],
+      "notes": "Part of Phase 3 proposal ($600 for M5+M6 quick-yes bundle). Uses existing Resend + React Email stack."
+    },
+    {
+      "id": "F-108",
+      "title": "M7 — Consultant Directory (deferred)",
+      "status": "deferred",
+      "phase": "Phase 3 - Milestone 7",
+      "price": "$350",
+      "description": "Public-facing consultant directory with filtering by expertise tag, location, rating. Replaces the random-match expert contact flow once there are enough consultants to make browsing worthwhile.",
+      "files": [],
+      "criteria": [
+        { "text": "Public directory page /berater with filterable consultant cards", "done": false },
+        { "text": "Filter by expertise tag, location (PLZ/Bundesland), language", "done": false },
+        { "text": "Individual consultant profile pages with bio + contact CTA", "done": false },
+        { "text": "Respects contact_revealed consent from F-102-E2", "done": false },
+        { "text": "SEO: static paths per consultant for organic discovery", "done": false }
+      ],
+      "notes": "Deferred in Phase 3 proposal — hold until there are 50+ consultants on the platform. Until then, the referral-code + random-match flow (F-102) is sufficient."
     },
     {
       "id": "F-104",
