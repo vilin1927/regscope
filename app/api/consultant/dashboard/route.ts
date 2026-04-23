@@ -3,6 +3,7 @@ import { requireAuth, verifyConsultantOwnership } from "@/lib/db/auth-checks";
 import { db } from "@/lib/db";
 import { consultants, referrals, helpRequests } from "@/lib/db/schema";
 import { eq, desc } from "drizzle-orm";
+import { toConsultant, toReferral, toHelpRequest } from "@/lib/consultant-mappers";
 
 // GET — consultant dashboard data (referrals, help requests, stats)
 export async function GET() {
@@ -47,9 +48,9 @@ export async function GET() {
     const totalRequests = helpRequestList.length;
 
     return NextResponse.json({
-      consultant,
-      referrals: referralList,
-      helpRequests: helpRequestList,
+      consultant: toConsultant(consultant),
+      referrals: referralList.map(toReferral),
+      helpRequests: helpRequestList.map(toHelpRequest),
       stats: {
         totalReferrals,
         activeReferrals,

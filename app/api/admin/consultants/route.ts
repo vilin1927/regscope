@@ -3,6 +3,7 @@ import { requireAdmin } from "@/lib/db/auth-checks";
 import { db } from "@/lib/db";
 import { consultants, referrals, helpRequests } from "@/lib/db/schema";
 import { eq, desc } from "drizzle-orm";
+import { toConsultant } from "@/lib/consultant-mappers";
 
 // GET — admin: list all consultants with referral counts
 export async function GET() {
@@ -46,7 +47,7 @@ export async function GET() {
     });
 
     const enriched = allConsultants.map((c) => ({
-      ...c,
+      ...toConsultant(c),
       referral_count: countMap[c.id] || 0,
       help_request_count: helpMap[c.id]?.total || 0,
       pending_requests: helpMap[c.id]?.pending || 0,
@@ -103,7 +104,7 @@ export async function PATCH(request: Request) {
       );
     }
 
-    return NextResponse.json({ consultant: updated });
+    return NextResponse.json({ consultant: toConsultant(updated) });
   } catch (error) {
     console.error("Admin consultant update error:", error);
     return NextResponse.json(
