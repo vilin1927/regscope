@@ -780,7 +780,9 @@
     "showQR": "QR-Code anzeigen",
     "commission": "Provision",
     "commissionInitial": "Erstzahlung",
-    "commissionRecurring": "laufend"
+    "commissionRecurring": "laufend",
+    "copyLinkTooltip": "Link kopieren",
+    "copySuccess": "Link kopiert!"
   },
   "ConsultantSignup": {
     "title": "Berater-Konto erstellen",

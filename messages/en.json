@@ -780,7 +780,9 @@
     "showQR": "Show QR Code",
     "commission": "Commission",
     "commissionInitial": "First Payment",
-    "commissionRecurring": "Recurring"
+    "commissionRecurring": "Recurring",
+    "copyLinkTooltip": "Copy link",
+    "copySuccess": "Link copied!"
   },
   "ConsultantSignup": {
     "title": "Create Consultant Account",
