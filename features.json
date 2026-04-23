@@ -1,6 +1,6 @@
 {
   "project": "ComplyRadar (RegScope)",
-  "lastUpdated": "2026-04-17",
+  "lastUpdated": "2026-04-23",
   "features": [
     {
       "id": "F-001",
@@ -656,6 +656,9 @@
       "price": "$350",
       "description": "Two engagement features: (1) Automated AI-generated weekly/monthly newsletter from regulation updates (replaces manual admin send). (2) Risk reminder emails at 2/6/10 weeks post-scan nudging users to revisit results and upgrade.",
       "files": [],
+      "prerequisites": [
+        { "id": "F-107-PRE-01", "text": "Migrate email sender domain from @complyradar.de to @smart-lex.de (Resend domain verification, DNS SPF/DKIM/DMARC records on smart-lex.de, update RESEND_DOMAIN env var, update all `from:` strings in send-newsletter/forgot-password/preview-newsletter routes). Deferred from F-BUG-03 rebrand PR because it's infra work, not a string swap — needs DNS access + Resend dashboard + reverification window. Ship before M6 starts because automated newsletters at scale on an unbranded sender domain will hurt deliverability and undercut the Smart Lex brand.", "done": false }
+      ],
       "criteria": [
         { "text": "Scheduled job generates newsletter content via GPT-5.2 from recent regulation changes", "done": false },
         { "text": "Admin preview + approve before send (or full auto-send opt-in)", "done": false },
@@ -664,7 +667,7 @@
         { "text": "Links deep-link back to user's scan + upgrade CTA", "done": false },
         { "text": "Mobile responsive emails + i18n DE+EN", "done": false }
       ],
-      "notes": "Part of Phase 3 proposal ($600 for M5+M6 quick-yes bundle). Uses existing Resend + React Email stack."
+      "notes": "Part of Phase 3 proposal ($600 for M5+M6 quick-yes bundle). Uses existing Resend + React Email stack. Prereq F-107-PRE-01 (email domain migration to @smart-lex.de) must ship before M6 kickoff — carried over from F-BUG-03 rebrand scope."
     },
     {
       "id": "F-108",
@@ -682,6 +685,81 @@
         { "text": "SEO: static paths per consultant for organic discovery", "done": false }
       ],
       "notes": "Deferred in Phase 3 proposal — hold until there are 50+ consultants on the platform. Until then, the referral-code + random-match flow (F-102) is sufficient."
+    },
+    {
+      "id": "F-BUG-01",
+      "title": "Dynamic Scan Timeout Fix",
+      "status": "pending",
+      "phase": "Pre-Launch Polish (Investor Demo Bug)",
+      "price": "$0 (goodwill)",
+      "description": "Dynamic scan regularly hits 90s OpenAI abort timeout and returns 'Zeitüberschreitung. Bitte versuchen Sie es erneut.' to the user. Happened live during Raphael's investor demo on 2026-04-22. Root cause: app/api/scan/route.ts:286 requests max_completion_tokens=8000 and prompts GPT-5.2 for 10-20 regulations with 11 fields each — generation regularly exceeds 90s. Confirmed in production PM2 logs on 46.225.92.189.",
+      "files": [
+        "app/api/scan/route.ts"
+      ],
+      "criteria": [
+        { "text": "runDynamicScan calls callOpenAI with max_completion_tokens=4000 (was 8000)", "done": false },
+        { "text": "System prompt asks for 'max. 10 wichtigsten Vorschriften' (was '10-20 wichtigsten')", "done": false },
+        { "text": "3 consecutive dynamic scans on smart-lex.de (e.g. BERATUNG, PRODUKTION, EINZELHANDEL industries) complete in <60s each without Zeitüberschreitung error", "done": false },
+        { "text": "Production PM2 logs show no new 'Scan API error: Error: Zeitüberschreitung' entries for 24h after deploy", "done": false },
+        { "text": "Scan output quality unchanged — still returns 8-10 regulations with full field set (name, reference, summary, requirements[], penalty, risk, URL, whyApplies)", "done": false },
+        { "text": "No regression on static carpentry scan path (runStaticScan untouched)", "done": false }
+      ],
+      "notes": "Verification: after deploy, run 3 scans on smart-lex.de covering different industries and check PM2 logs with `ssh root@46.225.92.189 'pm2 logs complyradar-web --lines 200 --nostream | grep Zeitüberschreitung'` — should be empty for post-deploy timestamps."
+    },
+    {
+      "id": "F-BUG-02",
+      "title": "Consultant Dashboard Copy+QR Buttons Fix",
+      "status": "pending",
+      "phase": "Pre-Launch Polish (Raphael feedback)",
+      "price": "$0 (goodwill)",
+      "description": "Raphael reports clicking the link icon and QR icon in the top-right corner of the consultant dashboard does nothing. Root cause in components/consultant/ConsultantDashboardScreen.tsx:117-137: (1) Link2 icon on line 117 is purely decorative with no onClick, (2) Copy button only gives a 2-second Check icon swap as feedback — easy to miss, (3) QR toggle works but is visually disconnected. Not a logic bug in QR — a UX/feedback problem.",
+      "files": [
+        "components/consultant/ConsultantDashboardScreen.tsx",
+        "messages/de.json",
+        "messages/en.json"
+      ],
+      "criteria": [
+        { "text": "Clicking anywhere on the blue referral-code pill copies the referral URL to clipboard", "done": false },
+        { "text": "On successful copy, a toast/banner 'Link kopiert!' (DE) / 'Link copied!' (EN) appears for 2 seconds", "done": false },
+        { "text": "QR button remains a separate clickable button and toggles the QR display (existing behavior preserved)", "done": false },
+        { "text": "QR display shows the same referral URL the copy button produces (https://smart-lex.de/de?ref=CODE)", "done": false },
+        { "text": "Decorative Link2 icon either removed or made part of the clickable pill — no dead pixels in the pill area", "done": false },
+        { "text": "Clipboard fallback preserved for non-HTTPS/old-browser contexts (existing textarea fallback kept)", "done": false },
+        { "text": "Mobile responsive: pill stacks below title on <640px, still fully clickable", "done": false },
+        { "text": "i18n: 'copySuccess' / 'copyLinkTooltip' keys added to both de.json and en.json Consultant namespace", "done": false }
+      ],
+      "notes": "Manual test plan: log in as consultant (test@complyradar.de), go to /de/consultant/dashboard, click pill → see toast, click QR → see QR, scan QR → opens signup with ref param prefilled. Test on desktop Chrome + iPhone Safari."
+    },
+    {
+      "id": "F-BUG-03",
+      "title": "Rebrand User-Facing ComplyRadar → Smart Lex",
+      "status": "pending",
+      "phase": "Pre-Launch Polish (Raphael feedback)",
+      "price": "$0 (goodwill)",
+      "description": "Raphael wants the product name in all user-facing UI changed from 'ComplyRadar' to 'Smart Lex' to match the live domain smart-lex.de. Scope covers visible UI strings, page meta titles, and email sender/subject lines. Legal/impressum references to 'ComplyRadar' as the company name are OUT OF SCOPE pending confirmation from Raphael (legal entity may still be registered as ComplyRadar).",
+      "files": [
+        "messages/de.json",
+        "messages/en.json",
+        "app/[locale]/layout.tsx",
+        "app/api/auth/forgot-password/route.ts",
+        "app/api/send-newsletter/route.ts",
+        "app/api/admin/preview-newsletter/route.ts",
+        "emails/newsletter-digest.tsx"
+      ],
+      "criteria": [
+        { "text": "Auth screen title changes from 'Willkommen bei ComplyRadar' to 'Willkommen bei Smart Lex' (DE) and EN equivalent", "done": false },
+        { "text": "Dashboard greeting 'welcome' key updated DE+EN", "done": false },
+        { "text": "App name key (App.name) updated DE+EN", "done": false },
+        { "text": "Paywall 'ComplyRadar Pro' → 'Smart Lex Pro' DE+EN", "done": false },
+        { "text": "Mobile-rotate screen description updated DE+EN", "done": false },
+        { "text": "Browser tab / meta title 'ComplyRadar — Compliance...' → 'Smart Lex — Compliance...' in app/[locale]/layout.tsx", "done": false },
+        { "text": "Email sender display name 'ComplyRadar <noreply@smart-lex.de>' → 'Smart Lex <noreply@smart-lex.de>' in forgot-password + newsletter routes", "done": false },
+        { "text": "Email subject lines updated (password reset + newsletter digest)", "done": false },
+        { "text": "Newsletter email footer text updated in emails/newsletter-digest.tsx", "done": false },
+        { "text": "OUT OF SCOPE / unchanged: legal company name in impressum (Legal.company), privacy policy responsibleText/emails, email domain @complyradar.de (infra), code-internal identifiers (ComplyRadarApp component, file names, PM2 process name)", "done": false },
+        { "text": "Verified on smart-lex.de: home screen, login, dashboard, paywall all show 'Smart Lex' — no stale 'ComplyRadar' in user-visible chrome", "done": false }
+      ],
+      "notes": "Legal decision pending: Raphael needs to confirm whether Impressum/Datenschutz text should also switch to 'Smart Lex' as the operating entity — that depends on his actual legal registration. Flagged as follow-up, not blocking this PR. Email sender domain @complyradar.de stays in this PR and is tracked separately as F-107-PRE-01 (prereq for M6 Engagement Automation) — needs DNS + Resend verification, not just a string swap."
     },
     {
       "id": "F-104",
