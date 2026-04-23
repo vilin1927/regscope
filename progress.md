@@ -1,11 +1,37 @@
 # ComplyRadar — Progress Log
 
 > **Last updated:** 2026-04-23
-> **Current state:** Investigating 3 bugs Raphael reported after investor demo. Scout phase — not yet coding.
+> **Current state:** 4 bugs fixed + deployed to smart-lex.de. All verified live. Writing regression tests next.
 
 ---
 
-### Session 2026-04-23 — Investor-Demo Bug Scout
+### Session 2026-04-23 (cont.) — Deploy + Post-Deploy Verification + F-BUG-04
+
+**Deployed PR #28 (F-BUG-01/02/03):**
+- Merged to main, pulled on VPS, rebuilt, PM2 reload clean (ready in 632ms, no errors)
+- Rebrand verified via curl + chrome-devtools: tab title "Smart Lex — Compliance für Handwerksbetriebe", H1 "Willkommen bei Smart Lex", sidebar "Smart Lex", paywall "Smart Lex Pro" — all user-facing strings flipped
+- F-BUG-02 pill structure confirmed via DOM: `<button type="button" title="Link kopieren">` wraps the whole pill, nested QR is `<span role="button" tabindex="0">` — valid HTML, keyboard accessible
+
+**Discovered during post-deploy verification — F-BUG-04:**
+- Copy-link button in dashboard was copying `https://smart-lex.de/de?ref=` (empty ref) — not a cosmetic bug but a broken data binding
+- Root cause: Drizzle ORM returns camelCase (referralCode, commissionRateInitial, isActive); `lib/consultant-types.ts` + all UI components expect snake_case (referral_code, commission_rate_initial, is_active) — silent undefined since Supabase→Postgres migration on 2026-04-03
+- Evidence: `fetch('/api/consultant/dashboard')` → `{ referralCode: "4GXVBMDB" }` but `consultant.referral_code` in component was `undefined`
+- Fix: PR #29 — new `lib/consultant-mappers.ts` (toConsultant/toReferral/toHelpRequest) applied at API boundaries in `/api/consultant/dashboard` + `/api/admin/consultants`. Minimal blast radius — no type/component changes.
+- Merged + deployed + verified. `<code>` element now shows referral code `4GXVBMDB`, commissions show `30% Erstzahlung / 10% laufend`.
+
+**Post-deploy verification results (smart-lex.de, live):**
+- F-BUG-01 (scan timeout): 3 dynamic scans executed — BERATUNG (54.9s, 10 regs), PRODUKTION (50.7s, 10 regs), EINZELHANDEL (60.9s, 10 regs). All HTTP 200, no timeout errors. PM2 error log empty post-deploy (0 `Zeitüberschreitung` entries).
+- F-BUG-02 (consultant dashboard UX): clicked pill → green toast "Link kopiert!" appears at top + green check icon in pill. Clicked QR icon → QR code renders with referral code below (stopPropagation prevents copy-toast double-fire).
+- F-BUG-03 (rebrand): all user-facing chrome verified "Smart Lex". Legal/Impressum preserved as specified.
+- F-BUG-04 (API mapping): `/api/consultant/dashboard` returns `referral_code: "4GXVBMDB"`, `commission_rate_initial: 30`, `commission_rate_recurring: 10`, `is_active: true`.
+
+**What comes next:**
+- Add vitest + write regression tests for F-BUG-01/02/03/04 (user's ask: generate tests for those bugs)
+- Respond to Raphael with his outstanding question: "ideas for next improvements" — M5/M6/M7 pitch from features.json
+
+---
+
+### Session 2026-04-23 — Investor-Demo Bug Scout (original)
 
 **Raphael's report (chat, 8:06 AM):**
 1. Scan failed during investor demo — "too long load time, try again" (embarrassing — happened live)
