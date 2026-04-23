@@ -50,9 +50,9 @@ export async function POST(request: NextRequest) {
     const resetUrl = `${baseUrl}/de/auth/reset-password?token=${token}`;
 
     await resend.emails.send({
-      from: "ComplyRadar <noreply@smart-lex.de>",
+      from: "Smart Lex <noreply@smart-lex.de>",
       to: user.email,
-      subject: "Passwort zurücksetzen — ComplyRadar",
+      subject: "Passwort zurücksetzen — Smart Lex",
       html: `
         <h2>Passwort zurücksetzen</h2>
         <p>Klicken Sie auf den folgenden Link, um Ihr Passwort zurückzusetzen:</p>
@@ -60,7 +60,7 @@ export async function POST(request: NextRequest) {
         <p>Dieser Link ist 1 Stunde gültig.</p>
         <p>Falls Sie diese Anfrage nicht gestellt haben, ignorieren Sie diese E-Mail.</p>
         <hr>
-        <p style="color:#6b7280;font-size:12px;">ComplyRadar — smart-lex.de</p>
+        <p style="color:#6b7280;font-size:12px;">Smart Lex — smart-lex.de</p>
       `,
     });
 

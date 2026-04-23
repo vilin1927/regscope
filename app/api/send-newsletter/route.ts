@@ -63,7 +63,7 @@ export async function POST(request: Request) {
 
     const dashboardUrl =
       process.env.NEXT_PUBLIC_APP_URL || "https://smart-lex.de";
-    const fromEmail = `ComplyRadar <newsletter@${process.env.RESEND_DOMAIN || "complyradar.de"}>`;
+    const fromEmail = `Smart Lex <newsletter@${process.env.RESEND_DOMAIN || "complyradar.de"}>`;
 
     // Process each subscriber
     const results = [];
@@ -150,8 +150,8 @@ export async function POST(request: Request) {
       // Subject line
       const subject =
         locale === "en"
-          ? "Your Regulation Update — ComplyRadar"
-          : "Ihr Vorschriften-Update — ComplyRadar";
+          ? "Your Regulation Update — Smart Lex"
+          : "Ihr Vorschriften-Update — Smart Lex";
 
       try {
         const html = await render(

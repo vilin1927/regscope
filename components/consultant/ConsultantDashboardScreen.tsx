@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { useTranslations } from "next-intl";
 import {
   Users,
@@ -106,6 +106,22 @@ export function ConsultantDashboardScreen() {
       exit={{ opacity: 0 }}
       className="max-w-4xl mx-auto space-y-6"
     >
+      <AnimatePresence>
+        {copied && (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-green-600 text-white px-4 py-2.5 rounded-xl shadow-lg flex items-center gap-2 text-sm font-medium"
+            role="status"
+            aria-live="polite"
+          >
+            <Check className="w-4 h-4" />
+            {t("copySuccess")}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Header with referral code */}
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -113,29 +129,42 @@ export function ConsultantDashboardScreen() {
             <h1 className="text-xl font-bold text-gray-900">{t("dashboardTitle")}</h1>
             <p className="text-sm text-gray-500 mt-1">{consultant.name}</p>
           </div>
-          <div className="flex items-center gap-2 bg-blue-50 px-4 py-2.5 rounded-xl">
-            <Link2 className="w-4 h-4 text-blue-600" />
+          <button
+            type="button"
+            onClick={copyReferralCode}
+            title={t("copyLinkTooltip")}
+            className="flex items-center gap-2 bg-blue-50 hover:bg-blue-100 active:bg-blue-200 px-4 py-2.5 rounded-xl transition-colors cursor-pointer text-left"
+          >
+            <Link2 className="w-4 h-4 text-blue-600 shrink-0" />
             <span className="text-sm font-medium text-blue-700">{t("referralCode")}:</span>
             <code className="text-sm font-bold text-blue-900 tracking-wider">{consultant.referral_code}</code>
-            <button
-              onClick={copyReferralCode}
-              className="ml-1 p-1.5 hover:bg-blue-100 rounded-lg transition-colors"
-              title={t("copyCode")}
-            >
+            <span className="ml-1 p-1.5 rounded-lg" aria-hidden="true">
               {copied ? (
                 <Check className="w-4 h-4 text-green-600" />
               ) : (
                 <Copy className="w-4 h-4 text-blue-600" />
               )}
-            </button>
-            <button
-              onClick={() => setShowQR(!showQR)}
-              className="p-1.5 hover:bg-blue-100 rounded-lg transition-colors"
+            </span>
+            <span
+              role="button"
+              tabIndex={0}
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowQR(!showQR);
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setShowQR(!showQR);
+                }
+              }}
+              className="p-1.5 hover:bg-blue-200 rounded-lg transition-colors inline-flex"
               title={t("showQR")}
             >
               <QrCode className="w-4 h-4 text-blue-600" />
-            </button>
-          </div>
+            </span>
+          </button>
         </div>
 
         {/* QR Code */}

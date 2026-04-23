@@ -44,7 +44,7 @@ const translations = {
     yourAreas: "Ihre Bereiche",
     cta: "Zum Dashboard",
     footer:
-      "Sie erhalten diese E-Mail, weil Sie den ComplyRadar Vorschriften-Newsletter abonniert haben.",
+      "Sie erhalten diese E-Mail, weil Sie den Smart Lex Vorschriften-Newsletter abonniert haben.",
     unsubscribe: "Newsletter abbestellen",
     noUpdates:
       "Keine neuen Änderungen in Ihren Bereichen. Ihr Betrieb ist auf dem neuesten Stand!",
@@ -61,7 +61,7 @@ const translations = {
     yourAreas: "Your Areas",
     cta: "Go to Dashboard",
     footer:
-      "You receive this email because you subscribed to the ComplyRadar regulation newsletter.",
+      "You receive this email because you subscribed to the Smart Lex regulation newsletter.",
     unsubscribe: "Unsubscribe",
     noUpdates:
       "No new changes in your selected areas. Your business is up to date!",
@@ -98,7 +98,7 @@ export default function NewsletterDigest({
         <Container style={containerStyle}>
           {/* Header */}
           <Section style={headerStyle}>
-            <Text style={headerTextStyle}>ComplyRadar</Text>
+            <Text style={headerTextStyle}>Smart Lex</Text>
           </Section>
 
           {/* Content */}

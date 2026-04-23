@@ -1,6 +1,6 @@
 {
   "App": {
-    "name": "ComplyRadar",
+    "name": "Smart Lex",
     "tagline": "Compliance for Trade Businesses"
   },
   "Nav": {
@@ -24,7 +24,7 @@
     "adminConsultants": "Consultants"
   },
   "Dashboard": {
-    "welcome": "Welcome to ComplyRadar",
+    "welcome": "Welcome to Smart Lex",
     "subtitle": "Discover which regulations apply to your trade business",
     "startScan": "Start Compliance Scan",
     "startScanDesc": "Answer a few questions about your business and we'll identify the relevant regulations.",
@@ -425,7 +425,7 @@
     "guestNote": "As a guest you can complete one scan, but results won't be saved.",
     "noAccount": "Don't have an account?",
     "hasAccount": "Already have an account?",
-    "welcomeTitle": "Welcome to ComplyRadar",
+    "welcomeTitle": "Welcome to Smart Lex",
     "welcomeSubtitle": "Compliance overview for trade businesses",
     "emailRequired": "Please enter an email address",
     "emailInvalid": "Please enter a valid email address",
@@ -514,7 +514,7 @@
   },
   "Mobile": {
     "title": "Desktop View Recommended",
-    "description": "ComplyRadar is optimized as a dashboard experience. Please open on a larger screen."
+    "description": "Smart Lex is optimized as a dashboard experience. Please open on a larger screen."
   },
   "Legal": {
     "impressum": "Legal Notice",
@@ -688,7 +688,7 @@
     "unlockAll": "Unlock All",
     "moreRisks": "Unlock {count} more risks",
     "moreRecommendations": "Unlock {count} more recommendations",
-    "proTitle": "ComplyRadar Pro",
+    "proTitle": "Smart Lex Pro",
     "proSubtitle": "Full access to all compliance data",
     "proPricing": "€32.50",
     "proPricingLabel": "/month",
@@ -780,7 +780,9 @@
     "showQR": "Show QR Code",
     "commission": "Commission",
     "commissionInitial": "First Payment",
-    "commissionRecurring": "Recurring"
+    "commissionRecurring": "Recurring",
+    "copyLinkTooltip": "Copy link",
+    "copySuccess": "Link copied!"
   },
   "ConsultantSignup": {
     "title": "Create Consultant Account",

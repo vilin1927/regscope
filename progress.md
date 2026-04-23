@@ -1,7 +1,58 @@
 # ComplyRadar — Progress Log
 
-> **Last updated:** 2026-04-17
-> **Current state:** Docs reconciliation. Code unchanged — only progress.md + features.json + .gitignore updated to reflect actual shipped state.
+> **Last updated:** 2026-04-23
+> **Current state:** Investigating 3 bugs Raphael reported after investor demo. Scout phase — not yet coding.
+
+---
+
+### Session 2026-04-23 — Investor-Demo Bug Scout
+
+**Raphael's report (chat, 8:06 AM):**
+1. Scan failed during investor demo — "too long load time, try again" (embarrassing — happened live)
+2. Consultant dashboard: link icon + QR icon in top-right corner do nothing when clicked (logged in)
+3. Homepage says "Welcome to ComplyRadar" — needs to say "Smart Lex"
+4. Wants ideas for next improvements
+
+**Production logs scouted (PM2 `complyradar-web` on 46.225.92.189):**
+- Exact error confirmed: `Scan API error: Error: Zeitüberschreitung. Bitte versuchen Sie es erneut.` — logged multiple times
+- Source: `lib/api-helpers.ts:89` — `AbortError` in `callOpenAI` (90s internal timeout)
+- Context: dynamic scans run with `max_completion_tokens: 8000` (`app/api/scan/route.ts:286`). GPT-5.2 generating 8000 tokens of German legal content regularly exceeds 90s.
+- Compare: risk analysis + recommendations endpoints are capped at 3000 tokens with 50s — they don't hit this (per memory).
+- Also noise in logs: "Failed to find Server Action" (benign — stale hashes after redeploy) and old Supabase session warnings (vestigial, Supabase fully removed 2026-04-03).
+
+**Root cause — Issue 1 (scan timeout):**
+- Dynamic scan prompt asks GPT-5.2 for "10-20 wichtigsten Vorschriften" with 11 fields each (name, reference, summary, requirements[], penalty, URL, etc.)
+- Requesting 8000 completion tokens with low-temp JSON mode. Single request regularly >90s.
+- Route declares `maxDuration = 60` but app is self-hosted (not Vercel) — Next.js default behavior on Node server means the internal 90s AbortController wins, and OpenAI generation itself is what's slow, not the route wrapper.
+
+**Fix options considered:**
+- (a) Cut token budget 8000 → 4000, trim prompt to ask for 10 regs max (not 10-20) — same UX, ~half the generation time. Safest.
+- (b) Switch dynamic scan to streaming — more work, requires frontend changes.
+- (c) Split into 2 calls (identify regs first, then enrich top 10) — more work, 2× API cost.
+- Recommending (a).
+
+**Root cause — Issue 2 (consultant dashboard buttons):**
+- `components/consultant/ConsultantDashboardScreen.tsx:117` — `<Link2>` icon is **decorative, not a button** (no onClick). Raphael clicking it gets nothing.
+- Line 120–130: Copy button DOES work but only gives a tiny `<Check>` icon swap for 2s feedback. On desktop cursor hovering elsewhere, very easy to miss.
+- Line 131–137: QR button toggles `showQR` state. Logic is correct, but button `title` is in English (`t("showQR")`). QR renders below header — should work.
+- Likely user perception: clicked Link2 (does nothing), also maybe quickly clicked Copy and didn't notice the feedback. So *feels* broken even if Copy technically works.
+- Fix: make `Link2` a second copy button (or make the whole pill clickable), add toast/tooltip feedback on copy ("Kopiert!"), ensure QR button has same click area as Copy.
+
+**Root cause — Issue 3 (branding):**
+- `messages/de.json:27` — `"welcome": "Willkommen bei ComplyRadar"` → used in `DashboardScreen.tsx:67`
+- `messages/de.json:428` — `"welcomeTitle": "Willkommen bei ComplyRadar"` → used in `AuthScreen.tsx:41`
+- Same two keys in `en.json`. Fix: swap "ComplyRadar" → "Smart Lex" in all 4 values.
+- Note: app name in nav/logo/header may also contain "ComplyRadar" — need to grep before PR.
+
+**Decisions:**
+- Do NOT start coding until Vladimir confirms scope. These are all quick fixes but affect live site right before investor advertising push (May 12).
+- One PR per issue (or one combined PR for the "pre-launch polish" bundle) — need Vladimir's call.
+- Free goodwill (per Raphael relationship) — not billable.
+
+**What comes next:**
+- Wait for Vladimir to confirm approach
+- Then: feature branch `fix/investor-demo-bugs` → PR → wait for approval → merge → deploy
+- Ideas for "next improvements" response: already have M5 ($250), M6 ($350), M7 ($350) proposed in features.json — pitch these as the roadmap.
 
 ---
 
