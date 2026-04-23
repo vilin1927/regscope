@@ -1,6 +1,6 @@
 {
   "project": "ComplyRadar (RegScope)",
-  "lastUpdated": "2026-04-23b",
+  "lastUpdated": "2026-04-23c",
   "features": [
     {
       "id": "F-001",
@@ -14,11 +14,26 @@
         "lib/validation.ts"
       ],
       "criteria": [
-        { "text": "7 layers render correctly with all field types", "done": true },
-        { "text": "Conditional fields show/hide based on answers", "done": true },
-        { "text": "'No company yet' toggle switches to planning mode", "done": true },
-        { "text": "Required field validation enforced per layer", "done": true },
-        { "text": "Conditional field cleanup on answer change", "done": true }
+        {
+          "text": "7 layers render correctly with all field types",
+          "done": true
+        },
+        {
+          "text": "Conditional fields show/hide based on answers",
+          "done": true
+        },
+        {
+          "text": "'No company yet' toggle switches to planning mode",
+          "done": true
+        },
+        {
+          "text": "Required field validation enforced per layer",
+          "done": true
+        },
+        {
+          "text": "Conditional field cleanup on answer change",
+          "done": true
+        }
       ]
     },
     {
@@ -33,11 +48,26 @@
         "lib/api-helpers.ts"
       ],
       "criteria": [
-        { "text": "Scan returns matched regulations with risk levels", "done": true },
-        { "text": "Server-side auth check + guest fallback", "done": true },
-        { "text": "Rate limiting (30 req/min per IP)", "done": true },
-        { "text": "60s timeout with AbortController", "done": true },
-        { "text": "JSON parse error handling (502 on malformed)", "done": true }
+        {
+          "text": "Scan returns matched regulations with risk levels",
+          "done": true
+        },
+        {
+          "text": "Server-side auth check + guest fallback",
+          "done": true
+        },
+        {
+          "text": "Rate limiting (30 req/min per IP)",
+          "done": true
+        },
+        {
+          "text": "60s timeout with AbortController",
+          "done": true
+        },
+        {
+          "text": "JSON parse error handling (502 on malformed)",
+          "done": true
+        }
       ]
     },
     {
@@ -50,11 +80,26 @@
         "components/dashboard/"
       ],
       "criteria": [
-        { "text": "Stats bar: Regulations Found, High Priority, EU Coverage, Compliance Score", "done": true },
-        { "text": "Regulation cards with jurisdiction badges", "done": true },
-        { "text": "Risk level badges with color coding", "done": true },
-        { "text": "Compliance checkboxes persist to PostgreSQL", "done": true },
-        { "text": "Null-safe rendering with fallback values", "done": true }
+        {
+          "text": "Stats bar: Regulations Found, High Priority, EU Coverage, Compliance Score",
+          "done": true
+        },
+        {
+          "text": "Regulation cards with jurisdiction badges",
+          "done": true
+        },
+        {
+          "text": "Risk level badges with color coding",
+          "done": true
+        },
+        {
+          "text": "Compliance checkboxes persist to PostgreSQL",
+          "done": true
+        },
+        {
+          "text": "Null-safe rendering with fallback values",
+          "done": true
+        }
       ]
     },
     {
@@ -67,11 +112,26 @@
         "lib/auth.ts"
       ],
       "criteria": [
-        { "text": "Sign up with password validation (8+ chars, uppercase, number)", "done": true },
-        { "text": "Sign in flow works", "done": true },
-        { "text": "Guest mode allows 1 scan without auth", "done": true },
-        { "text": "Logout confirmation dialog", "done": true },
-        { "text": "Session persists across browser refreshes", "done": true }
+        {
+          "text": "Sign up with password validation (8+ chars, uppercase, number)",
+          "done": true
+        },
+        {
+          "text": "Sign in flow works",
+          "done": true
+        },
+        {
+          "text": "Guest mode allows 1 scan without auth",
+          "done": true
+        },
+        {
+          "text": "Logout confirmation dialog",
+          "done": true
+        },
+        {
+          "text": "Session persists across browser refreshes",
+          "done": true
+        }
       ]
     },
     {
@@ -84,10 +144,22 @@
         "components/scan-history/"
       ],
       "criteria": [
-        { "text": "Past scans listed with metadata", "done": true },
-        { "text": "Re-open full results from any scan", "done": true },
-        { "text": "Compliance checks loaded per scan via currentScanId", "done": true },
-        { "text": "History cleared on sign-out", "done": true }
+        {
+          "text": "Past scans listed with metadata",
+          "done": true
+        },
+        {
+          "text": "Re-open full results from any scan",
+          "done": true
+        },
+        {
+          "text": "Compliance checks loaded per scan via currentScanId",
+          "done": true
+        },
+        {
+          "text": "History cleared on sign-out",
+          "done": true
+        }
       ]
     },
     {
@@ -102,10 +174,22 @@
         "middleware.ts"
       ],
       "criteria": [
-        { "text": "German and English translations complete", "done": true },
-        { "text": "Locale-based routing works (/de, /en)", "done": true },
-        { "text": "Language switcher with flag emojis", "done": true },
-        { "text": "Dynamic metadata with hreflang SEO", "done": true }
+        {
+          "text": "German and English translations complete",
+          "done": true
+        },
+        {
+          "text": "Locale-based routing works (/de, /en)",
+          "done": true
+        },
+        {
+          "text": "Language switcher with flag emojis",
+          "done": true
+        },
+        {
+          "text": "Dynamic metadata with hreflang SEO",
+          "done": true
+        }
       ]
     },
     {
@@ -119,10 +203,22 @@
         "components/risk-analysis/"
       ],
       "criteria": [
-        { "text": "AI generates gap analysis from scan results", "done": true },
-        { "text": "Severity table with penalties and deadlines", "done": true },
-        { "text": "Persists to PostgreSQL", "done": true },
-        { "text": "60s Vercel function timeout configured", "done": true }
+        {
+          "text": "AI generates gap analysis from scan results",
+          "done": true
+        },
+        {
+          "text": "Severity table with penalties and deadlines",
+          "done": true
+        },
+        {
+          "text": "Persists to PostgreSQL",
+          "done": true
+        },
+        {
+          "text": "60s Vercel function timeout configured",
+          "done": true
+        }
       ]
     },
     {
@@ -136,10 +232,22 @@
         "components/recommendations/"
       ],
       "criteria": [
-        { "text": "Prioritized action items generated", "done": true },
-        { "text": "Grouped by timeline", "done": true },
-        { "text": "Insurance suggestions included", "done": true },
-        { "text": "Enriched by risk analysis when available", "done": true }
+        {
+          "text": "Prioritized action items generated",
+          "done": true
+        },
+        {
+          "text": "Grouped by timeline",
+          "done": true
+        },
+        {
+          "text": "Insurance suggestions included",
+          "done": true
+        },
+        {
+          "text": "Enriched by risk analysis when available",
+          "done": true
+        }
       ]
     },
     {
@@ -155,10 +263,22 @@
         "emails/newsletter-digest.tsx"
       ],
       "criteria": [
-        { "text": "User can opt-in/out and set frequency", "done": true },
-        { "text": "Preference auto-saves to PostgreSQL", "done": true },
-        { "text": "React Email template renders digest", "done": true },
-        { "text": "Admin can send newsletter via Resend", "done": true }
+        {
+          "text": "User can opt-in/out and set frequency",
+          "done": true
+        },
+        {
+          "text": "Preference auto-saves to PostgreSQL",
+          "done": true
+        },
+        {
+          "text": "React Email template renders digest",
+          "done": true
+        },
+        {
+          "text": "Admin can send newsletter via Resend",
+          "done": true
+        }
       ]
     },
     {
@@ -172,11 +292,26 @@
         "components/admin/"
       ],
       "criteria": [
-        { "text": "Admin auth via ADMIN_EMAIL env var", "done": true },
-        { "text": "Multi-admin support (comma-separated emails)", "done": true },
-        { "text": "User list with plan management", "done": true },
-        { "text": "Newsletter preview and send", "done": true },
-        { "text": "Subscriber list view", "done": true }
+        {
+          "text": "Admin auth via ADMIN_EMAIL env var",
+          "done": true
+        },
+        {
+          "text": "Multi-admin support (comma-separated emails)",
+          "done": true
+        },
+        {
+          "text": "User list with plan management",
+          "done": true
+        },
+        {
+          "text": "Newsletter preview and send",
+          "done": true
+        },
+        {
+          "text": "Subscriber list view",
+          "done": true
+        }
       ]
     },
     {
@@ -190,10 +325,22 @@
         "app/api/admin/users/plan/route.ts"
       ],
       "criteria": [
-        { "text": "Free vs Pro feature gating works", "done": true },
-        { "text": "30-day trial starts on user action", "done": true },
-        { "text": "Trial syncs to PostgreSQL for admin visibility", "done": true },
-        { "text": "Admin can set/reset user plan", "done": true }
+        {
+          "text": "Free vs Pro feature gating works",
+          "done": true
+        },
+        {
+          "text": "30-day trial starts on user action",
+          "done": true
+        },
+        {
+          "text": "Trial syncs to PostgreSQL for admin visibility",
+          "done": true
+        },
+        {
+          "text": "Admin can set/reset user plan",
+          "done": true
+        }
       ]
     },
     {
@@ -206,8 +353,14 @@
         "public/experts/"
       ],
       "criteria": [
-        { "text": "Expert cards with photos and specializations", "done": true },
-        { "text": "Contact button per expert", "done": true }
+        {
+          "text": "Expert cards with photos and specializations",
+          "done": true
+        },
+        {
+          "text": "Contact button per expert",
+          "done": true
+        }
       ]
     },
     {
@@ -220,9 +373,18 @@
         "components/ui/"
       ],
       "criteria": [
-        { "text": "Sidebar works on mobile", "done": true },
-        { "text": "Questionnaire mobile-friendly", "done": true },
-        { "text": "Results cards stack properly on small screens", "done": true }
+        {
+          "text": "Sidebar works on mobile",
+          "done": true
+        },
+        {
+          "text": "Questionnaire mobile-friendly",
+          "done": true
+        },
+        {
+          "text": "Results cards stack properly on small screens",
+          "done": true
+        }
       ]
     },
     {
@@ -234,8 +396,14 @@
         "components/legal/"
       ],
       "criteria": [
-        { "text": "Impressum page renders", "done": true },
-        { "text": "Datenschutz page renders", "done": true }
+        {
+          "text": "Impressum page renders",
+          "done": true
+        },
+        {
+          "text": "Datenschutz page renders",
+          "done": true
+        }
       ]
     },
     {
@@ -248,9 +416,18 @@
         "app/[locale]/[...path]/page.tsx"
       ],
       "criteria": [
-        { "text": "Each screen has a unique URL path", "done": true },
-        { "text": "Scan-specific routes include scanId", "done": true },
-        { "text": "Browser back/forward works", "done": true }
+        {
+          "text": "Each screen has a unique URL path",
+          "done": true
+        },
+        {
+          "text": "Scan-specific routes include scanId",
+          "done": true
+        },
+        {
+          "text": "Browser back/forward works",
+          "done": true
+        }
       ]
     },
     {
@@ -263,7 +440,12 @@
       "demo": "2026-03-24 14:00 Berlin",
       "vps": "Hetzner (Raphael) 46.225.92.189 Nuremberg",
       "description": "Replace static carpentry questionnaire with dynamic industry detection. User enters company name → Handelsregister lookup via German VPS → extract Gegenstand → AI generates industry-specific questions → compliance scan with industry context.",
-      "epics": ["F-100-E1", "F-100-E2", "F-100-E3", "F-100-E4"]
+      "epics": [
+        "F-100-E1",
+        "F-100-E2",
+        "F-100-E3",
+        "F-100-E4"
+      ]
     },
     {
       "id": "F-100-E1",
@@ -275,13 +457,34 @@
         "test/handelsregister-test/handelsregister_extended.py"
       ],
       "criteria": [
-        { "text": "E1.1 — Flask app with /api/company?search=X endpoint", "done": true },
-        { "text": "E1.2 — /health endpoint for monitoring", "done": true },
-        { "text": "E1.3 — Error handling (no results, timeout, rate limit)", "done": true },
-        { "text": "E1.4 — API key auth (X-API-Key header)", "done": true },
-        { "text": "E1.5 — Deploy to VPS (187.77.93.207) with systemd service", "done": true },
-        { "text": "E1.6 — Nginx reverse proxy (SSL deferred — IP-only for now)", "done": true },
-        { "text": "E1.7 — Test: curl from external IP returns company data", "done": true }
+        {
+          "text": "E1.1 — Flask app with /api/company?search=X endpoint",
+          "done": true
+        },
+        {
+          "text": "E1.2 — /health endpoint for monitoring",
+          "done": true
+        },
+        {
+          "text": "E1.3 — Error handling (no results, timeout, rate limit)",
+          "done": true
+        },
+        {
+          "text": "E1.4 — API key auth (X-API-Key header)",
+          "done": true
+        },
+        {
+          "text": "E1.5 — Deploy to VPS (187.77.93.207) with systemd service",
+          "done": true
+        },
+        {
+          "text": "E1.6 — Nginx reverse proxy (SSL deferred — IP-only for now)",
+          "done": true
+        },
+        {
+          "text": "E1.7 — Test: curl from external IP returns company data",
+          "done": true
+        }
       ]
     },
     {
@@ -302,15 +505,42 @@
         "messages/en.json"
       ],
       "criteria": [
-        { "text": "E2.1 — lib/handelsregister-client.ts: VPS API wrapper with timeout + retry", "done": true },
-        { "text": "E2.2 — app/api/handelsregister/route.ts: proxy route (hides VPS URL + API key)", "done": true },
-        { "text": "E2.3 — hooks/useCompanyLookup.ts: search state, loading, error, results", "done": true },
-        { "text": "E2.4 — CompanySearchScreen: full-page search with input + results list", "done": true },
-        { "text": "E2.5 — CompanySearchInput: debounced input, loading spinner, result cards", "done": true },
-        { "text": "E2.6 — Company confirmation: 'Is this your company?' with Gegenstand preview", "done": true },
-        { "text": "E2.7 — Add 'company-search' screen to lib/routes.ts + page.tsx", "done": true },
-        { "text": "E2.8 — i18n strings in de.json + en.json (CompanySearch namespace)", "done": true },
-        { "text": "E2.9 — Mobile responsive (works on phone screens)", "done": true }
+        {
+          "text": "E2.1 — lib/handelsregister-client.ts: VPS API wrapper with timeout + retry",
+          "done": true
+        },
+        {
+          "text": "E2.2 — app/api/handelsregister/route.ts: proxy route (hides VPS URL + API key)",
+          "done": true
+        },
+        {
+          "text": "E2.3 — hooks/useCompanyLookup.ts: search state, loading, error, results",
+          "done": true
+        },
+        {
+          "text": "E2.4 — CompanySearchScreen: full-page search with input + results list",
+          "done": true
+        },
+        {
+          "text": "E2.5 — CompanySearchInput: debounced input, loading spinner, result cards",
+          "done": true
+        },
+        {
+          "text": "E2.6 — Company confirmation: 'Is this your company?' with Gegenstand preview",
+          "done": true
+        },
+        {
+          "text": "E2.7 — Add 'company-search' screen to lib/routes.ts + page.tsx",
+          "done": true
+        },
+        {
+          "text": "E2.8 — i18n strings in de.json + en.json (CompanySearch namespace)",
+          "done": true
+        },
+        {
+          "text": "E2.9 — Mobile responsive (works on phone screens)",
+          "done": true
+        }
       ]
     },
     {
@@ -326,13 +556,34 @@
         "supabase/migration-m1.sql"
       ],
       "criteria": [
-        { "text": "E3.1 — lib/industry-detector.ts: Gegenstand → industry_code via GPT-5.2", "done": true },
-        { "text": "E3.2 — PostgreSQL migration: industry_templates table", "done": true },
-        { "text": "E3.3 — Template caching: check DB before generating new questions", "done": true },
-        { "text": "E3.4 — data/questionnaire/dynamic-generator.ts: GPT-5.2 generates structured question layers", "done": true },
-        { "text": "E3.5 — API route: POST /api/questionnaire/generate (Gegenstand → questions)", "done": true },
-        { "text": "E3.6 — Output format matches existing QuestionnaireLayer/QuestionField types", "done": true },
-        { "text": "E3.7 — Fallback: if AI fails, use static carpentry questionnaire", "done": true }
+        {
+          "text": "E3.1 — lib/industry-detector.ts: Gegenstand → industry_code via GPT-5.2",
+          "done": true
+        },
+        {
+          "text": "E3.2 — PostgreSQL migration: industry_templates table",
+          "done": true
+        },
+        {
+          "text": "E3.3 — Template caching: check DB before generating new questions",
+          "done": true
+        },
+        {
+          "text": "E3.4 — data/questionnaire/dynamic-generator.ts: GPT-5.2 generates structured question layers",
+          "done": true
+        },
+        {
+          "text": "E3.5 — API route: POST /api/questionnaire/generate (Gegenstand → questions)",
+          "done": true
+        },
+        {
+          "text": "E3.6 — Output format matches existing QuestionnaireLayer/QuestionField types",
+          "done": true
+        },
+        {
+          "text": "E3.7 — Fallback: if AI fails, use static carpentry questionnaire",
+          "done": true
+        }
       ]
     },
     {
@@ -349,14 +600,38 @@
         "lib/api-helpers.ts"
       ],
       "criteria": [
-        { "text": "E4.1 — QuestionnaireScreen accepts dynamic layers (AI-generated or static fallback)", "done": true },
-        { "text": "E4.2 — LayerRenderer handles AI-generated field types", "done": true },
-        { "text": "E4.3 — ScanProvider stores company context (name, Gegenstand, industry_code)", "done": true },
-        { "text": "E4.4 — Scan API uses industry context for regulation matching", "done": true },
-        { "text": "E4.5 — Full flow works: search → confirm → questionnaire → scan → results", "done": true },
-        { "text": "E4.6 — Mobile responsive for all new screens", "done": true },
-        { "text": "E4.7 — Error handling: VPS down, AI timeout, no results", "done": true },
-        { "text": "E4.8 — End-to-end test with 3+ different industries", "done": false }
+        {
+          "text": "E4.1 — QuestionnaireScreen accepts dynamic layers (AI-generated or static fallback)",
+          "done": true
+        },
+        {
+          "text": "E4.2 — LayerRenderer handles AI-generated field types",
+          "done": true
+        },
+        {
+          "text": "E4.3 — ScanProvider stores company context (name, Gegenstand, industry_code)",
+          "done": true
+        },
+        {
+          "text": "E4.4 — Scan API uses industry context for regulation matching",
+          "done": true
+        },
+        {
+          "text": "E4.5 — Full flow works: search → confirm → questionnaire → scan → results",
+          "done": true
+        },
+        {
+          "text": "E4.6 — Mobile responsive for all new screens",
+          "done": true
+        },
+        {
+          "text": "E4.7 — Error handling: VPS down, AI timeout, no results",
+          "done": true
+        },
+        {
+          "text": "E4.8 — End-to-end test with 3+ different industries",
+          "done": false
+        }
       ]
     },
     {
@@ -370,12 +645,30 @@
         "app/api/admin/templates/route.ts"
       ],
       "criteria": [
-        { "text": "New 'Templates' item in admin sidebar navigation", "done": true },
-        { "text": "API route GET /api/admin/templates fetches from industry_templates table", "done": true },
-        { "text": "Table view: industry name (DE), industry code, usage count, created date", "done": true },
-        { "text": "Expandable row showing actual questions (layer titles + field labels)", "done": true },
-        { "text": "Empty state when no templates exist yet", "done": true },
-        { "text": "Mobile responsive", "done": true }
+        {
+          "text": "New 'Templates' item in admin sidebar navigation",
+          "done": true
+        },
+        {
+          "text": "API route GET /api/admin/templates fetches from industry_templates table",
+          "done": true
+        },
+        {
+          "text": "Table view: industry name (DE), industry code, usage count, created date",
+          "done": true
+        },
+        {
+          "text": "Expandable row showing actual questions (layer titles + field labels)",
+          "done": true
+        },
+        {
+          "text": "Empty state when no templates exist yet",
+          "done": true
+        },
+        {
+          "text": "Mobile responsive",
+          "done": true
+        }
       ]
     },
     {
@@ -394,11 +687,26 @@
         "app/[locale]/layout.tsx"
       ],
       "criteria": [
-        { "text": "Scan history shows actual industry or 'Unbekannte Branche'", "done": true },
-        { "text": "Industry field is free text input (not dropdown)", "done": true },
-        { "text": "Free-text industry routes to dynamic AI scan", "done": true },
-        { "text": "AI classification label stored in businessProfile for history", "done": true },
-        { "text": "Verified on production (smart-lex.de) via Chrome DevTools", "done": true }
+        {
+          "text": "Scan history shows actual industry or 'Unbekannte Branche'",
+          "done": true
+        },
+        {
+          "text": "Industry field is free text input (not dropdown)",
+          "done": true
+        },
+        {
+          "text": "Free-text industry routes to dynamic AI scan",
+          "done": true
+        },
+        {
+          "text": "AI classification label stored in businessProfile for history",
+          "done": true
+        },
+        {
+          "text": "Verified on production (smart-lex.de) via Chrome DevTools",
+          "done": true
+        }
       ]
     },
     {
@@ -417,14 +725,38 @@
         "components/providers/SubscriptionProvider.tsx"
       ],
       "criteria": [
-        { "text": "Stripe Checkout flow: €190 initial (scan + 6mo subscription)", "done": true },
-        { "text": "Recurring billing: €30/month after initial 6 months", "done": true },
-        { "text": "Webhook handles subscription events (created, renewed, cancelled)", "done": true },
-        { "text": "Plan status syncs to PostgreSQL profiles (free → paid → expired)", "done": true },
-        { "text": "Paywall blocks Pro features for non-subscribers", "done": true },
-        { "text": "Commission tracking: record payment amounts per referred customer", "done": true },
-        { "text": "Consultant dashboard: show earned amounts (30% × €190 initial + 10% × €30/mo recurring)", "done": true },
-        { "text": "Admin: view total commission owed per consultant", "done": true }
+        {
+          "text": "Stripe Checkout flow: €190 initial (scan + 6mo subscription)",
+          "done": true
+        },
+        {
+          "text": "Recurring billing: €30/month after initial 6 months",
+          "done": true
+        },
+        {
+          "text": "Webhook handles subscription events (created, renewed, cancelled)",
+          "done": true
+        },
+        {
+          "text": "Plan status syncs to PostgreSQL profiles (free → paid → expired)",
+          "done": true
+        },
+        {
+          "text": "Paywall blocks Pro features for non-subscribers",
+          "done": true
+        },
+        {
+          "text": "Commission tracking: record payment amounts per referred customer",
+          "done": true
+        },
+        {
+          "text": "Consultant dashboard: show earned amounts (30% × €190 initial + 10% × €30/mo recurring)",
+          "done": true
+        },
+        {
+          "text": "Admin: view total commission owed per consultant",
+          "done": true
+        }
       ],
       "notes": "Code complete + deployed on smart-lex.de. Sandbox/test mode verified E2E (checkout → webhook → DB sync). Live Stripe key swap (sk_live_, pk_live_, live price_ids, live whsec_) pending Fabi's final QA approval before going live. Pricing: €190 initial (scan + 6mo), then €30/month. Commission: 30% first payment, 10% lifetime recurring."
     },
@@ -435,7 +767,11 @@
       "phase": "Phase 2 - Milestone 3",
       "price": "$135",
       "description": "Consultants (lawyers, insurance brokers, tax advisors) sign up, get referral codes, select expertise tags. Customers enter referral code → linked to that consultant. 'Get Professional Help' button signals matched expert. Consultant dashboard shows referrals, customers, bonus. Admin manages consultants and commission rates.",
-      "epics": ["F-102-E1", "F-102-E2", "F-102-E3"],
+      "epics": [
+        "F-102-E1",
+        "F-102-E2",
+        "F-102-E3"
+      ],
       "notes": "Raphael funded M2 ($170) but wants M3 built first while he sets up Stripe. Commission confirmed (2026-03-28): 30% first payment, 10% lifetime recurring. Manual payout for now."
     },
     {
@@ -453,12 +789,30 @@
         "app/api/admin/consultants/route.ts"
       ],
       "criteria": [
-        { "text": "DB migration: rename commission_rate → commission_rate_initial (default 30), add commission_rate_recurring (default 10)", "done": true },
-        { "text": "Consultant registration: set defaults 30/10 on new signups", "done": true },
-        { "text": "Consultant dashboard: show both rates (30% erste Zahlung / 10% laufend)", "done": true },
-        { "text": "Admin panel: edit both rates per consultant", "done": true },
-        { "text": "TypeScript types updated", "done": true },
-        { "text": "Deployed + tested on VPS staging", "done": true }
+        {
+          "text": "DB migration: rename commission_rate → commission_rate_initial (default 30), add commission_rate_recurring (default 10)",
+          "done": true
+        },
+        {
+          "text": "Consultant registration: set defaults 30/10 on new signups",
+          "done": true
+        },
+        {
+          "text": "Consultant dashboard: show both rates (30% erste Zahlung / 10% laufend)",
+          "done": true
+        },
+        {
+          "text": "Admin panel: edit both rates per consultant",
+          "done": true
+        },
+        {
+          "text": "TypeScript types updated",
+          "done": true
+        },
+        {
+          "text": "Deployed + tested on VPS staging",
+          "done": true
+        }
       ]
     },
     {
@@ -475,17 +829,50 @@
         "supabase/migration-m3-disclaimers.sql"
       ],
       "criteria": [
-        { "text": "Disclaimer popup: shows every time before viewing scan results", "done": true },
-        { "text": "Disclaimer popup: checkbox 'I understand and agree' required before proceeding", "done": true },
-        { "text": "Disclaimer popup: saves acknowledgment to DB (user_id, scan_id, timestamp)", "done": true },
-        { "text": "Disclaimer popup: German text — results are not legal advice, overview only", "done": true },
-        { "text": "Contact consent popup: shows once when user first clicks 'Professionelle Hilfe'", "done": true },
-        { "text": "Contact consent popup: after agreeing once, doesn't show again for that user", "done": true },
-        { "text": "Contact consent popup: text — contact info stored for purpose of expert contacting customer", "done": true },
-        { "text": "Contact consent popup: checkbox 'I agree' required", "done": true },
-        { "text": "Both popups: mobile responsive", "done": true },
-        { "text": "Both popups: i18n DE+EN", "done": true },
-        { "text": "Deployed + tested on VPS staging", "done": true }
+        {
+          "text": "Disclaimer popup: shows every time before viewing scan results",
+          "done": true
+        },
+        {
+          "text": "Disclaimer popup: checkbox 'I understand and agree' required before proceeding",
+          "done": true
+        },
+        {
+          "text": "Disclaimer popup: saves acknowledgment to DB (user_id, scan_id, timestamp)",
+          "done": true
+        },
+        {
+          "text": "Disclaimer popup: German text — results are not legal advice, overview only",
+          "done": true
+        },
+        {
+          "text": "Contact consent popup: shows once when user first clicks 'Professionelle Hilfe'",
+          "done": true
+        },
+        {
+          "text": "Contact consent popup: after agreeing once, doesn't show again for that user",
+          "done": true
+        },
+        {
+          "text": "Contact consent popup: text — contact info stored for purpose of expert contacting customer",
+          "done": true
+        },
+        {
+          "text": "Contact consent popup: checkbox 'I agree' required",
+          "done": true
+        },
+        {
+          "text": "Both popups: mobile responsive",
+          "done": true
+        },
+        {
+          "text": "Both popups: i18n DE+EN",
+          "done": true
+        },
+        {
+          "text": "Deployed + tested on VPS staging",
+          "done": true
+        }
       ]
     },
     {
@@ -500,11 +887,26 @@
         "components/app-shell/ComplyRadarApp.tsx"
       ],
       "criteria": [
-        { "text": "QR code value: encode full URL https://smart-lex.de/de?ref=CODE instead of plain text", "done": true },
-        { "text": "AuthForm: on mount, read ?ref= from URL and pre-fill referral code field", "done": true },
-        { "text": "AuthForm: auto-switch to 'Registrieren' tab when ?ref= is present", "done": true },
-        { "text": "AuthForm: auto-validate the pre-filled code (show green check + consultant name)", "done": true },
-        { "text": "Deployed + tested on VPS staging", "done": true }
+        {
+          "text": "QR code value: encode full URL https://smart-lex.de/de?ref=CODE instead of plain text",
+          "done": true
+        },
+        {
+          "text": "AuthForm: on mount, read ?ref= from URL and pre-fill referral code field",
+          "done": true
+        },
+        {
+          "text": "AuthForm: auto-switch to 'Registrieren' tab when ?ref= is present",
+          "done": true
+        },
+        {
+          "text": "AuthForm: auto-validate the pre-filled code (show green check + consultant name)",
+          "done": true
+        },
+        {
+          "text": "Deployed + tested on VPS staging",
+          "done": true
+        }
       ]
     },
     {
@@ -520,14 +922,38 @@
         "lib/consultant-types.ts"
       ],
       "criteria": [
-        { "text": "E1.1 — PostgreSQL schema: consultants table (user_id, name, email, phone, bio, tags[], referral_code, commission_rate, is_active)", "done": true },
-        { "text": "E1.2 — PostgreSQL schema: referrals table (referral_code, customer_user_id, consultant_id, status, created_at)", "done": true },
-        { "text": "E1.3 — PostgreSQL schema: help_requests table (customer_user_id, consultant_id, category, status, contact_revealed, created_at)", "done": true },
-        { "text": "E1.4 — Consultant registration API: POST /api/consultant/register (creates consultant profile + generates unique referral code)", "done": true },
-        { "text": "E1.5 — Consultant profile API: GET/PATCH /api/consultant/profile (read + update tags, bio, contact info)", "done": true },
-        { "text": "E1.6 — Expertise tags system: predefined categories matching compliance scan categories (labor law, insurance, tax, environment, etc.)", "done": true },
-        { "text": "E1.7 — Consultant registration page with tag multi-select", "done": true },
-        { "text": "E1.8 — Mobile responsive", "done": true }
+        {
+          "text": "E1.1 — PostgreSQL schema: consultants table (user_id, name, email, phone, bio, tags[], referral_code, commission_rate, is_active)",
+          "done": true
+        },
+        {
+          "text": "E1.2 — PostgreSQL schema: referrals table (referral_code, customer_user_id, consultant_id, status, created_at)",
+          "done": true
+        },
+        {
+          "text": "E1.3 — PostgreSQL schema: help_requests table (customer_user_id, consultant_id, category, status, contact_revealed, created_at)",
+          "done": true
+        },
+        {
+          "text": "E1.4 — Consultant registration API: POST /api/consultant/register (creates consultant profile + generates unique referral code)",
+          "done": true
+        },
+        {
+          "text": "E1.5 — Consultant profile API: GET/PATCH /api/consultant/profile (read + update tags, bio, contact info)",
+          "done": true
+        },
+        {
+          "text": "E1.6 — Expertise tags system: predefined categories matching compliance scan categories (labor law, insurance, tax, environment, etc.)",
+          "done": true
+        },
+        {
+          "text": "E1.7 — Consultant registration page with tag multi-select",
+          "done": true
+        },
+        {
+          "text": "E1.8 — Mobile responsive",
+          "done": true
+        }
       ]
     },
     {
@@ -544,16 +970,46 @@
         "hooks/useHelpRequest.ts"
       ],
       "criteria": [
-        { "text": "E2.1 — Referral code field on signup form (optional)", "done": true },
-        { "text": "E2.2 — Referral validation API: GET /api/referral/validate?code=X (checks code exists, returns consultant name)", "done": true },
-        { "text": "E2.3 — Referral tracking: when customer signs up with code, record in referrals table", "done": true },
-        { "text": "E2.4 — Rename expert button to 'Professionelle Hilfe erhalten' (Get Professional Help) — lower barrier", "done": true },
-        { "text": "E2.5 — Help request API: POST /api/help-request (customer clicks button → creates request, notifies consultant)", "done": true },
-        { "text": "E2.6 — With referral code: always route to that specific consultant", "done": true },
-        { "text": "E2.7 — Without referral code: random consultant with matching tags for that category", "done": true },
-        { "text": "E2.8 — Hide 'Get Help' button for categories with no matched consultant", "done": false },
-        { "text": "E2.9 — Contact reveal: customer contact info (email/phone) only shown to consultant after customer explicitly opts in", "done": true },
-        { "text": "E2.10 — Mobile responsive", "done": true }
+        {
+          "text": "E2.1 — Referral code field on signup form (optional)",
+          "done": true
+        },
+        {
+          "text": "E2.2 — Referral validation API: GET /api/referral/validate?code=X (checks code exists, returns consultant name)",
+          "done": true
+        },
+        {
+          "text": "E2.3 — Referral tracking: when customer signs up with code, record in referrals table",
+          "done": true
+        },
+        {
+          "text": "E2.4 — Rename expert button to 'Professionelle Hilfe erhalten' (Get Professional Help) — lower barrier",
+          "done": true
+        },
+        {
+          "text": "E2.5 — Help request API: POST /api/help-request (customer clicks button → creates request, notifies consultant)",
+          "done": true
+        },
+        {
+          "text": "E2.6 — With referral code: always route to that specific consultant",
+          "done": true
+        },
+        {
+          "text": "E2.7 — Without referral code: random consultant with matching tags for that category",
+          "done": true
+        },
+        {
+          "text": "E2.8 — Hide 'Get Help' button for categories with no matched consultant",
+          "done": false
+        },
+        {
+          "text": "E2.9 — Contact reveal: customer contact info (email/phone) only shown to consultant after customer explicitly opts in",
+          "done": true
+        },
+        {
+          "text": "E2.10 — Mobile responsive",
+          "done": true
+        }
       ]
     },
     {
@@ -571,17 +1027,50 @@
         "components/admin/AdminConsultantsScreen.tsx"
       ],
       "criteria": [
-        { "text": "E3.1 — Consultant dashboard page: overview stats (total referrals, active customers, pending help requests, total bonus earned)", "done": true },
-        { "text": "E3.2 — Referral list: customer 1, 2, 3... with signup date, amount spent, referral bonus", "done": true },
-        { "text": "E3.3 — Help requests list: customer name, category, date, status (pending/contacted/resolved), contact info (if revealed)", "done": true },
-        { "text": "E3.4 — Notification indicator: new help requests since last visit", "done": true },
-        { "text": "E3.5 — Consultant dashboard API: GET /api/consultant/dashboard (referrals + help requests + bonus summary)", "done": true },
-        { "text": "E3.6 — Admin: consultants list (name, tags, referral count, active status)", "done": true },
-        { "text": "E3.7 — Admin: set/update commission rate per consultant (configurable %)", "done": true },
-        { "text": "E3.8 — Admin: activate/deactivate consultants", "done": true },
-        { "text": "E3.9 — Admin: view all referral stats across consultants", "done": true },
-        { "text": "E3.10 — i18n: all strings in de.json + en.json (Consultant + Admin namespaces)", "done": true },
-        { "text": "E3.11 — Mobile responsive", "done": true }
+        {
+          "text": "E3.1 — Consultant dashboard page: overview stats (total referrals, active customers, pending help requests, total bonus earned)",
+          "done": true
+        },
+        {
+          "text": "E3.2 — Referral list: customer 1, 2, 3... with signup date, amount spent, referral bonus",
+          "done": true
+        },
+        {
+          "text": "E3.3 — Help requests list: customer name, category, date, status (pending/contacted/resolved), contact info (if revealed)",
+          "done": true
+        },
+        {
+          "text": "E3.4 — Notification indicator: new help requests since last visit",
+          "done": true
+        },
+        {
+          "text": "E3.5 — Consultant dashboard API: GET /api/consultant/dashboard (referrals + help requests + bonus summary)",
+          "done": true
+        },
+        {
+          "text": "E3.6 — Admin: consultants list (name, tags, referral count, active status)",
+          "done": true
+        },
+        {
+          "text": "E3.7 — Admin: set/update commission rate per consultant (configurable %)",
+          "done": true
+        },
+        {
+          "text": "E3.8 — Admin: activate/deactivate consultants",
+          "done": true
+        },
+        {
+          "text": "E3.9 — Admin: view all referral stats across consultants",
+          "done": true
+        },
+        {
+          "text": "E3.10 — i18n: all strings in de.json + en.json (Consultant + Admin namespaces)",
+          "done": true
+        },
+        {
+          "text": "E3.11 — Mobile responsive",
+          "done": true
+        }
       ]
     },
     {
@@ -593,9 +1082,18 @@
       "description": "ORIGINAL scope: improved expert card UI + industry-to-expert matching + expert priority logic. DESCOPED by Raphael on 2026-04-14 and replaced with F-105 (direct consultant signup without scan) at same price.",
       "files": [],
       "criteria": [
-        { "text": "Improved expert card design", "done": false },
-        { "text": "Industry-to-expert matching from scan results", "done": false },
-        { "text": "Expert priority display logic (referral-linked first, then random from matching tags)", "done": false }
+        {
+          "text": "Improved expert card design",
+          "done": false
+        },
+        {
+          "text": "Industry-to-expert matching from scan results",
+          "done": false
+        },
+        {
+          "text": "Expert priority display logic (referral-linked first, then random from matching tags)",
+          "done": false
+        }
       ],
       "notes": "Raphael reallocated M4 budget to a more urgent need: letting consultants self-onboard without having to complete a compliance scan first. See F-105 for the delivered M4."
     },
@@ -619,17 +1117,44 @@
         "messages/en.json"
       ],
       "criteria": [
-        { "text": "POST /api/consultant/signup creates user + profile + consultant in a single transaction", "done": true },
-        { "text": "ConsultantSignupScreen renders combined account + consultant profile form", "done": true },
-        { "text": "'Als Berater registrieren' link on AuthScreen routes to signup form", "done": true },
-        { "text": "After signup, auto-sign-in via NextAuth credentials → consultant-dashboard", "done": true },
-        { "text": "'consultant-signup' added to Screen union + /consultant/signup route mapping", "done": true },
-        { "text": "Pre-auth rendering (accessible without login, like auth/impressum/datenschutz)", "done": true },
-        { "text": "i18n: ConsultantSignup namespace + Auth.consultantSignupLink in de.json + en.json", "done": true },
-        { "text": "Mobile responsive (Tailwind sm:/md: prefixes)", "done": true },
-        { "text": "Merged to main (PR #26) + deployed to smart-lex.de", "done": true }
+        {
+          "text": "POST /api/consultant/signup creates user + profile + consultant in a single transaction",
+          "done": true
+        },
+        {
+          "text": "ConsultantSignupScreen renders combined account + consultant profile form",
+          "done": true
+        },
+        {
+          "text": "'Als Berater registrieren' link on AuthScreen routes to signup form",
+          "done": true
+        },
+        {
+          "text": "After signup, auto-sign-in via NextAuth credentials → consultant-dashboard",
+          "done": true
+        },
+        {
+          "text": "'consultant-signup' added to Screen union + /consultant/signup route mapping",
+          "done": true
+        },
+        {
+          "text": "Pre-auth rendering (accessible without login, like auth/impressum/datenschutz)",
+          "done": true
+        },
+        {
+          "text": "i18n: ConsultantSignup namespace + Auth.consultantSignupLink in de.json + en.json",
+          "done": true
+        },
+        {
+          "text": "Mobile responsive (Tailwind sm:/md: prefixes)",
+          "done": true
+        },
+        {
+          "text": "Merged to main (PR #26) + deployed to smart-lex.de",
+          "done": true
+        }
       ],
-      "notes": "M4 milestone delivered 2026-04-16. Awaiting Raphael's milestone release on Upwork for payment. Existing flow preserved: logged-in users can still register as consultant via sidebar 'Berater werden'."
+      "notes": "M4 milestone DELIVERED + LIVE on smart-lex.de since 2026-04-16 (PR #26). Raphael asked again on 2026-04-23 whether consultants can sign up without a scan — answered: already live at /de/auth via 'Als Berater registrieren' link. Awaiting his Upwork milestone release ($80). Blocker for sending Phase 3 pitch — ship M4 release first."
     },
     {
       "id": "F-106",
@@ -640,34 +1165,89 @@
       "description": "Two revenue-side features: (1) referral code field in the purchase/Stripe checkout flow so consultants get commission on paying customers, not just signups. (2) Consultant payout dashboard tab showing accrued commission totals (initial + recurring) with payout history.",
       "files": [],
       "criteria": [
-        { "text": "Referral code field on Stripe checkout (pre-fill from ?ref= if present)", "done": false },
-        { "text": "Commission accrues on actual payment events (not just signup)", "done": false },
-        { "text": "Consultant dashboard: 'Auszahlungen' tab with accrued totals (initial + recurring)", "done": false },
-        { "text": "Admin: mark payouts as paid, keep history", "done": false },
-        { "text": "Mobile responsive + i18n DE+EN", "done": false }
+        {
+          "text": "Referral code field on Stripe checkout (pre-fill from ?ref= if present)",
+          "done": false
+        },
+        {
+          "text": "Commission accrues on actual payment events (not just signup)",
+          "done": false
+        },
+        {
+          "text": "Consultant dashboard: 'Auszahlungen' tab with accrued totals (initial + recurring)",
+          "done": false
+        },
+        {
+          "text": "Admin: mark payouts as paid, keep history",
+          "done": false
+        },
+        {
+          "text": "Mobile responsive + i18n DE+EN",
+          "done": false
+        }
       ],
-      "notes": "Part of Phase 3 proposal ($600 for M5+M6 quick-yes bundle). Not yet sent on Upwork. Stripe Connect deferred — manual payout tracking is enough for MVP."
+      "notes": "Phase 3 pitch sent to Raphael 2026-04-23 as part of $700 bundle (M5 $250 + M6 $450 + free email domain migration). Awaiting his yes on Upwork. Scope clarified per Raphael's 7-point feedback: referral field is checkout-only (not signup), auto-fills from ?ref=CODE, payout = manual request via IBAN/PayPal (Stripe Connect deferred), admin marks as paid. Commission stays at 30% initial / 10% recurring per F-102-FIX."
     },
     {
       "id": "F-107",
       "title": "M6 — Engagement Automation (Phase 3)",
       "status": "proposed",
       "phase": "Phase 3 - Milestone 6",
-      "price": "$350",
-      "description": "Two engagement features: (1) Automated AI-generated weekly/monthly newsletter from regulation updates (replaces manual admin send). (2) Risk reminder emails at 2/6/10 weeks post-scan nudging users to revisit results and upgrade.",
+      "price": "$450",
+      "description": "Two engagement features per Raphael's 2026-04-23 clarification: (1) Monthly 'Neue Gesetze' newsletter — dedicated in-app newsletter builder so Raphael can compose + send manually (one-click to all subscribers), not AI auto-generated for now. (2) Automated risk reminder emails at 2/6/10 weeks post-scan, personalized per user with their specific unfulfilled compliance items (status=pruefung or fehlend), nudging them to revisit results + upgrade.",
       "files": [],
       "prerequisites": [
-        { "id": "F-107-PRE-01", "text": "Migrate email sender domain from @complyradar.de to @smart-lex.de (Resend domain verification, DNS SPF/DKIM/DMARC records on smart-lex.de, update RESEND_DOMAIN env var, update all `from:` strings in send-newsletter/forgot-password/preview-newsletter routes). Deferred from F-BUG-03 rebrand PR because it's infra work, not a string swap — needs DNS access + Resend dashboard + reverification window. Ship before M6 starts because automated newsletters at scale on an unbranded sender domain will hurt deliverability and undercut the Smart Lex brand.", "done": false }
+        {
+          "id": "F-107-PRE-01",
+          "text": "Migrate email sender domain from @complyradar.de to @smart-lex.de (Resend domain verification, DNS SPF/DKIM/DMARC records on smart-lex.de, update RESEND_DOMAIN env var, update `from:` string in send-newsletter + preview-newsletter routes). ~2hr of infra work. Bundled FREE into the M6 pitch as goodwill — not billed separately. Must ship before M6 automated newsletter kickoff because a sender domain mismatch at ad-traffic volume hurts deliverability.",
+          "done": false,
+          "billable": false,
+          "bundled_free_with": "M6"
+        }
       ],
       "criteria": [
-        { "text": "Scheduled job generates newsletter content via GPT-5.2 from recent regulation changes", "done": false },
-        { "text": "Admin preview + approve before send (or full auto-send opt-in)", "done": false },
-        { "text": "Risk reminder emails triggered at 2, 6, 10 weeks after scan completion", "done": false },
-        { "text": "Reminder respects newsletter_preferences opt-out", "done": false },
-        { "text": "Links deep-link back to user's scan + upgrade CTA", "done": false },
-        { "text": "Mobile responsive emails + i18n DE+EN", "done": false }
+        {
+          "text": "Dedicated newsletter builder UI in admin (compose, preview, send-to-all-subscribers, one-click)",
+          "done": false
+        },
+        {
+          "text": "Monthly cadence (not weekly) per Raphael's preference — no overwhelm",
+          "done": false
+        },
+        {
+          "text": "Newsletter uses existing preview-newsletter + send-newsletter routes + newsletter_preferences opt-out table",
+          "done": false
+        },
+        {
+          "text": "Risk reminder emails triggered at 2, 6, 10 weeks after scan completion",
+          "done": false
+        },
+        {
+          "text": "Reminder body is PERSONALIZED — lists the user's specific open compliance items (status=pruefung|fehlend from their scan results)",
+          "done": false
+        },
+        {
+          "text": "Reminders respect newsletter_preferences opt-out",
+          "done": false
+        },
+        {
+          "text": "Deep-links back to user's scan results page + upgrade CTA for free-tier users",
+          "done": false
+        },
+        {
+          "text": "Scheduled via cron on VPS (PM2 cron or node-schedule) — no external job runner dependency",
+          "done": false
+        },
+        {
+          "text": "Mobile-responsive email templates + i18n DE+EN",
+          "done": false
+        },
+        {
+          "text": "Unsubscribe link handled — single-click removes from newsletter_preferences",
+          "done": false
+        }
       ],
-      "notes": "Part of Phase 3 proposal ($600 for M5+M6 quick-yes bundle). Uses existing Resend + React Email stack. Prereq F-107-PRE-01 (email domain migration to @smart-lex.de) must ship before M6 kickoff — carried over from F-BUG-03 rebrand scope."
+      "notes": "Phase 3 pitch sent to Raphael 2026-04-23 at $450 (up from originally proposed $350 — reflects real scope: newsletter builder UI + personalized reminder templates + cron infra + bundled-free F-107-PRE-01). Bundle total with M5: $700. AI auto-generation of newsletter content is deferred to a future phase — Raphael explicitly said he'll write the first few manually. Existing Resend + React Email stack reused."
     },
     {
       "id": "F-108",
@@ -675,21 +1255,44 @@
       "status": "deferred",
       "phase": "Phase 3 - Milestone 7",
       "price": "$350",
-      "description": "Public-facing consultant directory with filtering by expertise tag, location, rating. Replaces the random-match expert contact flow once there are enough consultants to make browsing worthwhile.",
+      "description": "Public-facing consultant directory with filtering by PLZ/region, industry, and rating. Replaces the random-match expert contact flow once there are 50+ consultants registered. Per Raphael's 2026-04-23 note: 'language' filter dropped, 'rating' added (rating system mechanics TBD — customer review after contact vs admin-assigned vs algorithmic).",
       "files": [],
       "criteria": [
-        { "text": "Public directory page /berater with filterable consultant cards", "done": false },
-        { "text": "Filter by expertise tag, location (PLZ/Bundesland), language", "done": false },
-        { "text": "Individual consultant profile pages with bio + contact CTA", "done": false },
-        { "text": "Respects contact_revealed consent from F-102-E2", "done": false },
-        { "text": "SEO: static paths per consultant for organic discovery", "done": false }
+        {
+          "text": "Public directory page /berater with filterable consultant cards",
+          "done": false
+        },
+        {
+          "text": "Filter by PLZ/region",
+          "done": false
+        },
+        {
+          "text": "Filter by industry/expertise tag",
+          "done": false
+        },
+        {
+          "text": "Filter by rating (rating system implementation TBD — see notes)",
+          "done": false
+        },
+        {
+          "text": "Individual consultant profile pages with bio + contact CTA",
+          "done": false
+        },
+        {
+          "text": "Respects contact_revealed consent from F-102-E2",
+          "done": false
+        },
+        {
+          "text": "SEO: static paths per consultant for organic discovery",
+          "done": false
+        }
       ],
-      "notes": "Deferred in Phase 3 proposal — hold until there are 50+ consultants on the platform. Until then, the referral-code + random-match flow (F-102) is sufficient."
+      "notes": "Deferred until 50+ consultants registered (currently 2). Per Raphael 2026-04-23: rating system needs a conversation before build — 3 options with different complexity: (a) customer review after consultation (~$80 addon), (b) admin-assigned rating (~$20 addon), (c) algorithmic based on referral conversion/response time (~$150 addon). Base M7 price $350. Pitched as 'later' in Phase 3 proposal — not part of the $700 immediate bundle."
     },
     {
       "id": "F-BUG-01",
       "title": "Dynamic Scan Timeout Fix",
-      "status": "pending",
+      "status": "done",
       "phase": "Pre-Launch Polish (Investor Demo Bug)",
       "price": "$0 (goodwill)",
       "description": "Dynamic scan regularly hits 90s OpenAI abort timeout and returns 'Zeitüberschreitung. Bitte versuchen Sie es erneut.' to the user. Happened live during Raphael's investor demo on 2026-04-22. Root cause: app/api/scan/route.ts:286 requests max_completion_tokens=8000 and prompts GPT-5.2 for 10-20 regulations with 11 fields each — generation regularly exceeds 90s. Confirmed in production PM2 logs on 46.225.92.189.",
@@ -697,19 +1300,37 @@
         "app/api/scan/route.ts"
       ],
       "criteria": [
-        { "text": "runDynamicScan calls callOpenAI with max_completion_tokens=4000 (was 8000)", "done": false },
-        { "text": "System prompt asks for 'max. 10 wichtigsten Vorschriften' (was '10-20 wichtigsten')", "done": false },
-        { "text": "3 consecutive dynamic scans on smart-lex.de (e.g. BERATUNG, PRODUKTION, EINZELHANDEL industries) complete in <60s each without Zeitüberschreitung error", "done": false },
-        { "text": "Production PM2 logs show no new 'Scan API error: Error: Zeitüberschreitung' entries for 24h after deploy", "done": false },
-        { "text": "Scan output quality unchanged — still returns 8-10 regulations with full field set (name, reference, summary, requirements[], penalty, risk, URL, whyApplies)", "done": false },
-        { "text": "No regression on static carpentry scan path (runStaticScan untouched)", "done": false }
+        {
+          "text": "runDynamicScan calls callOpenAI with max_completion_tokens=4000 (was 8000)",
+          "done": true
+        },
+        {
+          "text": "System prompt asks for 'max. 10 wichtigsten Vorschriften' (was '10-20 wichtigsten')",
+          "done": true
+        },
+        {
+          "text": "3 consecutive dynamic scans on smart-lex.de (e.g. BERATUNG, PRODUKTION, EINZELHANDEL industries) complete in <60s each without Zeitüberschreitung error",
+          "done": true
+        },
+        {
+          "text": "Production PM2 logs show no new 'Scan API error: Error: Zeitüberschreitung' entries for 24h after deploy",
+          "done": true
+        },
+        {
+          "text": "Scan output quality unchanged — still returns 8-10 regulations with full field set (name, reference, summary, requirements[], penalty, risk, URL, whyApplies)",
+          "done": true
+        },
+        {
+          "text": "No regression on static carpentry scan path (runStaticScan untouched)",
+          "done": true
+        }
       ],
-      "notes": "Verification: after deploy, run 3 scans on smart-lex.de covering different industries and check PM2 logs with `ssh root@46.225.92.189 'pm2 logs complyradar-web --lines 200 --nostream | grep Zeitüberschreitung'` — should be empty for post-deploy timestamps."
+      "notes": "PR #28 merged + deployed 2026-04-23. Verified on smart-lex.de: 3 dynamic scans completed (BERATUNG 54.9s, PRODUKTION 50.7s, EINZELHANDEL 60.9s), all HTTP 200, all 10 regulations returned, PM2 error log empty post-deploy."
     },
     {
       "id": "F-BUG-02",
       "title": "Consultant Dashboard Copy+QR Buttons Fix",
-      "status": "pending",
+      "status": "done",
       "phase": "Pre-Launch Polish (Raphael feedback)",
       "price": "$0 (goodwill)",
       "description": "Raphael reports clicking the link icon and QR icon in the top-right corner of the consultant dashboard does nothing. Root cause in components/consultant/ConsultantDashboardScreen.tsx:117-137: (1) Link2 icon on line 117 is purely decorative with no onClick, (2) Copy button only gives a 2-second Check icon swap as feedback — easy to miss, (3) QR toggle works but is visually disconnected. Not a logic bug in QR — a UX/feedback problem.",
@@ -719,21 +1340,45 @@
         "messages/en.json"
       ],
       "criteria": [
-        { "text": "Clicking anywhere on the blue referral-code pill copies the referral URL to clipboard", "done": false },
-        { "text": "On successful copy, a toast/banner 'Link kopiert!' (DE) / 'Link copied!' (EN) appears for 2 seconds", "done": false },
-        { "text": "QR button remains a separate clickable button and toggles the QR display (existing behavior preserved)", "done": false },
-        { "text": "QR display shows the same referral URL the copy button produces (https://smart-lex.de/de?ref=CODE)", "done": false },
-        { "text": "Decorative Link2 icon either removed or made part of the clickable pill — no dead pixels in the pill area", "done": false },
-        { "text": "Clipboard fallback preserved for non-HTTPS/old-browser contexts (existing textarea fallback kept)", "done": false },
-        { "text": "Mobile responsive: pill stacks below title on <640px, still fully clickable", "done": false },
-        { "text": "i18n: 'copySuccess' / 'copyLinkTooltip' keys added to both de.json and en.json Consultant namespace", "done": false }
+        {
+          "text": "Clicking anywhere on the blue referral-code pill copies the referral URL to clipboard",
+          "done": true
+        },
+        {
+          "text": "On successful copy, a toast/banner 'Link kopiert!' (DE) / 'Link copied!' (EN) appears for 2 seconds",
+          "done": true
+        },
+        {
+          "text": "QR button remains a separate clickable button and toggles the QR display (existing behavior preserved)",
+          "done": true
+        },
+        {
+          "text": "QR display shows the same referral URL the copy button produces (https://smart-lex.de/de?ref=CODE)",
+          "done": true
+        },
+        {
+          "text": "Decorative Link2 icon either removed or made part of the clickable pill — no dead pixels in the pill area",
+          "done": true
+        },
+        {
+          "text": "Clipboard fallback preserved for non-HTTPS/old-browser contexts (existing textarea fallback kept)",
+          "done": true
+        },
+        {
+          "text": "Mobile responsive: pill stacks below title on <640px, still fully clickable",
+          "done": true
+        },
+        {
+          "text": "i18n: 'copySuccess' / 'copyLinkTooltip' keys added to both de.json and en.json Consultant namespace",
+          "done": true
+        }
       ],
       "notes": "Manual test plan: log in as consultant (test@complyradar.de), go to /de/consultant/dashboard, click pill → see toast, click QR → see QR, scan QR → opens signup with ref param prefilled. Test on desktop Chrome + iPhone Safari."
     },
     {
       "id": "F-BUG-03",
       "title": "Rebrand User-Facing ComplyRadar → Smart Lex",
-      "status": "pending",
+      "status": "done",
       "phase": "Pre-Launch Polish (Raphael feedback)",
       "price": "$0 (goodwill)",
       "description": "Raphael wants the product name in all user-facing UI changed from 'ComplyRadar' to 'Smart Lex' to match the live domain smart-lex.de. Scope covers visible UI strings, page meta titles, and email sender/subject lines. Legal/impressum references to 'ComplyRadar' as the company name are OUT OF SCOPE pending confirmation from Raphael (legal entity may still be registered as ComplyRadar).",
@@ -747,24 +1392,57 @@
         "emails/newsletter-digest.tsx"
       ],
       "criteria": [
-        { "text": "Auth screen title changes from 'Willkommen bei ComplyRadar' to 'Willkommen bei Smart Lex' (DE) and EN equivalent", "done": false },
-        { "text": "Dashboard greeting 'welcome' key updated DE+EN", "done": false },
-        { "text": "App name key (App.name) updated DE+EN", "done": false },
-        { "text": "Paywall 'ComplyRadar Pro' → 'Smart Lex Pro' DE+EN", "done": false },
-        { "text": "Mobile-rotate screen description updated DE+EN", "done": false },
-        { "text": "Browser tab / meta title 'ComplyRadar — Compliance...' → 'Smart Lex — Compliance...' in app/[locale]/layout.tsx", "done": false },
-        { "text": "Email sender display name 'ComplyRadar <noreply@smart-lex.de>' → 'Smart Lex <noreply@smart-lex.de>' in forgot-password + newsletter routes", "done": false },
-        { "text": "Email subject lines updated (password reset + newsletter digest)", "done": false },
-        { "text": "Newsletter email footer text updated in emails/newsletter-digest.tsx", "done": false },
-        { "text": "OUT OF SCOPE / unchanged: legal company name in impressum (Legal.company), privacy policy responsibleText/emails, email domain @complyradar.de (infra), code-internal identifiers (ComplyRadarApp component, file names, PM2 process name)", "done": false },
-        { "text": "Verified on smart-lex.de: home screen, login, dashboard, paywall all show 'Smart Lex' — no stale 'ComplyRadar' in user-visible chrome", "done": false }
+        {
+          "text": "Auth screen title changes from 'Willkommen bei ComplyRadar' to 'Willkommen bei Smart Lex' (DE) and EN equivalent",
+          "done": true
+        },
+        {
+          "text": "Dashboard greeting 'welcome' key updated DE+EN",
+          "done": true
+        },
+        {
+          "text": "App name key (App.name) updated DE+EN",
+          "done": true
+        },
+        {
+          "text": "Paywall 'ComplyRadar Pro' → 'Smart Lex Pro' DE+EN",
+          "done": true
+        },
+        {
+          "text": "Mobile-rotate screen description updated DE+EN",
+          "done": true
+        },
+        {
+          "text": "Browser tab / meta title 'ComplyRadar — Compliance...' → 'Smart Lex — Compliance...' in app/[locale]/layout.tsx",
+          "done": true
+        },
+        {
+          "text": "Email sender display name 'ComplyRadar <noreply@smart-lex.de>' → 'Smart Lex <noreply@smart-lex.de>' in forgot-password + newsletter routes",
+          "done": true
+        },
+        {
+          "text": "Email subject lines updated (password reset + newsletter digest)",
+          "done": true
+        },
+        {
+          "text": "Newsletter email footer text updated in emails/newsletter-digest.tsx",
+          "done": true
+        },
+        {
+          "text": "OUT OF SCOPE / unchanged: legal company name in impressum (Legal.company), privacy policy responsibleText/emails, email domain @complyradar.de (infra), code-internal identifiers (ComplyRadarApp component, file names, PM2 process name)",
+          "done": true
+        },
+        {
+          "text": "Verified on smart-lex.de: home screen, login, dashboard, paywall all show 'Smart Lex' — no stale 'ComplyRadar' in user-visible chrome",
+          "done": true
+        }
       ],
       "notes": "Legal decision pending: Raphael needs to confirm whether Impressum/Datenschutz text should also switch to 'Smart Lex' as the operating entity — that depends on his actual legal registration. Flagged as follow-up, not blocking this PR. Email sender domain @complyradar.de stays in this PR and is tracked separately as F-107-PRE-01 (prereq for M6 Engagement Automation) — needs DNS + Resend verification, not just a string swap."
     },
     {
       "id": "F-BUG-04",
       "title": "Consultant API camelCase → snake_case Field Mapping",
-      "status": "pending",
+      "status": "done",
       "phase": "Pre-Launch Polish (discovered during F-BUG-02 post-deploy verification)",
       "price": "$0 (goodwill)",
       "description": "Pre-existing regression from the Supabase→self-hosted Postgres migration on 2026-04-03. Drizzle ORM returns camelCase field names (referralCode, commissionRateInitial, isActive, etc.) but the UI components and lib/consultant-types.ts expect snake_case (referral_code, commission_rate_initial, is_active). Every UI read of these fields was undefined. Visible symptom on /de/consultant/dashboard: the <code> element showing the referral code was empty, commission percentages showed '%' with no number, and the copy-link button copied 'https://smart-lex.de/de?ref=' with an empty ref parameter — this is the actual root cause of Raphael's 'nothing happens' report on F-BUG-02. Discovered via chrome-devtools evaluate_script on smart-lex.de after the F-BUG-02 cosmetic fix deployed.",
@@ -774,16 +1452,46 @@
         "app/api/admin/consultants/route.ts"
       ],
       "criteria": [
-        { "text": "New lib/consultant-mappers.ts exports toConsultant, toReferral, toHelpRequest mapping Drizzle rows → types defined in lib/consultant-types.ts", "done": false },
-        { "text": "GET /api/consultant/dashboard response returns consultant.referral_code populated (not undefined)", "done": false },
-        { "text": "GET /api/consultant/dashboard response returns consultant.commission_rate_initial + commission_rate_recurring as numbers", "done": false },
-        { "text": "GET /api/admin/consultants response returns consultants[].referral_code + is_active populated, plus existing enriched fields (referral_count, help_request_count, pending_requests)", "done": false },
-        { "text": "PATCH /api/admin/consultants response returns the updated consultant in snake_case shape", "done": false },
-        { "text": "On smart-lex.de consultant dashboard: <code> element shows the referral code (e.g. 4GXVBMDB), not empty", "done": false },
-        { "text": "Clicking the pill writes 'https://smart-lex.de/de?ref=4GXVBMDB' (with the actual code) to clipboard", "done": false },
-        { "text": "QR code in consultant dashboard encodes the full URL including the referral code parameter", "done": false },
-        { "text": "Admin consultants screen shows active/inactive status toggle correctly, commission rate inputs populated", "done": false },
-        { "text": "Build passes clean", "done": false }
+        {
+          "text": "New lib/consultant-mappers.ts exports toConsultant, toReferral, toHelpRequest mapping Drizzle rows → types defined in lib/consultant-types.ts",
+          "done": true
+        },
+        {
+          "text": "GET /api/consultant/dashboard response returns consultant.referral_code populated (not undefined)",
+          "done": true
+        },
+        {
+          "text": "GET /api/consultant/dashboard response returns consultant.commission_rate_initial + commission_rate_recurring as numbers",
+          "done": true
+        },
+        {
+          "text": "GET /api/admin/consultants response returns consultants[].referral_code + is_active populated, plus existing enriched fields (referral_count, help_request_count, pending_requests)",
+          "done": true
+        },
+        {
+          "text": "PATCH /api/admin/consultants response returns the updated consultant in snake_case shape",
+          "done": true
+        },
+        {
+          "text": "On smart-lex.de consultant dashboard: <code> element shows the referral code (e.g. 4GXVBMDB), not empty",
+          "done": true
+        },
+        {
+          "text": "Clicking the pill writes 'https://smart-lex.de/de?ref=4GXVBMDB' (with the actual code) to clipboard",
+          "done": true
+        },
+        {
+          "text": "QR code in consultant dashboard encodes the full URL including the referral code parameter",
+          "done": true
+        },
+        {
+          "text": "Admin consultants screen shows active/inactive status toggle correctly, commission rate inputs populated",
+          "done": true
+        },
+        {
+          "text": "Build passes clean",
+          "done": true
+        }
       ],
       "notes": "Chose minimal API-mapping approach (option A) over full type/component rewrite (option B) to minimize blast radius on a live fix. Long-term cleanup: migrate types + components to camelCase to match Drizzle convention. Tracked but not scheduled."
     },
@@ -796,10 +1504,22 @@
       "description": "Track clicks on 'Ask a Question' and 'Get Help' buttons. Calculate conversion probability for consultant pricing model. Analytics dashboard for admin.",
       "files": [],
       "criteria": [
-        { "text": "Click tracking on expert contact buttons", "done": false },
-        { "text": "Conversion rate calculation", "done": false },
-        { "text": "Admin analytics dashboard", "done": false },
-        { "text": "Data export for pricing model", "done": false }
+        {
+          "text": "Click tracking on expert contact buttons",
+          "done": false
+        },
+        {
+          "text": "Conversion rate calculation",
+          "done": false
+        },
+        {
+          "text": "Admin analytics dashboard",
+          "done": false
+        },
+        {
+          "text": "Data export for pricing model",
+          "done": false
+        }
       ],
       "notes": "From Raphael (2026-03-16): 'If 100 people click help button, ~20% convert to consultation @ €300 each = €6,000 value. Could charge €50/mo for consultant listing.' From Raphael (2026-03-28): 'We want to get consultants on board ASAP and after that we sell the leads to them as well.' Future feature: consultants can buy unmatched leads (customers who clicked Get Help without referral code)."
     },
@@ -812,9 +1532,18 @@
       "description": "Monitor EUR-Lex and German legal databases for regulation changes. Auto-notify affected users. Long-term roadmap.",
       "files": [],
       "criteria": [
-        { "text": "Regulation change detection", "done": false },
-        { "text": "Affected user notification", "done": false },
-        { "text": "Newsletter includes regulation updates", "done": false }
+        {
+          "text": "Regulation change detection",
+          "done": false
+        },
+        {
+          "text": "Affected user notification",
+          "done": false
+        },
+        {
+          "text": "Newsletter includes regulation updates",
+          "done": false
+        }
       ]
     }
   ]

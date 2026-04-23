@@ -1,7 +1,57 @@
 # ComplyRadar — Progress Log
 
-> **Last updated:** 2026-04-23
-> **Current state:** 4 bugs fixed + deployed to smart-lex.de. All verified live. Writing regression tests next.
+> **Last updated:** 2026-04-23 (end of day)
+> **Current state:** 4 investor-demo bugs shipped free + 30 regression tests merged + Phase 3 pitch drafted ($700: M5 $250 + M6 $450 + free email domain migration). Awaiting M4 Upwork release ($80) before sending Phase 3 pitch to Raphael.
+
+---
+
+### Session 2026-04-23 (end of day) — Phase 3 Pitch Finalized
+
+**What happened today (full arc):**
+1. Raphael reported 3 investor-demo bugs (scan timeout, dashboard copy/QR, ComplyRadar branding).
+2. Scouted PM2 logs on 46.225.92.189 → root-caused each.
+3. Specced 3 bugs in features.json as F-BUG-01/02/03 with testable criteria.
+4. Shipped PR #28 (3 bugs) + merged + deployed to smart-lex.de.
+5. Post-deploy browser verification caught a 4th deeper bug: camelCase/snake_case field mismatch from the Supabase→Postgres migration (copy button was writing empty ?ref= URL).
+6. Shipped PR #29 (F-BUG-04 mapper fix) + merged + deployed + verified.
+7. Added vitest + 30 regression tests in PR #30 + merged.
+8. Drafted 2 messages for Raphael: (a) M4 release reminder with bug-fix summary, (b) Phase 3 pitch at $700.
+
+**Pricing conversation with Vladimir:**
+- Initial M5+M6 bundle was $600 quick-yes per original features.json.
+- Revisited scope per Raphael's 7-point feedback — M6 bigger than originally specced (newsletter builder UI + personalized risk reminders + cron infra).
+- Settled on M6 at $450 (reflects real ~14hr effort) + M5 at $250 + free email domain migration = $700 total.
+- Vladimir agreed $100 difference is worth it: "more than it looks and quite big thing".
+
+**Key scope decisions locked today:**
+- M5 (F-106 $250): checkout-only referral field (not signup), auto-fill from ?ref=CODE, manual payout via IBAN/PayPal form, admin marks paid. Stripe Connect deferred.
+- M6 (F-107 $450): dedicated newsletter builder (not AI auto-gen — Raphael writes first few manually), monthly cadence, risk reminders PERSONALIZED with each user's open compliance items (pruefung/fehlend), cron on VPS, unsubscribe handled.
+- F-107-PRE-01 (email domain migration @complyradar.de → @smart-lex.de): bundled FREE in the M6 pitch as goodwill. Not billed separately.
+- M7 (F-108 $350): held until 50+ consultants. Filters confirmed: PLZ/region, industry, rating. Rating system mechanics TBD (3 options: customer review +$80 / admin-assigned +$20 / algorithmic +$150). Language filter dropped.
+
+**M4 blocker:**
+- M4 ($80) delivered 2026-04-16, never released on Upwork.
+- Raphael asked on 2026-04-23: "Is there a way for consultants to sign up without doing a scan first?" — which is literally what M4 delivered (the "Als Berater registrieren" link on /de/auth).
+- Either he forgot the feature shipped or discoverability is poor.
+- Decision: Message 1 reminds him it's live + requests M4 release. Message 2 (Phase 3 pitch) goes out only AFTER M4 cleared. Protects ledger optics.
+
+**Both messages drafted, copy-ready** (in conversation history). Waiting on Vladimir to send.
+
+**Deploy state (smart-lex.de):**
+- main branch synced, PM2 `complyradar-web` uptime clean, no error log entries post-deploy.
+- 3 dynamic scans verified: BERATUNG 54.9s, PRODUKTION 50.7s, EINZELHANDEL 60.9s — all 200, all 10 regs.
+- Consultant dashboard verified: referral code 4GXVBMDB populates, 30%/10% commissions show, copy + QR work with toast.
+- Smart Lex brand verified: tab title, H1, sidebar, paywall, emails all flipped.
+
+**What comes next (post-M4-release):**
+- Send Phase 3 pitch to Raphael on Upwork.
+- Remove placeholder consultants from results (Raphael asked to hold until after Friday 2026-04-24 demo with business partners — ping Monday 2026-04-27).
+- If M5+M6 greenlit, start M5 immediately (targets ~1 week, M6 ~1.5 weeks after — both live before May 12 investor session).
+- May 12 investor session will add scope → price THAT round at honest market rate ($700+ range).
+
+---
+
+### Session 2026-04-23 (cont.) — Deploy + Post-Deploy Verification + F-BUG-04
 
 ---
 
