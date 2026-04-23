@@ -18,8 +18,8 @@ export async function generateMetadata({
 
   return {
     title: isGerman
-      ? "ComplyRadar — Compliance für Handwerksbetriebe"
-      : "ComplyRadar — Compliance for Trade Businesses",
+      ? "Smart Lex — Compliance für Handwerksbetriebe"
+      : "Smart Lex — Compliance for Trade Businesses",
     description: isGerman
       ? "Finden Sie heraus, welche Vorschriften für Ihren Betrieb gelten. Compliance-Scan für alle Branchen."
       : "Discover which regulations apply to your business. Compliance scanner for all industries.",

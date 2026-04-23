@@ -1,6 +1,6 @@
 {
   "App": {
-    "name": "ComplyRadar",
+    "name": "Smart Lex",
     "tagline": "Compliance für Handwerksbetriebe"
   },
   "Nav": {
@@ -24,7 +24,7 @@
     "adminConsultants": "Berater"
   },
   "Dashboard": {
-    "welcome": "Willkommen bei ComplyRadar",
+    "welcome": "Willkommen bei Smart Lex",
     "subtitle": "Finden Sie heraus, welche Vorschriften für Ihren Handwerksbetrieb gelten",
     "startScan": "Compliance-Scan starten",
     "startScanDesc": "Beantworten Sie einige Fragen zu Ihrem Betrieb und wir identifizieren die relevanten Vorschriften.",
@@ -425,7 +425,7 @@
     "guestNote": "Als Gast können Sie einen Scan durchführen, aber Ergebnisse werden nicht gespeichert.",
     "noAccount": "Noch kein Konto?",
     "hasAccount": "Bereits registriert?",
-    "welcomeTitle": "Willkommen bei ComplyRadar",
+    "welcomeTitle": "Willkommen bei Smart Lex",
     "welcomeSubtitle": "Compliance-Übersicht für Handwerksbetriebe",
     "emailRequired": "Bitte geben Sie eine E-Mail-Adresse ein",
     "emailInvalid": "Bitte geben Sie eine gültige E-Mail-Adresse ein",
@@ -514,7 +514,7 @@
   },
   "Mobile": {
     "title": "Desktop-Ansicht empfohlen",
-    "description": "ComplyRadar ist als Dashboard optimiert. Bitte öffnen Sie die Anwendung auf einem größeren Bildschirm."
+    "description": "Smart Lex ist als Dashboard optimiert. Bitte öffnen Sie die Anwendung auf einem größeren Bildschirm."
   },
   "Legal": {
     "impressum": "Impressum",
@@ -688,7 +688,7 @@
     "unlockAll": "Alle freischalten",
     "moreRisks": "{count} weitere Risiken freischalten",
     "moreRecommendations": "{count} weitere Empfehlungen freischalten",
-    "proTitle": "ComplyRadar Pro",
+    "proTitle": "Smart Lex Pro",
     "proSubtitle": "Vollständiger Zugriff auf alle Compliance-Daten",
     "proPricing": "32,50 €",
     "proPricingLabel": "/Monat",

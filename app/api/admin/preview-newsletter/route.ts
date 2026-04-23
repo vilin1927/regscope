@@ -147,8 +147,8 @@ export async function POST(request: Request) {
 
     const subject =
       locale === "en"
-        ? "Your Regulation Update — ComplyRadar"
-        : "Ihr Vorschriften-Update — ComplyRadar";
+        ? "Your Regulation Update — Smart Lex"
+        : "Ihr Vorschriften-Update — Smart Lex";
 
     const html = await render(
       NewsletterDigest({
