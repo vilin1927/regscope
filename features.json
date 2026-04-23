@@ -1,6 +1,6 @@
 {
   "project": "ComplyRadar (RegScope)",
-  "lastUpdated": "2026-04-23",
+  "lastUpdated": "2026-04-23b",
   "features": [
     {
       "id": "F-001",
@@ -760,6 +760,32 @@
         { "text": "Verified on smart-lex.de: home screen, login, dashboard, paywall all show 'Smart Lex' — no stale 'ComplyRadar' in user-visible chrome", "done": false }
       ],
       "notes": "Legal decision pending: Raphael needs to confirm whether Impressum/Datenschutz text should also switch to 'Smart Lex' as the operating entity — that depends on his actual legal registration. Flagged as follow-up, not blocking this PR. Email sender domain @complyradar.de stays in this PR and is tracked separately as F-107-PRE-01 (prereq for M6 Engagement Automation) — needs DNS + Resend verification, not just a string swap."
+    },
+    {
+      "id": "F-BUG-04",
+      "title": "Consultant API camelCase → snake_case Field Mapping",
+      "status": "pending",
+      "phase": "Pre-Launch Polish (discovered during F-BUG-02 post-deploy verification)",
+      "price": "$0 (goodwill)",
+      "description": "Pre-existing regression from the Supabase→self-hosted Postgres migration on 2026-04-03. Drizzle ORM returns camelCase field names (referralCode, commissionRateInitial, isActive, etc.) but the UI components and lib/consultant-types.ts expect snake_case (referral_code, commission_rate_initial, is_active). Every UI read of these fields was undefined. Visible symptom on /de/consultant/dashboard: the <code> element showing the referral code was empty, commission percentages showed '%' with no number, and the copy-link button copied 'https://smart-lex.de/de?ref=' with an empty ref parameter — this is the actual root cause of Raphael's 'nothing happens' report on F-BUG-02. Discovered via chrome-devtools evaluate_script on smart-lex.de after the F-BUG-02 cosmetic fix deployed.",
+      "files": [
+        "lib/consultant-mappers.ts",
+        "app/api/consultant/dashboard/route.ts",
+        "app/api/admin/consultants/route.ts"
+      ],
+      "criteria": [
+        { "text": "New lib/consultant-mappers.ts exports toConsultant, toReferral, toHelpRequest mapping Drizzle rows → types defined in lib/consultant-types.ts", "done": false },
+        { "text": "GET /api/consultant/dashboard response returns consultant.referral_code populated (not undefined)", "done": false },
+        { "text": "GET /api/consultant/dashboard response returns consultant.commission_rate_initial + commission_rate_recurring as numbers", "done": false },
+        { "text": "GET /api/admin/consultants response returns consultants[].referral_code + is_active populated, plus existing enriched fields (referral_count, help_request_count, pending_requests)", "done": false },
+        { "text": "PATCH /api/admin/consultants response returns the updated consultant in snake_case shape", "done": false },
+        { "text": "On smart-lex.de consultant dashboard: <code> element shows the referral code (e.g. 4GXVBMDB), not empty", "done": false },
+        { "text": "Clicking the pill writes 'https://smart-lex.de/de?ref=4GXVBMDB' (with the actual code) to clipboard", "done": false },
+        { "text": "QR code in consultant dashboard encodes the full URL including the referral code parameter", "done": false },
+        { "text": "Admin consultants screen shows active/inactive status toggle correctly, commission rate inputs populated", "done": false },
+        { "text": "Build passes clean", "done": false }
+      ],
+      "notes": "Chose minimal API-mapping approach (option A) over full type/component rewrite (option B) to minimize blast radius on a live fix. Long-term cleanup: migrate types + components to camelCase to match Drizzle convention. Tracked but not scheduled."
     },
     {
       "id": "F-104",
