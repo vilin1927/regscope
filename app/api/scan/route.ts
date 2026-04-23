@@ -266,7 +266,7 @@ Antworte ausschließlich im folgenden JSON-Format:
 }
 
 Wichtig:
-- Identifiziere die 10-20 wichtigsten Vorschriften für die Branche "${industryInfo}"
+- Identifiziere die max. 10 wichtigsten Vorschriften für die Branche "${industryInfo}"
 - Berücksichtige: Arbeitsrecht, Gewerberecht, Umweltrecht, Datenschutz, branchenspezifische Vorschriften
 - Sortiere nach Risikolevel: hoch zuerst, dann mittel, dann niedrig
 - Die whyApplies-Texte sollen konkret und hilfreich sein — beziehe dich auf die konkreten Betriebsdaten
@@ -283,7 +283,7 @@ Handelsregister-Gegenstand: ${companyContext.gegenstand || "Nicht verfügbar"}
 
 ${JSON.stringify(profile, null, 2)}`;
 
-  const { content, error } = await callOpenAI(systemPrompt, userPrompt, undefined, 8000);
+  const { content, error } = await callOpenAI(systemPrompt, userPrompt, undefined, 4000);
 
   if (error || !content) {
     throw new Error(error || "Keine Antwort vom KI-System");
